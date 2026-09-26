@@ -1,8 +1,9 @@
 import type { GeoPermissibleObjects, GeoProjection } from 'd3-geo'
-import { geoAzimuthalEquidistant, geoDistance, geoGraticule10, geoPath } from 'd3-geo'
+import { geoDistance, geoGraticule10, geoPath } from 'd3-geo'
 import earth from './earth-110m.json'
 import { admin1Boundaries, geographicLabels } from './geography.ts'
 import { annotationLabels, receiverLabels } from './labels.ts'
+import { createMapProjection, earthRadiusKm } from './projection.ts'
 import type {
   MapLabel,
   MapLocation,
@@ -23,7 +24,6 @@ export type {
   ReceptionMapOptions,
 } from './types.ts'
 
-const earthRadiusKm = 6371.0088
 const radiansToDegrees = 180 / Math.PI
 
 const fallbackTheme: MapTheme = {
@@ -90,63 +90,6 @@ function projected(projection: GeoProjection, location: MapLocation): [number, n
 function freshOpacity(age: number): number {
   const minutes = Number.isFinite(age) ? Math.max(0, age) : 30
   return Math.max(0.32, 1 - minutes / 45)
-}
-
-function niceRadius(distanceKm: number): number {
-  const steps = [1000, 2000, 3000, 5000, 7500, 10000, 15000, 20000]
-  return steps.find((step) => step >= distanceKm * 1.2) ?? 20000
-}
-
-function createProjection(
-  origin: MapLocation,
-  stations: readonly MapStation[],
-  width: number,
-  height: number,
-  kind: 'regional' | 'azimuthal',
-): GeoProjection {
-  const projection = geoAzimuthalEquidistant()
-    .rotate([-origin.longitude, -origin.latitude])
-    .scale(1)
-    .translate([0, 0])
-    .clipAngle(179.99)
-    .precision(0.6)
-
-  const points = [origin, ...stations].flatMap((location) => {
-    const point = projected(projection, location)
-    return point ? [point] : []
-  })
-  const padding = Math.max(26, Math.min(44, width / 12))
-  if (kind === 'azimuthal') {
-    const farthest = stations.reduce(
-      (distance, receiver) =>
-        Math.max(distance, geoDistance(coordinates(origin), coordinates(receiver)) * earthRadiusKm),
-      0,
-    )
-    const radius = niceRadius(farthest) / earthRadiusKm
-    projection
-      .scale(Math.min(width - padding * 2, height - padding * 2) / (radius * 2))
-      .translate([width / 2, height / 2])
-  } else {
-    // A minimum extent prevents a single local skimmer from over-zooming the
-    // 110m geography. Quantized bounds reduce drift when a receiver reappears.
-    const minX = Math.floor(Math.min(...points.map((point) => point[0])) / 0.05) * 0.05
-    const maxX = Math.ceil(Math.max(...points.map((point) => point[0])) / 0.05) * 0.05
-    const minY = Math.floor(Math.min(...points.map((point) => point[1])) / 0.05) * 0.05
-    const maxY = Math.ceil(Math.max(...points.map((point) => point[1])) / 0.05) * 0.05
-    const extentX = Math.max(0.4, (maxX - minX) * 1.2)
-    const extentY = Math.max(0.3, (maxY - minY) * 1.2)
-    const scale = Math.min((width - padding * 2) / extentX, (height - padding * 2) / extentY)
-    projection
-      .scale(scale)
-      .translate([
-        width / 2 - ((minX + maxX) / 2) * scale,
-        height / 2 - ((minY + maxY) / 2) * scale,
-      ])
-  }
-  return projection.clipExtent([
-    [1, 1],
-    [width - 1, height - 1],
-  ])
 }
 
 function mappedReceivers(origin: MapLocation, stations: readonly MapStation[]): MapStation[] {
@@ -326,13 +269,13 @@ export function layoutReceptionMap(options: ReceptionMapOptions): ReceptionMapLa
 
   const receivers = mappedReceivers(origin, options.stations)
   const plotHeight = Math.max(70, height - 15 - 16 * labelScale)
-  const projection = createProjection(
-    origin,
-    receivers,
-    width,
-    plotHeight,
-    options.projection ?? 'regional',
-  )
+  const projectionKind = options.projection ?? 'regional'
+  const projection = createMapProjection(origin, receivers, width, plotHeight, projectionKind)
+  // Fit stations above attribution, but let geography continue behind its text.
+  projection.clipExtent([
+    [1, 1],
+    [width - 1, height - 1],
+  ])
   const path = geoPath(projection).digits(1)
   const originPoint = projected(projection, origin) ?? [width / 2, height / 2]
   const markers: MapMarker[] = receivers.flatMap((receiver) => {
@@ -381,45 +324,47 @@ export function layoutReceptionMap(options: ReceptionMapOptions): ReceptionMapLa
   const body: string[] = []
   const ringLabels: MapLabel[] = []
 
-  const visibleRadiusKm = (Math.max(width, height) / projection.scale()) * earthRadiusKm
-  const ringStep =
-    visibleRadiusKm > 18000
-      ? 5000
-      : visibleRadiusKm > 8000
-        ? 2000
-        : visibleRadiusKm > 3500
-          ? 1000
-          : 500
-  for (
-    let distanceKm = ringStep;
-    distanceKm < Math.min(20000, visibleRadiusKm);
-    distanceKm += ringStep
-  ) {
-    const radius = (distanceKm / earthRadiusKm) * projection.scale()
-    body.push(
-      `<circle cx="${format(originPoint[0])}" cy="${format(originPoint[1])}" r="${format(radius)}" fill="none" stroke="${theme.muted}" stroke-opacity="0.2" stroke-width="0.7" stroke-dasharray="2 7"/>`,
-    )
-    const x = originPoint[0] + 6
-    const y = originPoint[1] - radius - 10
-    if (
-      labelScale <= 1.4 &&
-      x > 10 &&
-      x + 80 * labelScale < width - 10 &&
-      y > 12 &&
-      y < height - 30
+  if (projectionKind === 'azimuthal') {
+    const visibleRadiusKm = (Math.max(width, height) / projection.scale()) * earthRadiusKm
+    const ringStep =
+      visibleRadiusKm > 18000
+        ? 5000
+        : visibleRadiusKm > 8000
+          ? 2000
+          : visibleRadiusKm > 3500
+            ? 1000
+            : 500
+    for (
+      let distanceKm = ringStep;
+      distanceKm < Math.min(20000, visibleRadiusKm);
+      distanceKm += ringStep
     ) {
-      ringLabels.push({
-        key: `ring:${distanceKm}`,
-        text: `${distanceKm.toLocaleString('en-US')} km`,
-        x,
-        y,
-        width: 80 * labelScale,
-        height: 16 * labelScale,
-        size: 11,
-        color: theme.muted,
-        weight: 400,
-        align: 'left',
-      })
+      const radius = (distanceKm / earthRadiusKm) * projection.scale()
+      body.push(
+        `<circle cx="${format(originPoint[0])}" cy="${format(originPoint[1])}" r="${format(radius)}" fill="none" stroke="${theme.muted}" stroke-opacity="0.2" stroke-width="0.7" stroke-dasharray="2 7"/>`,
+      )
+      const x = originPoint[0] + 6
+      const y = originPoint[1] - radius - 10
+      if (
+        labelScale <= 1.4 &&
+        x > 10 &&
+        x + 80 * labelScale < width - 10 &&
+        y > 12 &&
+        y < height - 30
+      ) {
+        ringLabels.push({
+          key: `ring:${distanceKm}`,
+          text: `${distanceKm.toLocaleString('en-US')} km`,
+          x,
+          y,
+          width: 80 * labelScale,
+          height: 16 * labelScale,
+          size: 11,
+          color: theme.muted,
+          weight: 400,
+          align: 'left',
+        })
+      }
     }
   }
 
@@ -485,32 +430,50 @@ export function layoutReceptionMap(options: ReceptionMapOptions): ReceptionMapLa
   labels.push(...receiverLabels(receivers, mapMarkers, width, height, theme, labels, labelScale))
   labels.push(...annotationLabels(ringLabels, mapMarkers, labels, width, height, 2))
   if (labelScale <= 1.4) {
-    const countries: MapLabel[] = geographicLabels.flatMap((country) => {
+    const countries = geographicLabels.flatMap((country) => {
       const point = projected(projection, country)
       if (!point) return []
       const text = country.label.toUpperCase()
       const labelWidth = text.length * 6.5 * labelScale + 8
       return [
         {
-          key: `geography:${country.key}`,
-          text,
-          x: point[0] - labelWidth / 2,
-          y: point[1] - 9 * labelScale,
-          width: labelWidth,
-          height: 18 * labelScale,
-          size: 11,
-          color: theme.muted,
-          weight: 400,
-          align: 'center' as const,
+          rank: country.rank,
+          proximity: Math.min(
+            ...mapMarkers.map((marker) => Math.hypot(point[0] - marker.x, point[1] - marker.y)),
+          ),
+          label: {
+            key: `geography:${country.key}`,
+            text,
+            x: point[0] - labelWidth / 2,
+            y: point[1] - 9 * labelScale,
+            width: labelWidth,
+            height: 18 * labelScale,
+            size: 11,
+            color: theme.muted,
+            weight: 400,
+            align: 'center' as const,
+          },
         },
       ]
     })
+    // Equally prominent countries near reports give more context than the
+    // dataset's alphabetical order (for example, Brazil before Belgium).
+    countries.sort(
+      (a, b) =>
+        a.rank - b.rank || a.proximity - b.proximity || a.label.key.localeCompare(b.label.key),
+    )
     labels.push(
-      ...annotationLabels(countries, mapMarkers, labels, width, height, width < 520 ? 3 : 5),
+      ...annotationLabels(
+        countries.map((country) => country.label),
+        mapMarkers,
+        labels,
+        width,
+        height,
+        width < 520 ? 3 : 5,
+      ),
     )
   }
   const overlay = [
-    `<rect x="1" y="${format(plotHeight)}" width="${width - 2}" height="${format(height - plotHeight - 1)}" rx="9" fill="${theme.surface}"/>`,
     labelBackings(labels, theme),
     `<rect x="0.5" y="0.5" width="${width - 1}" height="${height - 1}" rx="10" fill="none" stroke="${theme.border}" stroke-width="1"/>`,
   ]

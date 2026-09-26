@@ -63,7 +63,9 @@ pending; the installed app was still build 170 at promotion time.
 - The shared [reception workspace](../../../packages/reception/README.md)
   supplies RBN's map, SVG renderer, settings, and panel state. Settings offer
   **Who hears me** and **Who I hear**, map/list layouts, band/window selection,
-  projection and sorting. Callsign and location follow the operation unless
+  projection and sorting. The default fitted map is north-up (Natural Earth 1)
+  and keeps distant continents recognizable; the optional station-centered
+  view supplies distance rings. Callsign and location follow the operation unless
   overridden. SNR belongs to the receiver; reported grids are never replaced
   with callsign-prefix guesses.
 - `src/transport/mqtt.ts` implements the needed MQTT 3.1.1 clean-session QoS-0

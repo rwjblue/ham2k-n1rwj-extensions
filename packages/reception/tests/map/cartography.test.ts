@@ -76,6 +76,55 @@ function expectReadableLabels(map: ReceptionMapLayout): void {
 }
 
 describe('reception map cartography', () => {
+  it('keeps a wide north–south report spread readable in a short panel', () => {
+    const origin = { latitude: 41.733, longitude: -71.574, label: 'N1RWJ' }
+    const stations = [
+      receiver('WEST1', 40.7, -112.1),
+      receiver('WEST2', 45.7, -111),
+      receiver('BRAZIL', -23.2, -46.6),
+    ]
+    for (const stationLabel of ['receiver', 'transmitter', 'station'] as const) {
+      for (const [width, height] of [
+        [800, 258],
+        [1100, 180],
+      ]) {
+        const map = layoutReceptionMap({
+          width,
+          height,
+          origin,
+          stations,
+          stationLabel,
+          theme,
+        })
+        expect(map.markers).toHaveLength(3)
+        const ys = map.markers.map((marker) => marker.y)
+        expect(Math.max(...ys) - Math.min(...ys)).toBeGreaterThan(height * 0.5)
+        expect(map.labels.some((label) => label.key.startsWith('ring:'))).toBe(false)
+        expect(map.svg).not.toContain('stroke-dasharray="2 7"')
+        expect(map.labels.find((label) => label.key === 'attribution')?.text).toContain(
+          `${stationLabel} locations approximate`,
+        )
+        expectReadableLabels(map)
+      }
+    }
+  })
+
+  it('labels countries near reports before equally ranked distant countries', () => {
+    const map = layoutReceptionMap({
+      width: 800,
+      height: 258,
+      origin: { latitude: 41.733, longitude: -71.574, label: 'N1RWJ' },
+      stations: [
+        receiver('WEST1', 40.7, -112.1),
+        receiver('WEST2', 45.7, -111),
+        receiver('SOUTH', -23.2, -46.6),
+      ],
+      theme,
+    })
+    expect(map.labels.map((label) => label.text)).toContain('BRAZIL')
+    expectReadableLabels(map)
+  })
+
   it('keeps receiver positions stable when resizing across the former compact breakpoint', () => {
     const base = { origin: americanOrigin, stations: northAmerica, theme }
     const before = layoutReceptionMap({ ...base, width: 419, height: 390 })
@@ -128,15 +177,18 @@ describe('reception map cartography', () => {
       receiver('WEST1', 36.7, -115),
       receiver('WEST2', 48, -123),
     ]
+    let ringCaptionCount = 0
     for (const width of [320, 424, 720]) {
       const map = layoutReceptionMap({
         width,
         height: 390,
         origin: americanOrigin,
         stations: receivers,
+        projection: 'azimuthal',
         theme,
       })
       for (const label of map.labels.filter((label) => label.key.startsWith('ring:'))) {
+        ringCaptionCount++
         for (const marker of map.markers) {
           expect(
             overlapsMarker(label, marker.x, marker.y),
@@ -146,6 +198,7 @@ describe('reception map cartography', () => {
       }
       expectReadableLabels(map)
     }
+    expect(ringCaptionCount).toBeGreaterThan(0)
   })
 
   it('keeps scaled native map labels readable without pushing them outside a compact panel', () => {

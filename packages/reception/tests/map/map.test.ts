@@ -163,13 +163,41 @@ describe('reception map', () => {
 
   it('keeps the station centered in azimuthal mode and draws real distance rings', () => {
     const map = layoutReceptionMap({ ...options, projection: 'azimuthal' })
-    // The map reserves a footer for attribution below its geographic viewport.
+    // Stations fit above attribution, while geography uses the full viewport.
     expect(map.svg.includes('cx="360.00" cy="174.50" r="2"')).toBe(true)
     expect(map.labels.some((label) => label.key.startsWith('ring:'))).toBe(true)
     expect(map.svg).not.toMatch(/NaN|Infinity/)
     const regional = layoutReceptionMap({ ...options, projection: 'regional' })
     expect(regional.markers[0].x).not.toBeCloseTo(map.markers[0].x, 0)
     expect(regional.markers[0].y).not.toBeCloseTo(map.markers[0].y, 0)
+  })
+
+  it('continues geography behind attribution without painting ocean over the coastline', () => {
+    for (const stationLabel of ['receiver', 'transmitter'] as const) {
+      for (const labelScale of [1, 2, 4]) {
+        const map = layoutReceptionMap({
+          ...options,
+          width: 800,
+          height: 258,
+          origin: { latitude: 41.733, longitude: -71.574, label: 'N1RWJ' },
+          stations: [],
+          stationLabel,
+          labelScale,
+        })
+        const attributionY =
+          map.labels.find((label) => label.key === 'attribution')?.y ?? map.height
+        const landPaths = [...map.svg.matchAll(/<path d="([^"]+)" fill="#dce9ed" stroke=/g)]
+        const landY = landPaths.flatMap((path) =>
+          [...path[1].matchAll(/[ML][\d.-]+,([\d.-]+)/g)].map((point) => Number(point[1])),
+        )
+        // Florida/Mexico must continue through the text area to the map's edge.
+        expect(Math.max(...landY)).toBe(257)
+        expect(landY.some((y) => y > attributionY)).toBe(true)
+        const oceanRects = [...map.svg.matchAll(/<rect\b[^>]*fill="#ffffff"[^>]*\/>/g)]
+        expect(oceanRects).toHaveLength(1)
+        expect(map.svg.indexOf(oceanRects[0][0])).toBeLessThan(map.svg.indexOf(landPaths[0][0]))
+      }
+    }
   })
 
   it('fits distant receivers even in a short station-centered panel', () => {

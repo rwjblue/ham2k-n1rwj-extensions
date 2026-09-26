@@ -1307,3 +1307,53 @@ verification are exempt from upstream CWT/CQ WW synchronization.
 
 `mise run format` and `mise run check` passed **662 tests across 53 files**,
 lint, strict source/test/tooling typechecks, builds, and official packaging.
+
+## Reception map attribution overlay — 2026-09-26
+
+RBN and PSK Reporter maps now draw geography through the attribution area to
+the rounded outer frame. The previous projection clip and ocean-colored
+footer strip cut off Florida and Mexico above that frame. Attribution remains
+a text overlay; projection fitting still reserves its space so zoom and
+station positions remain unchanged.
+
+A deterministic short-panel regression covers receiver/transmitter maps and
+normal/large text scales, checking that land reaches the bottom edge and no
+opaque ocean strip covers it. Before/after static SVG previews reproduce the
+reported cutoff at N1RWJ's location and confirm continuous coastlines in light
+and dark themes. This is static rendering verification, not a native Ham2K
+UI test.
+
+`mise run format` and `mise run check` passed **663 tests across 53 files**,
+lint, strict typechecks, builds, and official packaging. The shared reception
+package has only RBN and PSK Reporter consumers; this change does not affect
+CWT or CQ WW and is exempt from their upstream synchronization requirements.
+
+## Reception map projection and fitting — 2026-09-26
+
+The default **Fit reporting receivers/stations** view now uses north-up
+Natural Earth 1 instead of the station-centered azimuthal projection. Its
+longitude seam follows the smallest arc containing the station and reports,
+including clusters crossing the date line. Padding is capped by map height,
+and the fitted extent has 10% extra space. The optional **From my station ·
+distance rings** view retains the equidistant projection and is now the only
+view that draws circular distance rings. Distance/bearing data is unchanged.
+Equally ranked country labels prioritize proximity to report endpoints.
+
+A synthetic New England–western US–Brazil fixture reproduces the reported
+wide/short view. At 800 × 258 logical pixels, the receiver vertical span grew
+from approximately 114 to 145 pixels (27%) while keeping all endpoints in
+view. Static light/dark previews confirm recognizable continents, a Brazil
+caption, and the attribution overlay. Additional phone previews cover Europe
+and a cluster straddling the date line. These are static previews with
+approximate fixture positions, not live reports or a native Polo UI test.
+
+New deterministic tests cover north-up ordering, date-line equivalence,
+stable longitude seams under reordering and duplicates, finite poles/global
+outliers, short-panel fitting, accurate azimuthal radial distances, and
+country-label relevance. Existing geometry budgets, clipping, accessibility
+scales, label collisions, and packaged RBN/PSK tests also pass.
+
+`mise run format` and `mise run check` passed **671 tests across 54 files**,
+lint, strict typechecks, builds, and official packaging. Only RBN and PSK
+Reporter consume this shared map; CWT and CQ WW upstream synchronization
+does not apply.

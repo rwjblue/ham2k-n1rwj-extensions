@@ -151,8 +151,11 @@ Reception paths show where your signal was heard. Regional maps include
 state/province boundaries and sparse country labels; light and dark colors keep
 land and water distinct. Labels adapt to the available space, with receiver
 callsigns taking priority over geographic captions.
-Choose **Fit reporting receivers** in panel settings for a regional view or
+Choose **Fit reporting receivers** in panel settings for a north-up map that
+fits nearby and distant reports while keeping continent shapes recognizable, or
 **From my station · distance rings** for a view centered on your station.
+Distance rings appear only in the station-centered view. The fitted map uses
+Natural Earth 1 and keeps reports near the date line together.
 The map includes the selected band's located receivers across all list pages.
 Receiver positions come from RBN node grids, with registered grids as a fallback, and may differ from the actual
 skimmer location. Receivers without a valid grid remain in the list.

@@ -60,7 +60,15 @@ retained in the [`licenses/`](licenses/) directory alongside this file. All noti
 are copied into the `.h2kext` bundle under `assets/`. These dependencies are bundled
 locally; the map does not load scripts or geography from a remote service.
 
-The regional view fits the station and receiver positions in a station-centered
-azimuthal equidistant projection. The azimuthal view keeps the station in the
-middle, with concentric great-circle distance rings. Distances and bearings are
-accurate from the station; shapes become more distorted farther from it.
+The default fitted view uses a north-up Natural Earth 1 projection, centered on
+the smallest longitude span containing the station and reports. This keeps
+continent shapes recognizable across distant reports and handles clusters
+crossing the date line. Padding follows the available height as well as width.
+Country labels favor equally ranked countries near the station and reports.
+
+The optional azimuthal equidistant view keeps the station in the middle, with
+concentric great-circle distance rings. Distances and bearings are accurate
+from the station in that view; shapes become more distorted farther from it.
+Distance rings appear only in the azimuthal view. Both views draw reception
+paths as projected great-circle routes, and the report list uses spherical
+distance and bearing calculations independently of the chosen projection.

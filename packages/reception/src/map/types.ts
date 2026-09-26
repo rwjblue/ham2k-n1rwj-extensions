@@ -26,6 +26,7 @@ export interface ReceptionMapOptions {
   stationLabel?: 'receiver' | 'transmitter' | 'station'
   origin?: MapLocation
   stations: readonly MapStation[]
+  /** Fit reports on a north-up map, or preserve distances/bearings from the origin. */
   projection?: 'regional' | 'azimuthal'
   /** Native text scale used only to reserve label space; font sizes stay unscaled. */
   labelScale?: number
