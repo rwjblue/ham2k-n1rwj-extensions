@@ -1357,3 +1357,27 @@ scales, label collisions, and packaged RBN/PSK tests also pass.
 lint, strict typechecks, builds, and official packaging. Only RBN and PSK
 Reporter consume this shared map; CWT and CQ WW upstream synchronization
 does not apply.
+
+## Release 0.5.1 publication — 2026-09-26
+
+Published [v0.5.1](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.5.1)
+from signed commit `88363a3cff77113963f3fb35ca8b57047ece5f1f` at 23:32 UTC.
+GitHub verifies all four release commits' signatures. The final local
+`mise run release v0.5.1 --dry-run` passed **671 tests across 54 files**,
+lint, strict typechecks, official builds, packaging, and checksum validation.
+The [check workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/36279721009)
+and [release workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/36279749519)
+succeeded. GitHub contains all six bundles and six checksum files, and its
+release tag resolves to the tested signed commit. The published body matches
+`docs/releases/v0.5.1.md`.
+
+`mise run release:catalog v0.5.1 --dry-run` downloaded and verified all
+published assets and selected only PSK Reporter and RBN. The catalog job
+confirmed both uploads to `stable` as **approved** at 23:32 UTC; all four
+unchanged contest extensions were skipped. The changed reception workspace
+has only RBN and PSK Reporter consumers. Synchronized version bumps introduce
+no contest behavior changes and require no CWT/CQ WW upstream changes.
+
+Published artifact verification does not extend the native Polo UI/lifecycle
+verification above. Publication records and versioning are personal repository
+packaging, exempt from upstream runtime synchronization.

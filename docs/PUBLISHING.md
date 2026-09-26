@@ -8,20 +8,24 @@ each submission before operators can install it from the catalog.
 
 ## Current release status
 
-[v0.5.0](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.5.0)
-was published from signed commit `f0bcef322306c7b7d37422e25f17145ffbf05ef6`
-on September 26, 2026 at 20:50 UTC. All six extension bundles and their
+[v0.5.1](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.5.1)
+was published from signed commit `88363a3cff77113963f3fb35ca8b57047ece5f1f`
+on September 26, 2026 at 23:32 UTC. All six extension bundles and their
 six checksum files are available on GitHub. The
-[GitHub upload job succeeded](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/36270914995/job/108484568716),
-and downloaded assets passed `mise run release:catalog v0.5.0 --dry-run`.
+[GitHub upload job succeeded](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/36279749519/job/108509200255),
+and downloaded assets passed `mise run release:catalog v0.5.1 --dry-run`.
 
-The [catalog job succeeded](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/36270914995/job/108484637517):
-CQ WW, CWT, MST, and SST uploads to `stable` returned **approved** at 20:51 UTC
-on September 26, with extension-specific release notes. Unchanged PSK Reporter
-and RBN were skipped. The CQ WW catalog name explicitly says **temporary**,
-and its description and release notes link the upstream PR and retirement
-condition. See the [release notes](releases/v0.5.0.md) and
-[published artifact verification](VERIFICATION.md#release-050-publication--2026-09-26).
+The [catalog job succeeded](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/36279749519/job/108509270006):
+PSK Reporter and RBN uploads to `stable` returned **approved** at 23:32 UTC
+on September 26. CQ WW, CWT, MST, and SST were skipped because their behavior
+is unchanged. See the [release notes](releases/v0.5.1.md) and
+[published artifact verification](VERIFICATION.md#release-051-publication--2026-09-26).
+
+The previous [v0.5.0 release](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.5.0)
+published CQ WW, CWT, MST, and SST to the catalog. The CQ WW catalog name
+explicitly says **temporary**, and its description and release notes link the
+upstream PR and retirement condition. Its unchanged bundle is also archived
+in v0.5.1 at the synchronized version.
 
 Earlier v0.2.1, v0.3.0, and v0.3.1 runs failed with HTTP 403 from a Cloudflare
 challenge. The v0.3.2 retry and v0.3.3/v0.3.4 publications succeeded; inspect each earlier
