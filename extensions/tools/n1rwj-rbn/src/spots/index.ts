@@ -168,8 +168,9 @@ export function createRbnSpots(options: Options) {
             fieldType: 'select',
             key: 'spotMode',
             label: 'Spot mode',
-            value: selected.raw.spotMode ?? 'CW',
-            options: spotModes.map((value) => ({ label: value, value })),
+            description: 'Choose All to filter modes on the Spots page.',
+            value: selected.raw.spotMode ?? 'all',
+            options: spotModes.map((value) => ({ label: value === 'all' ? 'All' : value, value })),
           },
           {
             type: 'field',

@@ -18,7 +18,10 @@ Open **Settings → RBN → Spots — Who I might hear** to choose:
   MST, SST, or **All calls** explicitly. A selected missing extension or file
   produces no spots, with an explanation in RBN settings. An explicit choice
   survives restarts; filters do not switch automatically with the operation.
-- **Spot mode:** CW (default), RTTY, FT8, or FT4.
+- **Spot mode:** All (default), CW, RTTY, FT8, or FT4. Choose **All** to
+  receive all four supported modes and use the native Spots page's mode filter.
+  The host currently groups RTTY, FT8, and FT4 under **Digital**; choose RTTY
+  here when you want only RTTY reports. Previously saved mode choices are preserved.
 - **Only these skimmers:** exact IDs, including suffixes such as `KM3T-5`.
 - **Receiver grid regions:** Maidenhead prefixes, for example `FN, EM`, `JO`,
   or `FN42`. These select the receiving skimmers, not the spotted stations.
@@ -48,7 +51,9 @@ continent filter applies to the spotted station, independently of these controls
 
 Reports cover ten minutes on 160, 80, 40, 30, 20, 17, 15, 12, and 10 meters.
 Each refresh is capped at two pages of 1,000 reports per band; a busy band can
-exceed this snapshot, particularly with digital modes. Requests are coalesced
+exceed this snapshot, particularly with digital modes. In **All** mode, the
+report limit is shared across modes, so a busy mode can crowd out others.
+Requests are coalesced
 and cached for at least a minute. Both Spots and My Signal honor shared API
 rate-limit backoff. Offline or failed refreshes use only unexpired cached
 reports, reapplying current filters. Settings apply on the next Spots refresh.

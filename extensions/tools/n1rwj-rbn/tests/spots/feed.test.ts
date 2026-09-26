@@ -89,29 +89,63 @@ function fixture() {
   }
 }
 
-test('fetches at most two pages per band with a fixed time window', async () => {
-  const urls: URL[] = []
-  const feed = createSpotFeed({
-    source: 'n1rwj-rbn',
-    now: () => at,
-    fetch: async (url) => {
-      const parsed = new URL(url)
-      urls.push(parsed)
-      return response(
-        Array.from({ length: 1000 }, () => row()),
-        5000,
-      )
-    },
-  })
-  await feed.get(true)
-  assert.equal(urls.length, 18)
-  assert.deepEqual([...new Set(urls.map((url) => url.searchParams.get('offset')))], ['0', '1000'])
-  for (const url of urls) {
-    assert.equal(url.searchParams.get('since'), String((at - maxAgeMs) / 1000))
-    assert.equal(url.searchParams.get('until'), String(at / 1000))
-    assert.equal(url.searchParams.get('mode'), 'CW')
-  }
-})
+test.each(['CW', 'all'])(
+  'fetches at most two pages per band with a fixed time window (%s)',
+  async (mode) => {
+    const urls: URL[] = []
+    const feed = createSpotFeed({
+      source: 'n1rwj-rbn',
+      mode,
+      now: () => at,
+      fetch: async (url) => {
+        const parsed = new URL(url)
+        urls.push(parsed)
+        return response(
+          Array.from({ length: 1000 }, () => row()),
+          5000,
+        )
+      },
+    })
+    await feed.get(true)
+    assert.equal(urls.length, 18)
+    assert.deepEqual([...new Set(urls.map((url) => url.searchParams.get('offset')))], ['0', '1000'])
+    for (const url of urls) {
+      assert.equal(url.searchParams.get('since'), String((at - maxAgeMs) / 1000))
+      assert.equal(url.searchParams.get('until'), String(at / 1000))
+      assert.equal(url.searchParams.get('mode'), mode === 'all' ? null : mode)
+    }
+  },
+)
+
+test.each([undefined, 'all', 'CW', 'RTTY', 'FT8', 'FT4'])(
+  'returns supported modes with their original mode and band (%s)',
+  async (mode) => {
+    const modes = ['CW', 'RTTY', 'FT8', 'FT4']
+    const urls: URL[] = []
+    const feed = createSpotFeed({
+      source: 'n1rwj-rbn',
+      mode,
+      now: () => at,
+      fetch: async (url) => {
+        urls.push(new URL(url))
+        return response([...modes.map((mode) => row({ mode })), row({ mode: 'SSB' })])
+      },
+    })
+    const reports = await feed.get(true)
+    assert.deepEqual(
+      reports.map((spot) => spot.mode),
+      mode === undefined || mode === 'all' ? modes : [mode],
+    )
+    assert.ok(reports.every((spot) => spot.band === '20m'))
+    for (const url of urls) {
+      assert.equal(url.searchParams.get('mode'), mode === undefined || mode === 'all' ? null : mode)
+    }
+    assert.equal(urls.length, 9)
+    assert.deepEqual(await feed.get(true), reports)
+    assert.deepEqual(await feed.get(false), reports)
+    assert.equal(urls.length, 9)
+  },
+)
 
 test('rate limits pause retries across bands and recover after retryAfter', async () => {
   const f = fixture()

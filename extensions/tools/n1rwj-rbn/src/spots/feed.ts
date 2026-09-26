@@ -20,6 +20,8 @@ export interface FeedOptions {
 /** Bounded HTTPS snapshots fit the hook deadline; no sockets or background timers. */
 export function createSpotFeed(options: FeedOptions) {
   const now = options.now ?? Date.now
+  const mode = options.mode ?? 'all'
+  const modeQuery = mode === 'all' ? '' : `mode=${mode}&`
   let cached: Spot[] = []
   let nextFetchAt = 0
   let failure: unknown
@@ -31,7 +33,7 @@ export function createSpotFeed(options: FeedOptions) {
     const until = Math.floor(at / 1000)
     for (let page = 0; page < maxPages; page++) {
       const response = await options.fetch(
-        `${endpoint}?mode=${options.mode ?? 'CW'}&band=${band}&since=${since}&until=${until}&limit=${pageSize}&offset=${page * pageSize}`,
+        `${endpoint}?${modeQuery}band=${band}&since=${since}&until=${until}&limit=${pageSize}&offset=${page * pageSize}`,
         { timeout: requestTimeoutMs },
       )
       if (response.status === 429) {
@@ -60,7 +62,7 @@ export function createSpotFeed(options: FeedOptions) {
         throw new Error('Vail ReRBN exceeded the requested report limit.')
       reports.push(
         ...parseReports(payload.spots, options.source, at).filter(
-          (spot) => spot.band === band && spot.mode === (options.mode ?? 'CW'),
+          (spot) => spot.band === band && (mode === 'all' || spot.mode === mode),
         ),
       )
       if (

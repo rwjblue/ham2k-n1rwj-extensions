@@ -3,7 +3,7 @@ import { continentCode } from '../data/continents.ts'
 import { isValidReceiver, receiverLocation } from '../data/parser.ts'
 import { type ReceiverSelection, record } from './model.ts'
 
-export const spotModes = ['CW', 'RTTY', 'FT8', 'FT4']
+export const spotModes = ['all', 'CW', 'RTTY', 'FT8', 'FT4']
 export interface SpotPreferences extends ReceiverSelection {
   callFilter?: string
   mode: string
@@ -105,7 +105,7 @@ export function readPreferences(raw: Record<string, unknown>): SpotPreferences {
   const [latitude, longitude] = receiverLocation(raw.spotRadiusGrid)
   return {
     callFilter: typeof raw.spotCallFilter === 'string' ? raw.spotCallFilter : undefined,
-    mode: String(raw.spotMode ?? 'CW'),
+    mode: String(raw.spotMode ?? 'all'),
     skimmers: tokens(String(raw.spotSkimmers ?? '')),
     grids: tokens(String(raw.spotGrids ?? '')),
     continents: [

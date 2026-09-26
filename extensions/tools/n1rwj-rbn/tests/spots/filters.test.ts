@@ -96,12 +96,98 @@ it('batches membership and rejects unknown calls, unavailable and failed provide
 })
 
 it('validates saved and edited filters without silently treating bad settings as all receivers', () => {
+  expect(validation('spotMode', 'all')).toBeNull()
+  expect(readPreferences({ spotMode: 'all' }).mode).toBe('all')
+  expect(readPreferences({}).mode).toBe('all')
+  expect(readPreferences({ spotMode: 'CW' }).mode).toBe('CW')
+  expect(() => readPreferences({ spotMode: 'SSB' })).toThrow()
   expect(validation('spotSkimmers', 'km3t-5, K1TTT')).toBeNull()
   expect(validation('spotGrids', 'FN, em, JO31')).toBeNull()
   expect(validation('spotGrids', 'USA')).toBeTruthy()
   expect(validation('spotSkimmers', '***')).toBeTruthy()
   expect(() => readPreferences({ spotGrids: 'USA' })).toThrow()
   expect(readPreferences({ spotGrids: 'fn, FN' }).grids).toEqual(['FN'])
+})
+
+it('persists All mode, returns distinct modes for the same station, and switches back to RTTY', async () => {
+  let preferences = { spotCallFilter: 'none', spotMode: 'CW' }
+  const createRuntime = () =>
+    createRbnSpots({
+      now: () => now,
+      lookup: () => undefined,
+      getSettings: async () => ({ extensions: { 'extension_n1rwj-rbn': preferences } }),
+      setSettings: async (values) => {
+        preferences = { ...preferences, ...values }
+      },
+      bridge: { invokeAll: async () => [], invokeOne: async () => [] },
+      fetch: async () => ({
+        status: 200,
+        body: JSON.stringify({ spots: ['CW', 'RTTY', 'FT8', 'FT4'].map((mode) => row({ mode })) }),
+      }),
+    })
+  const runtime = createRuntime()
+  const definition = await runtime.settings.getDefinition(
+    { panelKey: 'n1rwj-rbn' },
+    { online: true },
+  )
+  expect(definition.elements).toContainEqual(
+    expect.objectContaining({
+      key: 'spotMode',
+      options: expect.arrayContaining([{ label: 'All', value: 'all' }]),
+    }),
+  )
+  expect((await runtime.spots.fetchSpots({}, { online: true })).map((spot) => spot.mode)).toEqual([
+    'CW',
+  ])
+  await runtime.settings.onChangeField(
+    { panelKey: 'n1rwj-rbn', fieldKey: 'spotMode', value: 'all', state: {} },
+    { online: true },
+  )
+  expect(preferences.spotMode).toBe('all')
+  for (const instance of [runtime, createRuntime()]) {
+    expect(
+      (await instance.spots.fetchSpots({}, { online: true })).map((spot) => spot.mode),
+    ).toEqual(['CW', 'RTTY', 'FT8', 'FT4'])
+  }
+  await runtime.settings.onChangeField(
+    { panelKey: 'n1rwj-rbn', fieldKey: 'spotMode', value: 'RTTY', state: {} },
+    { online: true },
+  )
+  expect((await runtime.spots.fetchSpots({}, { online: true })).map((spot) => spot.mode)).toEqual([
+    'RTTY',
+  ])
+})
+
+it('defaults the settings field and spot feed to All when no mode was saved', async () => {
+  const runtime = createRbnSpots({
+    now: () => now,
+    lookup: () => undefined,
+    getSettings: async () => ({
+      extensions: { 'extension_n1rwj-rbn': { spotCallFilter: 'none' } },
+    }),
+    setSettings: async () => {},
+    bridge: { invokeAll: async () => [], invokeOne: async () => [] },
+    fetch: async (url) => {
+      expect(new URL(url).searchParams.has('mode')).toBe(false)
+      return {
+        status: 200,
+        body: JSON.stringify({ spots: ['CW', 'RTTY', 'FT8', 'FT4'].map((mode) => row({ mode })) }),
+      }
+    },
+  })
+  const definition = await runtime.settings.getDefinition(
+    { panelKey: 'n1rwj-rbn' },
+    { online: true },
+  )
+  expect(definition.elements).toContainEqual(
+    expect.objectContaining({ key: 'spotMode', value: 'all' }),
+  )
+  expect((await runtime.spots.fetchSpots({}, { online: true })).map((spot) => spot.mode)).toEqual([
+    'CW',
+    'RTTY',
+    'FT8',
+    'FT4',
+  ])
 })
 
 it('shares rate limits and simultaneous requests between panel and spot callers', async () => {
