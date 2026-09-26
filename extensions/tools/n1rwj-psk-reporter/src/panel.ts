@@ -21,6 +21,11 @@ import { renderReceptionScene } from '../../../../packages/reception/src/ui/scen
 import type { UiModel } from '../../../../packages/reception/src/ui/types.ts'
 import type { LiveReception, LiveSnapshot } from './live.ts'
 
+function realNowMillis(args: PanelRenderArgs): number | undefined {
+  const value = args.clock?.realNowMillis
+  return typeof value === 'number' && Number.isFinite(value) ? value : undefined
+}
+
 export const configFields: SettingsField[] = [
   {
     type: 'field',
@@ -87,7 +92,16 @@ export function pskPanelModel(
       ...(live.history?.warning ? [live.history.warning] : []),
       ...(live.cacheWarning ? [live.cacheWarning] : []),
     ],
-    note: 'Live reports while this panel is visible, with recent history requested on opening and after collection gaps. Automatic history requests are shared across panels and spaced at least five minutes apart. Force reload bypasses that cooldown. History is best effort and may be delayed or incomplete. Who I hear requires uploads from your receiving software. Reports are observations, not confirmed contacts.',
+    note: [
+      live.history?.pending
+        ? 'Recent history is loading. Cached and live reports remain available. The panel checks for completion every second while visible; repeated refresh clicks share the pending request.'
+        : live.history?.lastRequestDurationMs !== undefined
+          ? `Last history request duration: ${live.history.lastRequestDurationUpperBound ? 'up to ' : ''}${live.history.lastRequestDurationMs} ms.`
+          : '',
+      'Live reports while this panel is visible, with recent history requested on opening and after collection gaps. Automatic history requests are shared across panels and spaced at least five minutes apart. Force reload bypasses that cooldown. History is best effort and may be delayed or incomplete. Who I hear requires uploads from your receiving software. Reports are observations, not confirmed contacts.',
+    ]
+      .filter(Boolean)
+      .join(' '),
     locationLabel: origin
       ? `Map origin ${origin.label}`
       : 'Set an operation location or map origin grid.',
@@ -142,7 +156,8 @@ export function createPskPanel(live: LiveReception): PanelHook {
         }
       const state = stateFor(args, String(args.config.receptionDirection ?? 'outgoing'))
       const config = readConfig(args.config)
-      const now = args.clock?.realNowMillis ?? Date.now()
+      const realTime = realNowMillis(args)
+      const now = realTime ?? Date.now()
       await live.restore()
       const snapshot = live.snapshot(
         args.instanceId,
@@ -150,6 +165,7 @@ export function createPskPanel(live: LiveReception): PanelHook {
         args.config.receptionDirection === 'incoming' ? 'incoming' : 'outgoing',
         config.windowMinutes,
         ctx.online !== false,
+        realTime,
       )
       const model = pskPanelModel(args, snapshot.reports, now, snapshot)
       const rendered = renderReceptionScene(model, args.environment, {
@@ -158,17 +174,23 @@ export function createPskPanel(live: LiveReception): PanelHook {
         band: config.band,
       })
       state.selection = rendered.selection
-      return { kind: 'svgScene', title: model.title, scene: rendered.scene }
+      return {
+        kind: 'svgScene',
+        title: model.title,
+        scene: rendered.scene,
+        ...(snapshot.history?.pending ? { triggers: ['tick:1'] } : {}),
+      }
     },
     async onEvent(args, ctx) {
       if (args.instanceId && args.environment && args.event.phase === 'activate') {
         if (args.event.controlId === 'refresh' && args.event.action === 'refresh:reports') {
           const config = readConfig(args.config)
-          await live.forceHistory(
+          live.forceHistory(
             watchedCall(args.operation, config.watchCall),
             args.config.receptionDirection === 'incoming' ? 'incoming' : 'outgoing',
             config.windowMinutes,
             ctx.online !== false,
+            realNowMillis(args),
           )
           return { values: {} }
         }

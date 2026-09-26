@@ -14,7 +14,10 @@ export interface HistoryHost extends PersistentStorage {
 
 export interface HistoryStatus {
   message: string
+  pending: boolean
   warning?: string
+  lastRequestDurationMs?: number
+  lastRequestDurationUpperBound?: boolean
 }
 
 interface Entry {
@@ -27,10 +30,35 @@ interface Entry {
   needed: boolean
   loading: boolean
   warning?: string
+  lastRequestDurationMs?: number
+  lastRequestDurationUpperBound?: boolean
+  pendingTiming?: { startedAt: number; sampleRevision: number }
 }
 
 const cooldown = 5 * 60_000
 const storageKey = 'psk-history-next-request-v1'
+
+function requestWarning(error: unknown): string {
+  const message =
+    typeof error === 'string'
+      ? error
+      : error &&
+          typeof error === 'object' &&
+          'message' in error &&
+          typeof error.message === 'string'
+        ? error.message
+        : ''
+  const detail = message
+    // biome-ignore lint/suspicious/noControlCharactersInRegex: Strip control characters from host-provided diagnostics.
+    .replace(/[\u0000-\u001f\u007f]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+  const bounded = detail.length > 300 ? `${detail.slice(0, 300)}…` : detail
+  const timeout = /\b(?:TimeoutException|TimeoutError|ETIMEDOUT|timed?\s*out|timeout)\b/i.test(
+    detail,
+  )
+  return `History unavailable: ${timeout ? 'request timed out in the host' : 'host request failed'}; no HTTP response was available.${bounded ? ` Host detail: ${bounded}` : ' The host supplied no error detail.'}`
+}
 
 export function historyUrl(call: string, direction: ReceptionDirection, window: number): string {
   const field = direction === 'outgoing' ? 'senderCallsign' : 'receiverCallsign'
@@ -49,13 +77,31 @@ export function createHistoryClient(
   let failures = 0
   let restored: Promise<void> | undefined
   let running: { entry: Entry; promise: Promise<void> } | undefined
+  const queued = new Map<Entry, Promise<void>>()
   let online = true
   let generation = 0
+  let realClockSample: number | undefined
+  let sampleRevision = 0
   const keyFor = (call: string, direction: ReceptionDirection) =>
     `${direction}:${normalizeCall(call)}`
   const current = (entry: Entry) => entries.get(keyFor(entry.call, entry.direction)) === entry
   const active = (entry: Entry) =>
     current(entry) && now() - entry.seen <= 30_000 && watched(entry.call, entry.direction)
+
+  function sampleClock(realNowMillis: number | undefined) {
+    if (typeof realNowMillis !== 'number' || !Number.isFinite(realNowMillis)) return
+    realClockSample = Math.max(realClockSample ?? realNowMillis, realNowMillis)
+    sampleRevision++
+    for (const entry of entries.values()) {
+      const timing = entry.pendingTiming
+      if (!timing || timing.sampleRevision === sampleRevision) continue
+      // The sandbox's Date may follow a virtual clock. A fresh host sample
+      // bounds completion through this render without extrapolating from Date.
+      entry.lastRequestDurationMs = Math.max(0, realClockSample - timing.startedAt)
+      entry.lastRequestDurationUpperBound = true
+      delete entry.pendingTiming
+    }
+  }
 
   async function restore() {
     restored ??= host.read(storageKey).then((value) => {
@@ -68,8 +114,21 @@ export function createHistoryClient(
   function request(entry: Entry, force: boolean): Promise<void> {
     if (running) {
       if (!force || running.entry === entry) return running.promise
-      // A different panel's forced reload waits for the in-flight request.
-      return running.promise.then(() => request(entry, true))
+      const previous = queued.get(entry)
+      if (previous) return previous
+      // Coalesce a different panel's forced reload while it waits its turn.
+      const epoch = generation
+      const pending = running.promise
+        .then(() => {
+          queued.delete(entry)
+          if (epoch !== generation || !online || !active(entry)) return
+          return request(entry, true)
+        })
+        .finally(() => {
+          if (queued.get(entry) === pending) queued.delete(entry)
+        })
+      queued.set(entry, pending)
+      return pending
     }
     const epoch = generation
     const task = (async () => {
@@ -85,10 +144,27 @@ export function createHistoryClient(
         // Save before sending, so a reload cannot reset the automatic budget.
         await host.write(storageKey, nextRequest)
         if (epoch !== generation || !online || !active(entry)) return
-        const response = await host.fetch(historyUrl(entry.call, entry.direction, window), {
-          timeout: 7000,
-          headers: { Accept: 'application/xml, text/xml' },
-        })
+        const sampled = realClockSample !== undefined
+        const requestStarted = realClockSample ?? now()
+        let response: FetchResponse
+        try {
+          response = await host.fetch(historyUrl(entry.call, entry.direction, window), {
+            headers: { Accept: 'application/xml, text/xml' },
+          })
+        } catch (error) {
+          throw new Error(requestWarning(error))
+        } finally {
+          if (epoch === generation && current(entry)) {
+            if (sampled) {
+              delete entry.lastRequestDurationMs
+              delete entry.lastRequestDurationUpperBound
+              entry.pendingTiming = { startedAt: requestStarted, sampleRevision }
+            } else {
+              entry.lastRequestDurationMs = Math.max(0, now() - requestStarted)
+              entry.lastRequestDurationUpperBound = false
+            }
+          }
+        }
         if (epoch !== generation || !online || !active(entry)) return
         if (response.status !== 200)
           throw new Error(`History unavailable: HTTP ${response.status}.`)
@@ -146,9 +222,11 @@ export function createHistoryClient(
     window: number,
     connected: boolean,
     isOnline: boolean,
+    realNowMillis?: number,
   ): HistoryStatus {
+    sampleClock(realNowMillis)
     online = isOnline
-    if (!pskTopic(call, direction)) return { message: '' }
+    if (!pskTopic(call, direction)) return { message: '', pending: false }
     const time = now()
     const key = keyFor(call, direction)
     for (const [id, entry] of entries) if (time - entry.seen > 60 * 60_000) entries.delete(id)
@@ -181,30 +259,43 @@ export function createHistoryClient(
       entry.seen = time
       entry.connected = connected
     }
-    if (online && !running && time >= nextRequest) {
+    if (online && !running && !queued.size && time >= nextRequest) {
       const pending = [...entries.values()].find(
         (candidate) => candidate.needed && active(candidate),
       )
       if (pending) void request(pending, false)
     }
-    const message =
-      entry.loading || running?.entry === entry
-        ? 'Loading recent reports'
-        : entry.needed
-          ? !online
-            ? 'History paused while offline'
-            : entry.warning
-              ? 'History unavailable'
-              : 'Collection gap · history queued'
+    const pending = entry.loading || running?.entry === entry || queued.has(entry)
+    const message = pending
+      ? 'Loading recent reports'
+      : entry.needed
+        ? !online
+          ? 'History paused while offline'
           : entry.warning
-            ? 'History may be incomplete'
-            : 'Recent history loaded'
-    return { message, warning: entry.warning }
+            ? 'History unavailable'
+            : 'Collection gap · history queued'
+        : entry.warning
+          ? 'History may be incomplete'
+          : 'Recent history loaded'
+    return {
+      message,
+      pending,
+      warning: pending ? undefined : entry.warning,
+      lastRequestDurationMs: pending ? undefined : entry.lastRequestDurationMs,
+      lastRequestDurationUpperBound: pending ? undefined : entry.lastRequestDurationUpperBound,
+    }
   }
 
   return {
     observe,
-    async force(call: string, direction: ReceptionDirection, window: number, isOnline: boolean) {
+    async force(
+      call: string,
+      direction: ReceptionDirection,
+      window: number,
+      isOnline: boolean,
+      realNowMillis?: number,
+    ) {
+      sampleClock(realNowMillis)
       online = isOnline
       if (!online || !pskTopic(call, direction)) return
       const entry = entries.get(keyFor(call, direction))
@@ -219,6 +310,7 @@ export function createHistoryClient(
     stop() {
       generation++
       entries.clear()
+      queued.clear()
       online = false
     },
   }

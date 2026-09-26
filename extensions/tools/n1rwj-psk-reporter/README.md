@@ -87,9 +87,12 @@ pending; the installed app was still build 170 at promotion time.
   Restart restores the full hour with original timestamps and exact callsigns;
   the newest reports win if live delivery overlaps restoration. An abrupt close
   can lose reports since the last checkpoint. Storage failures are shown in the panel.
-- Panels render at most on the host's five-second tick cadence plus operation or
-  UI events. Connection status is separate from report age; connecting is not
-  presented as live reception. No per-report render or whole-log query occurs.
+- Panels normally render on the host's five-second tick cadence plus operation
+  or UI events. Pending history requests add one-second render ticks so their
+  results appear promptly. The first render observing completion removes that
+  fast tick and returns to five seconds, which also services MQTT heartbeats and
+  subscription leases. Connection status is separate from report age; connecting
+  is not presented as live reception. No per-report render or whole-log query occurs.
 - Recent history uses PSK Reporter's documented XML query API on startup,
   after a collection gap, and when a larger report window needs older data.
   It requests the configured 15/30/60-minute window across all bands, with a
@@ -99,16 +102,25 @@ pending; the installed app was still build 170 at promotion time.
 - Automatic HTTP requests share one queue and are spaced at least five minutes
   apart across all placements. The cooldown persists across extension reloads.
   Failures increase the delay up to an hour. Hidden or replaced subscriptions
-  do not start queued work or ingest late responses. Requests time out after
-  seven seconds and never block automatic panel rendering or MQTT delivery.
+  do not start queued work or ingest late responses. Requests use the host's
+  timeout without an extension override; the inspected host allows 15 seconds
+  for headers, then 30 seconds for the body. Rendering returns cached/live
+  reports while HTTP runs independently, so neither automatic history nor manual
+  reload blocks panel rendering or MQTT delivery.
 - The **Force reload** arrow explicitly bypasses the local history cooldown,
   including failure backoff, but still obeys offline state and serializes requests.
-  Repeated clicks for the same in-flight request share its result. It does not
+  The action returns immediately; repeated clicks for the same pending request
+  share its result, including a forced reload queued behind another callsign.
+  It does not
   bypass server limits or browser challenges. Use it sparingly: the provider
   recommends no more than one retrieval every five minutes.
 - Connection and history status are displayed separately. Challenges, HTTP
   errors, unsupported XML, response limits and cache capacity are reported;
   unsuccessful backfill never clears live reports or claims complete coverage.
+  Details include the last history request duration. With real host clock samples,
+  this is labeled as an upper bound through the render that observes completion;
+  hiding the panel can extend that bound. Waiting for completion does not trigger
+  another HTTP request on each one-second tick.
 
 ## Visibility and remaining native tests
 

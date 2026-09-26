@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
+import { setImmediate as settleHostCalls } from 'node:timers/promises'
 import { createContext, runInContext } from 'node:vm'
 import type { ExtensionDefinition, JSONValue, PanelHook } from '@ham2k/extension-sdk'
 import { environment } from '../../packages/reception/tests/environment.ts'
@@ -152,8 +153,11 @@ export async function verifyPskBundle(path: string, manifest: Manifest) {
     },
     { online: true },
   )
+  // The event returns before HTTP; settle the fixture host outside the timerless VM.
+  await settleHostCalls()
   const fetched = calls.find((call) => call.method === 'fetch')
   assert.ok(fetched)
+  assert.equal(fetched.params.timeout, undefined)
   assert.ok(
     String(fetched.params.url).startsWith(
       'https://retrieve.pskreporter.info/query?senderCallsign=N1RWJ',

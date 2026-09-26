@@ -14,10 +14,12 @@ const flush = async () => {
 }
 function deferred<T>() {
   let resolve!: (value: T) => void
-  const promise = new Promise<T>((done) => {
+  let reject!: (reason: unknown) => void
+  const promise = new Promise<T>((done, fail) => {
     resolve = done
+    reject = fail
   })
-  return { promise, resolve }
+  return { promise, resolve, reject }
 }
 
 function setup(storage = new Map<string, JSONValue>()) {
@@ -100,6 +102,9 @@ describe('shared backfill scheduling', () => {
     expect(s.host.fetch.mock.calls[0][0]).toContain(
       'senderCallsign=N1RWJ&flowStartSeconds=-900&rptlimit=1000',
     )
+    expect(s.host.fetch.mock.calls[0][1]).toEqual({
+      headers: { Accept: 'application/xml, text/xml' },
+    })
     expect(s.store.snapshot(initial, 15).reports).toHaveLength(1)
     expect(s.store.snapshot(initial, 15).reports[0].snrDb).toBe(-25)
     for (let i = 0; i < 100; i++) {
@@ -157,6 +162,135 @@ describe('shared backfill scheduling', () => {
     await Promise.all([first, duplicate, other])
     expect(s.host.fetch).toHaveBeenCalledTimes(2)
     expect(s.host.fetch.mock.calls[1][0]).toContain('senderCallsign=W1AW')
+  })
+  it('keeps a slow request pending across visible ticks and measures its completed duration', async () => {
+    const s = setup()
+    const response = deferred<FetchResponse>()
+    s.host.fetch.mockReturnValueOnce(response.promise)
+    expect(s.observe()).toMatchObject({ message: 'Loading recent reports', pending: true })
+    await flush()
+    for (let second = 1; second <= 45; second++) {
+      s.advance(1000)
+      expect(s.observe()).toMatchObject({ pending: true, lastRequestDurationMs: undefined })
+      await flush()
+    }
+    expect(s.host.fetch).toHaveBeenCalledTimes(1)
+    response.resolve({ status: 200, body: xml() })
+    await flush()
+    expect(s.observe()).toMatchObject({
+      message: 'Recent history loaded',
+      pending: false,
+      lastRequestDurationMs: 45_000,
+      lastRequestDurationUpperBound: false,
+    })
+    expect(s.ingest).toHaveBeenCalledTimes(1)
+  })
+  it('measures duration through the next real-clock sample without extrapolating from the virtual clock', async () => {
+    const s = setup()
+    const response = deferred<FetchResponse>()
+    const realStart = initial + 24 * 60 * 60_000
+    s.host.fetch.mockReturnValueOnce(response.promise)
+    const observe = (realNowMillis?: number) =>
+      s.client.observe('N1RWJ', 'outgoing', 15, true, true, realNowMillis)
+    expect(observe(realStart).pending).toBe(true)
+    await flush()
+    expect(observe(realStart + 2000).pending).toBe(true)
+    response.resolve({ status: 200, body: xml() })
+    await flush()
+    // Date is deliberately frozen here. Only a fresh host sample can bound
+    // a request that began with a supplied real clock.
+    expect(observe()).toMatchObject({ pending: false, lastRequestDurationMs: undefined })
+    expect(observe(realStart + 3000)).toMatchObject({
+      pending: false,
+      lastRequestDurationMs: 3000,
+      lastRequestDurationUpperBound: true,
+    })
+    s.advance(15_000)
+    expect(observe(realStart + 4000).lastRequestDurationMs).toBe(3000)
+  })
+  it('marks queued forced reloads pending and coalesces each callsign through a shared queue', async () => {
+    const s = setup()
+    const responses = [
+      deferred<FetchResponse>(),
+      deferred<FetchResponse>(),
+      deferred<FetchResponse>(),
+    ]
+    for (const response of responses) s.host.fetch.mockReturnValueOnce(response.promise)
+    s.observe()
+    expect(s.observe('W1AW').pending).toBe(false)
+    expect(s.observe('W2AA').pending).toBe(false)
+    await flush()
+    const first = s.client.force('W1AW', 'outgoing', 15, true)
+    const duplicate = s.client.force('W1AW', 'outgoing', 15, true)
+    const next = s.client.force('W2AA', 'outgoing', 15, true)
+    const nextDuplicate = s.client.force('W2AA', 'outgoing', 15, true)
+    expect(s.observe('W1AW').pending).toBe(true)
+    expect(s.observe('W2AA').pending).toBe(true)
+    expect(s.host.fetch).toHaveBeenCalledTimes(1)
+    responses[0].resolve({ status: 200, body: xml() })
+    await flush()
+    expect(s.host.fetch).toHaveBeenCalledTimes(2)
+    expect(s.host.fetch.mock.calls[1][0]).toContain('senderCallsign=W1AW')
+    expect(s.observe('W2AA').pending).toBe(true)
+    const during = s.client.force('W1AW', 'outgoing', 15, true)
+    responses[1].resolve({ status: 200, body: xml() })
+    await flush()
+    expect(s.host.fetch).toHaveBeenCalledTimes(3)
+    expect(s.host.fetch.mock.calls[2][0]).toContain('senderCallsign=W2AA')
+    responses[2].resolve({ status: 200, body: xml() })
+    await Promise.all([first, duplicate, next, nextDuplicate, during])
+    expect(s.observe('W1AW').pending).toBe(false)
+    expect(s.observe('W2AA').pending).toBe(false)
+    expect(s.host.fetch).toHaveBeenCalledTimes(3)
+  })
+  it('does not start a queued forced reload after it becomes hidden, offline, or stopped', async () => {
+    for (const action of ['hidden', 'offline', 'stop']) {
+      const s = setup()
+      const response = deferred<FetchResponse>()
+      s.host.fetch.mockReturnValueOnce(response.promise)
+      s.observe()
+      s.observe('W1AW')
+      await flush()
+      const forced = s.client.force('W1AW', 'outgoing', 15, true)
+      if (action === 'hidden') s.advance(31_000)
+      if (action === 'offline') s.observe('W1AW', 15, false, false)
+      if (action === 'stop') s.client.stop()
+      response.resolve({ status: 200, body: xml() })
+      await forced
+      expect(s.host.fetch).toHaveBeenCalledTimes(1)
+    }
+  })
+  it('reports a bounded host timeout diagnostic and suppresses it while retrying', async () => {
+    const s = setup()
+    const response = deferred<FetchResponse>()
+    s.host.fetch.mockReturnValueOnce(response.promise)
+    s.observe()
+    await flush()
+    s.advance(16_000)
+    response.reject({ message: `TimeoutException\n${'unavailable '.repeat(100)}` })
+    await flush()
+    const failed = s.observe()
+    expect(failed).toMatchObject({
+      pending: false,
+      lastRequestDurationMs: 16_000,
+      lastRequestDurationUpperBound: false,
+    })
+    expect(failed.warning).toContain('request timed out in the host; no HTTP response')
+    expect(failed.warning).toContain('Host detail: TimeoutException unavailable')
+    expect(failed.warning).not.toContain('\n')
+    expect(failed.warning?.length).toBeLessThan(450)
+    const retried = deferred<FetchResponse>()
+    s.host.fetch.mockReturnValueOnce(retried.promise)
+    const force = s.client.force('N1RWJ', 'outgoing', 15, true)
+    expect(s.observe()).toMatchObject({
+      pending: true,
+      warning: undefined,
+      lastRequestDurationMs: undefined,
+    })
+    await flush()
+    retried.resolve({ status: 200, body: xml() })
+    await force
+    expect(s.observe()).toMatchObject({ pending: false, warning: undefined })
   })
   it('filters exact calls, direction, stale/future reports and retains unlocated stations', async () => {
     const s = setup()

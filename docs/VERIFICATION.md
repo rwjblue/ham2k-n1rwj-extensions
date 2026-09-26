@@ -1279,3 +1279,31 @@ and a deferred host fetch to verify rendering returns before HTTP completes.
 lint, strict typechecks, builds, and official packaging. These checks do not
 constitute a native Ham2K UI/lifecycle test. RBN-only code, tests, and
 documentation do not affect upstream CWT or CQ WW behavior.
+
+## PSK Reporter background history — 2026-09-26
+
+PSK Reporter now returns from manual reload without awaiting HTTP, matching
+its existing automatic history behavior. Pending requests and forced requests
+queued behind another callsign add `tick:1`; completion removes that trigger.
+The regular `tick:5` remains because it services MQTT heartbeats and the
+30-second subscription leases. Repeated force clicks share one pending request.
+
+History fetches retain their XML Accept header but no longer supply the
+seven-second timeout override. The host owns header/body timeouts. Cached and
+live reports remain visible while history loads, and MQTT delivery continues
+independently. Global serialization, durable five-minute automatic cooldown,
+failure backoff, and offline/visibility/generation checks remain in place.
+
+Details show request duration, with real host clock samples producing an upper
+bound through the next observing render. History timing does not replace the
+MQTT/lease clock. Host timeout diagnostics are bounded and preserved; pending
+requests suppress the prior history warning until the new attempt completes.
+
+Source and timerless packaged-bundle tests cover deferred automatic/manual
+fetches, result/failure display, deduplication, live delivery during history
+loading, timeout omission, and removal of the extra render trigger. These are
+not native Ham2K UI/lifecycle tests. PSK-only runtime changes and supporting
+verification are exempt from upstream CWT/CQ WW synchronization.
+
+`mise run format` and `mise run check` passed **662 tests across 53 files**,
+lint, strict source/test/tooling typechecks, builds, and official packaging.

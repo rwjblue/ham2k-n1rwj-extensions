@@ -89,6 +89,7 @@ export function createLiveReception(
       direction: ReceptionDirection,
       windowMinutes: number,
       online: boolean,
+      realNowMillis?: number,
     ): LiveSnapshot {
       prune()
       leases.delete(instance)
@@ -107,6 +108,7 @@ export function createLiveReception(
         windowMinutes,
         !error && client.status().state === 'live',
         online,
+        realNowMillis,
       )
       const stored = {
         ...store.snapshot(now(), windowMinutes),
@@ -133,8 +135,16 @@ export function createLiveReception(
         }
       return { ...stored, ...client.status() }
     },
-    forceHistory: (call: string, direction: ReceptionDirection, window: number, online: boolean) =>
-      history?.force(call, direction, window, online) ?? Promise.resolve(),
+    forceHistory(
+      call: string,
+      direction: ReceptionDirection,
+      window: number,
+      online: boolean,
+      realNowMillis?: number,
+    ): void {
+      // HTTP completion updates the shared store/status independently of the event.
+      void history?.force(call, direction, window, online, realNowMillis)
+    },
     stop: () => {
       cache?.stop()
       history?.stop()
