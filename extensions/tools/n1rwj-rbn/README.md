@@ -179,9 +179,14 @@ attribution and warnings. Long details are paginated too.
 
 ## Refreshes and interpreting reports
 
-While visible, the panel requests a scheduled render every 60 seconds and
-automatically checks Vail ReRBN at most once per minute for each
-callsign/report-window combination.
+While visible, the panel normally requests a scheduled render every 60 seconds
+and automatically checks Vail ReRBN at most once per minute for each
+callsign/report-window combination. Rendering starts a due request and returns
+cached reports immediately, or a checking status when there is no saved result.
+While that request is pending, the panel adds one-second render ticks. These
+read the shared cache without starting another request. The first render after
+completion shows the result and removes the fast tick, restoring the normal
+60-second cadence.
 Multiple panels watching the same query share results. Switching away does not
 clear that cache: returning less than 60 seconds after the last request reuses
 the reports. The cooldown starts at the request, not at the last tab visit.
@@ -190,8 +195,9 @@ Changing the callsign or report window can request a different snapshot immediat
 Use **↻** beside the Details button to check manually without waiting for the
 next automatic refresh. It bypasses the local cooldown immediately. Concurrent
 requests for the same query share one request, including repeated refresh taps.
-The host disables scene buttons while the refresh action is pending. Refreshing
-preserves your view, band, sort, and page, and the icon uses the existing status
+The refresh action returns while the request continues, so panel controls remain
+usable during the fetch. Refreshing preserves your view, band, sort, and page,
+and the icon uses the existing status
 row without taking space from the map. Offline state and server rate-limit
 backoff still apply.
 
@@ -201,12 +207,26 @@ invalid responses, and host-reported offline state. When the host rejects a
 request without an HTTP response, its error message is shown (bounded to 300
 characters); the extension does not assume that every failure is a connection
 problem. Details show the last request attempt separately from the last
-successful check, explain when a local cooldown sends no new request, and give
+successful check, include the last completed request's duration, explain when
+a local cooldown sends no new request, and give
 whether manual refresh is available and the earliest automatic retry time. Automatic checks still depend
 on the host rendering the visible panel. Rate-limit backoff is shared with
 other My Signal panels and RBN Spots; it is separate from the normal local
 refresh cooldown. A timeout or missing host error detail cannot establish
 whether the server throttled the request.
+
+Request duration is an upper bound measured through the next render that
+observes completion. The host supplies real-time samples during renders;
+the sandbox's own clock can follow developer time travel. Normally the next
+one-second tick supplies that sample, but hiding the panel can extend the bound.
+
+My Signal supplies no request timeout override. The host owns the network
+deadline; the inspected host allows 15 seconds for headers and then 30 seconds
+for the body. HTTP runs independently of the five-second render/event deadline.
+The SDK has no delay primitive for a timed race, so rendering does not wait for
+HTTP. Per-render `triggers: ['tick:1']` uses the host's wall-clock-aligned ticks;
+it is not a one-shot timer or a request to fetch once a second. The SDK still
+has no panel-refresh push API.
 
 Ham2K suppresses repeat renders behind another dock tab and while the app is
 hidden or paused; the extension has no independent polling timer. A panel that

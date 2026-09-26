@@ -121,6 +121,15 @@ function event(controlId: string, action: string, extra: Partial<PanelRenderArgs
     event: { controlId, action, phase: 'activate' as const, sequence: 1 },
   }
 }
+function deferred<T>() {
+  let resolve!: (value: T) => void
+  let reject!: (reason: unknown) => void
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise
+    reject = rejectPromise
+  })
+  return { promise, resolve, reject }
+}
 
 describe('RBN native panel integration', () => {
   it('puts the failure and attempt/retry times on the first phone details page without duplicating the error', async () => {
@@ -133,8 +142,11 @@ describe('RBN native panel integration', () => {
     }
     await panel.render(phoneArgs, { online: true })
     await panel.onEvent?.(event('details', 'details:toggle', phoneArgs), { online: true })
+    // Observe completion before checking the following render's cooldown details.
+    await panel.render(phoneArgs, { online: true })
     const result = sceneText(await panel.render(phoneArgs, { online: true })).replace(/\s+/g, ' ')
     expect(result).toContain('request timed out')
+    expect(result).not.toContain('request budget')
     expect(result).toContain('Host detail: TimeoutException: Future not completed')
     expect(result).toContain('Last request attempt: 14:00:00 UTC')
     expect(result).toContain('Last successful check: never')
@@ -228,6 +240,72 @@ describe('RBN native panel integration', () => {
       on: ['operation', 'tick:60'],
     })
   })
+  it('renders immediately while the first request runs, then returns to the normal cadence', async () => {
+    let clock = now
+    const request = deferred<{ status: number; body: string }>()
+    const fetch = vi.fn(() => request.promise)
+    const client = createRbnClient({ fetch, now: () => clock })
+    const panel = createRbnPanel({ client, now: () => clock, settings: async () => ({}) })
+    const pending = await panel.render(args, { online: true })
+    expect(pending.triggers).toEqual(['tick:1'])
+    expect(sceneText(pending)).toContain('Checking Vail ReRBN…')
+    expect(sceneText(pending)).not.toContain('unavailable')
+    clock += 1_000
+    expect((await panel.render(args, { online: true })).triggers).toEqual(['tick:1'])
+    expect(fetch).toHaveBeenCalledTimes(1)
+
+    clock += 5_250
+    const finished = client.getSnapshot({ call: 'K8BTU', windowMinutes: 15 })
+    request.resolve({
+      status: 200,
+      body: JSON.stringify(
+        payload({
+          spots: [
+            spotPayload({ callsign: 'K8BTU', timestamp: new Date(now - 60_000).toISOString() }),
+          ],
+        }),
+      ),
+    })
+    await finished
+    const ready = await panel.render(args, { online: true })
+    expect(ready.triggers).toBeUndefined()
+    expect(sceneText(ready)).toContain('Recent reports')
+    expect(sceneText(ready)).toContain('W3LPL')
+    expect(fetch).toHaveBeenCalledTimes(1)
+    await panel.onEvent?.(event('details', 'details:toggle'), { online: true })
+    expect(sceneText(await panel.render(args, { online: true }))).toContain(
+      'Last request duration: 6250 ms.',
+    )
+  })
+  it('shows a pending refresh and request duration without presenting pending work as a failure', () => {
+    const refreshing: RbnSnapshot = {
+      ...snapshot,
+      refresh: { state: 'pending', manualAtMs: null, automaticAtMs: null },
+      lastRequestDurationMs: 217,
+    }
+    const pending = panelModel(args, refreshing, now)
+    expect(pending.status).toBe('Cached · refreshing')
+    expect(pending.statusKind).toBe('cached')
+    expect(pending.note).toContain('A Vail ReRBN request is in progress.')
+    expect(pending.note).toContain('Refresh reuses this request')
+    expect(pending.note).not.toContain('Manual refresh is available')
+    expect(pending.note).not.toContain('Last request duration')
+    expect(pending.warnings?.join(' ')).not.toContain('request')
+    expect(panelModel(args, { ...snapshot, lastRequestDurationMs: 217 }, now).note).toContain(
+      'Last request duration: 217 ms.',
+    )
+    expect(
+      panelModel(
+        args,
+        {
+          ...snapshot,
+          lastRequestDurationMs: 1000,
+          lastRequestDurationUpperBound: true,
+        },
+        now,
+      ).note,
+    ).toContain('Last request duration: up to 1000 ms.')
+  })
   it('reuses reports on reveal until 60 seconds since the last request, even across placements', async () => {
     const fetch = vi.fn(async () => ({
       status: 200,
@@ -239,7 +317,7 @@ describe('RBN native panel integration', () => {
         }),
       ),
     }))
-    const client = createRbnClient({ fetch })
+    const client = createRbnClient({ fetch, now: () => now })
     const makePanel = () => createRbnPanel({ client, settings: async () => ({}) })
     let panel = makePanel()
     const renderAt = (elapsed: number, reason: string, extra: Partial<PanelRenderArgs> = {}) =>
@@ -253,7 +331,9 @@ describe('RBN native panel integration', () => {
         },
         { online: true },
       )
-    const initial = await renderAt(0, 'initial')
+    await renderAt(0, 'initial')
+    await client.getSnapshot({ call: 'K8BTU', windowMinutes: 15 }, { realNowMillis: now })
+    const initial = await renderAt(0, 'tick')
     expect(sceneText(initial)).toContain('Recent reports')
     expect(sceneText(initial)).toContain('W3LPL')
     expect(fetch).toHaveBeenCalledTimes(1)
@@ -263,7 +343,7 @@ describe('RBN native panel integration', () => {
     panel = makePanel()
     expect(await renderAt(59_999, 'initial', { instanceId: 'another-placement' })).toEqual(initial)
     expect(fetch).toHaveBeenCalledTimes(1)
-    expect(sceneText(await renderAt(60_000, 'visible'))).toContain('Recent reports')
+    await renderAt(60_000, 'visible')
     expect(fetch).toHaveBeenCalledTimes(2)
     await renderAt(60_001, 'tick')
     expect(fetch).toHaveBeenCalledTimes(2)
@@ -333,42 +413,70 @@ describe('RBN native panel integration', () => {
     await panel.render({ ...args, clock: clockAt(60_001) }, { online: true })
     expect(fetch).toHaveBeenCalledTimes(3)
   })
-  it('awaits manual refresh so host buttons stay disabled and preserves display choices', async () => {
-    const { panel, getSnapshot } = setup()
+  it('returns from manual refresh while HTTP is pending, reuses it, and preserves display choices on failure', async () => {
+    let clock = now
+    const request = deferred<{ status: number; body: string }>()
+    const fetch = vi
+      .fn()
+      .mockResolvedValueOnce({
+        status: 200,
+        body: JSON.stringify(
+          payload({
+            spots: [
+              spotPayload({
+                callsign: 'K8BTU',
+                timestamp: new Date(now - 60_000).toISOString(),
+                frequency: 7034,
+              }),
+            ],
+          }),
+        ),
+      })
+      .mockImplementation(() => request.promise)
+    const client = createRbnClient({ fetch, now: () => clock })
+    await client.getSnapshot({ call: 'K8BTU', windowMinutes: 15 })
+    const getSnapshot = vi.spyOn(client, 'getSnapshot')
+    const panel = createRbnPanel({ client, now: () => clock, settings: async () => ({}) })
     const configured = { ...args, config: { ...args.config, view: 'list', band: '40m' } }
     await panel.render(configured, { online: true })
     await panel.onEvent?.(event('sort', 'sort:call', configured), { online: true })
-    const before = await panel.render(configured, { online: true })
-    let finish!: (value: RbnSnapshot) => void
-    getSnapshot.mockImplementationOnce(
-      () =>
-        new Promise<RbnSnapshot>((resolve) => {
-          finish = resolve
-        }),
-    )
-    let settled = false
-    const refresh = panel
-      .onEvent?.(event('refresh', 'refresh:reports', configured), { online: true })
-      .then(() => {
-        settled = true
-      })
-    await Promise.resolve()
-    expect(settled).toBe(false)
+    clock += 1
+    await panel.onEvent?.(event('refresh', 'refresh:reports', configured), { online: true })
     expect(getSnapshot).toHaveBeenLastCalledWith(
       { call: 'K8BTU', windowMinutes: 15 },
-      { force: true, online: true },
+      { force: true, online: true, waitForRequest: false },
     )
-    finish(snapshot)
-    await refresh
-    expect(settled).toBe(true)
-    expect(await panel.render(configured, { online: true })).toEqual(before)
+    const pending = await panel.render(configured, { online: true })
+    expect(pending.triggers).toEqual(['tick:1'])
+    expect(sceneText(pending)).toContain('Cached · refreshing')
+    expect(sceneText(pending)).toContain('W3LPL')
+    expect(sceneText(pending)).toContain('Sort: Receiver ▾')
+    await panel.onEvent?.(event('refresh', 'refresh:reports', configured), { online: true })
+    await panel.render(configured, { online: true })
+    expect(fetch).toHaveBeenCalledTimes(2)
+
+    clock += 15_000
+    const finished = client.getSnapshot({ call: 'K8BTU', windowMinutes: 15 })
+    request.reject(new Error('TimeoutException after 0:00:15: Future not completed'))
+    await finished
+    const failed = await panel.render(configured, { online: true })
+    expect(failed.triggers).toBeUndefined()
+    expect(sceneText(failed)).toContain('Cached · request timed out')
+    expect(sceneText(failed)).toContain('W3LPL')
+    expect(sceneText(failed)).toContain('Sort: Receiver ▾')
+    expect(fetch).toHaveBeenCalledTimes(2)
+    await panel.onEvent?.(event('details', 'details:toggle', configured), { online: true })
+    const details = sceneText(await panel.render(configured, { online: true }))
+    expect(details).toContain('Last request duration: 15000 ms.')
+    expect(details).toContain('Host detail: TimeoutException')
   })
   it('keeps manual refresh offline and rate-limit protections across callsigns', async () => {
     const fetch = vi
       .fn()
       .mockResolvedValueOnce({ status: 429, body: JSON.stringify({ error: { retryAfter: 120 } }) })
       .mockResolvedValue({ status: 200, body: JSON.stringify(payload({ spots: [], total: 0 })) })
-    const panel = createRbnPanel({ client: createRbnClient({ fetch }), settings: async () => ({}) })
+    const client = createRbnClient({ fetch })
+    const panel = createRbnPanel({ client, settings: async () => ({}) })
     const refreshAt = (elapsed: number, online = true) =>
       panel.onEvent?.(
         event('refresh', 'refresh:reports', {
@@ -380,11 +488,14 @@ describe('RBN native panel integration', () => {
     await refreshAt(0, false)
     expect(fetch).not.toHaveBeenCalled()
     await refreshAt(0)
+    const query = { call: 'K8BTU', windowMinutes: 30 }
+    await client.getSnapshot(query, { realNowMillis: now })
+    await client.getSnapshot(query, { realNowMillis: now })
     expect(fetch).toHaveBeenCalledTimes(1)
     await refreshAt(60_000)
-    await refreshAt(122_999)
+    await refreshAt(119_999)
     expect(fetch).toHaveBeenCalledTimes(1)
-    await refreshAt(123_000)
+    await refreshAt(120_000)
     expect(fetch).toHaveBeenCalledTimes(2)
     expect(fetch.mock.calls[1][0]).toContain('call=N1RWJ&since=')
   })
@@ -396,7 +507,7 @@ describe('RBN native panel integration', () => {
     )
     expect(getSnapshot).toHaveBeenCalledWith(
       { call: 'K8BTU', windowMinutes: 15 },
-      { online: false, realNowMillis: now + 60000 },
+      { online: false, realNowMillis: now + 60000, waitForRequest: false },
     )
     expect(sceneText(result)).toContain('2 min')
     expect(sceneText(result)).toContain('Cached')
@@ -453,9 +564,15 @@ describe('RBN native panel integration', () => {
     expect(model.warnings?.join(' ')).toContain('500-report limit')
     const { panel, getSnapshot } = setup()
     expect((await panel.render(home, { online: true })).kind).toBe('svgScene')
-    expect(getSnapshot).toHaveBeenCalledWith({ call: 'K8BTU', windowMinutes: 15 }, { online: true })
+    expect(getSnapshot).toHaveBeenCalledWith(
+      { call: 'K8BTU', windowMinutes: 15 },
+      { online: true, waitForRequest: false },
+    )
     await panel.render({ ...home, config: {} }, { online: true })
-    expect(getSnapshot).toHaveBeenLastCalledWith({ call: '', windowMinutes: 15 }, { online: true })
+    expect(getSnapshot).toHaveBeenLastCalledWith(
+      { call: '', windowMinutes: 15 },
+      { online: true, waitForRequest: false },
+    )
   })
   it('applies saved view and band together and keeps them across refreshes per placement', async () => {
     const { panel } = setup()

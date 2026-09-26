@@ -75,6 +75,66 @@ it('bypasses a restored cooldown manually and anchors the next automatic request
   expect(s.fetch).toHaveBeenCalledTimes(3)
 })
 
+it.each([4000, 4500, 15_000, 45_000])(
+  'restores reports from a request that took %i milliseconds',
+  async (elapsed) => {
+    const s = setup()
+    s.fetch.mockImplementationOnce(async () => {
+      s.advance(elapsed)
+      return { status: 200, body: JSON.stringify(payload()) }
+    })
+    const first = await s.restart().client.getSnapshot(query)
+    expect(first).toMatchObject({
+      status: 'ready',
+      lastAttemptMs: NOW,
+      lastSuccessMs: NOW + elapsed,
+      lastRequestDurationMs: elapsed,
+    })
+    const restored = await s.restart().client.getSnapshot(query, { online: false })
+    expect(restored).toMatchObject({
+      status: 'stale',
+      lastAttemptMs: NOW,
+      lastSuccessMs: NOW + elapsed,
+      lastRequestDurationMs: elapsed,
+    })
+    expect(restored.reports).toEqual(first.reports)
+    expect(s.fetch).toHaveBeenCalledTimes(1)
+  },
+)
+
+it('saves the result and duration after a background request finishes without another render', async () => {
+  const s = setup()
+  let finish!: () => void
+  let markStarted!: () => void
+  const started = new Promise<void>((resolve) => {
+    markStarted = resolve
+  })
+  const pending = new Promise<void>((resolve) => {
+    finish = resolve
+  })
+  s.fetch.mockImplementationOnce(async () => {
+    markStarted()
+    await pending
+    return { status: 200, body: JSON.stringify(payload()) }
+  })
+  const { client } = s.restart()
+  expect(await client.getSnapshot(query, { waitForRequest: false })).toMatchObject({
+    refresh: { state: 'pending' },
+  })
+  const completion = client.getSnapshot(query)
+  await started
+  s.advance(12_345)
+  finish()
+  const result = await completion
+  expect(await s.restart().client.getSnapshot(query, { online: false })).toMatchObject({
+    reports: result.reports,
+    lastAttemptMs: NOW,
+    lastSuccessMs: NOW + 12_345,
+    lastRequestDurationMs: 12_345,
+  })
+  expect(s.fetch).toHaveBeenCalledTimes(1)
+})
+
 it('persists failed attempt timing without replacing the last successful snapshot', async () => {
   const s = setup()
   const { client } = s.restart()
@@ -178,6 +238,19 @@ it('bounds persisted cache entries and keeps query windows and calls distinct', 
   expect(s.fetch).toHaveBeenCalledTimes(9)
   await s.restart().client.getSnapshot({ ...query, call: 'K8ABC', windowMinutes: 60 })
   expect(s.fetch).toHaveBeenCalledTimes(10)
+})
+
+it.each([
+  { lastAttemptMs: NOW + 1 },
+  { lastAttemptMs: -1 },
+  { lastSuccessMs: NOW + 1 },
+  { lastSuccessMs: -1 },
+])('rejects impossible persisted request timestamps: %j', async (invalid) => {
+  const s = setup()
+  await s.restart().client.getSnapshot(query)
+  const encoded = JSON.parse(String(s.values()[snapshotKey]))
+  Object.assign(encoded.snapshots[0], invalid)
+  expect(decodeSnapshots(JSON.stringify(encoded), NOW).snapshots).toEqual([])
 })
 
 it('retains live results on storage failures and retries reads without overwriting unread data', async () => {

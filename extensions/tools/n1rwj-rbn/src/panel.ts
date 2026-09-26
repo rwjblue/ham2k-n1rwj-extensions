@@ -30,14 +30,19 @@ function refreshDetails(snapshot: RbnSnapshot): string {
   return [
     `Last request attempt: ${snapshot.lastAttemptMs === null ? 'never' : utcLabel(snapshot.lastAttemptMs)}.`,
     `Last successful check: ${snapshot.lastSuccessMs === null ? 'never' : utcLabel(snapshot.lastSuccessMs)}.`,
-    refresh?.state === 'offline'
-      ? 'No request sent: Ham2K reports the device is offline.'
-      : refresh?.state === 'cooldown'
-        ? 'No new request sent: local refresh cooldown; reusing the last result.'
-        : refresh?.state === 'rate-limit'
-          ? 'Requests paused after HTTP 429, shared with other My Signal panels and RBN Spots.'
-          : '',
-    refresh?.manualAtMs != null && refresh.automaticAtMs != null
+    refresh?.state !== 'pending' && snapshot.lastRequestDurationMs !== undefined
+      ? `Last request duration: ${snapshot.lastRequestDurationUpperBound ? 'up to ' : ''}${snapshot.lastRequestDurationMs} ms.`
+      : '',
+    refresh?.state === 'pending'
+      ? 'A Vail ReRBN request is in progress. Cached reports are shown when available. Refresh reuses this request; the panel checks for its result every second while visible.'
+      : refresh?.state === 'offline'
+        ? 'No request sent: Ham2K reports the device is offline.'
+        : refresh?.state === 'cooldown'
+          ? 'No new request sent: local refresh cooldown; reusing the last result.'
+          : refresh?.state === 'rate-limit'
+            ? 'Requests paused after HTTP 429, shared with other My Signal panels and RBN Spots.'
+            : '',
+    refresh?.state !== 'pending' && refresh?.manualAtMs != null && refresh.automaticAtMs != null
       ? `${refresh.state === 'rate-limit' ? `Manual refresh allowed from ${utcLabel(refresh.manualAtMs)}.` : 'Manual refresh is available now and bypasses the local cooldown.'} Automatic check eligible from ${utcLabel(refresh.automaticAtMs)} while visible.`
       : '',
   ]
@@ -52,6 +57,7 @@ export function panelModel(
   settings: Record<string, JSONValue> = {},
 ): UiModel {
   const config = readConfig(args.config)
+  const pending = snapshot.refresh?.state === 'pending'
   const origin = operationOrigin(args.operation, config.gridOverride)
   const reports = latestReports(snapshot.reports)
   const bands = [...new Set([...rbnBands, ...reports.map((report) => report.band), config.band])]
@@ -113,8 +119,11 @@ export function panelModel(
     lastReport: reports.length
       ? ageLabel(Math.max(...reports.map((report) => report.timeMs)), now)
       : undefined,
-    status:
-      snapshot.status === 'ready'
+    status: pending
+      ? snapshot.lastSuccessMs === null
+        ? 'Checking Vail ReRBN…'
+        : 'Cached · refreshing'
+      : snapshot.status === 'ready'
         ? 'Recent reports'
         : snapshot.status === 'empty'
           ? 'No recent reports'
@@ -123,8 +132,11 @@ export function panelModel(
             : snapshot.failureKind
               ? `Vail ReRBN · ${failureLabel}`
               : 'Vail ReRBN unavailable',
-    statusKind:
-      snapshot.status === 'ready'
+    statusKind: pending
+      ? snapshot.lastSuccessMs === null
+        ? 'empty'
+        : 'cached'
+      : snapshot.status === 'ready'
         ? 'live'
         : snapshot.status === 'stale'
           ? 'cached'
@@ -193,6 +205,7 @@ export function createRbnPanel(
           { call, windowMinutes: config.windowMinutes },
           {
             online: ctx.online,
+            waitForRequest: false,
             ...(realTime === undefined ? {} : { realNowMillis: realTime }),
           },
         ),
@@ -223,6 +236,7 @@ export function createRbnPanel(
         kind: 'svgScene',
         title: `My Signal${call ? ` · ${call}` : ''}`,
         scene: rendered.scene,
+        ...(snapshot.refresh?.state === 'pending' ? { triggers: ['tick:1'] } : {}),
       }
     },
     async onEvent(args, ctx) {
@@ -235,8 +249,8 @@ export function createRbnPanel(
       if (action !== `${prefix}:${value}`) return { values: {} }
       if (controlId === 'refresh' && action === 'refresh:reports') {
         const suppliedTime = args.clock?.realNowMillis
-        // Await the request so the host disables buttons while it is pending.
-        // Its post-event render reads this same shared cache, without another fetch.
+        // Start a request without holding the event open. Its post-event render
+        // reads the shared cache and polls the pending result through tick:1.
         await client.getSnapshot(
           {
             call: watchedCall(args.operation, config.watchCall),
@@ -245,6 +259,7 @@ export function createRbnPanel(
           {
             force: true,
             online: ctx.online,
+            waitForRequest: false,
             ...(typeof suppliedTime === 'number' && Number.isFinite(suppliedTime)
               ? { realNowMillis: suppliedTime }
               : {}),

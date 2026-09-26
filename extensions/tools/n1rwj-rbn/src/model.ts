@@ -28,11 +28,17 @@ export interface RbnSnapshot {
   status: 'ready' | 'empty' | 'stale' | 'error'
   lastAttemptMs: number | null
   lastSuccessMs: number | null
+  /** Elapsed request time. With host clock samples, an upper bound through the next render. */
+  lastRequestDurationMs?: number
+  /** True when duration includes the wait until a later render observed completion. */
+  lastRequestDurationUpperBound?: boolean
+  /** Internal persistence marker: completion awaits the next real host clock sample. */
+  pendingRequestTiming?: { startedAtMs: number; succeeded: boolean }
   error: string | null
   failureKind?: RbnFailureKind
   storageWarning?: string
   refresh?: {
-    state: 'attempted' | 'cooldown' | 'rate-limit' | 'offline'
+    state: 'attempted' | 'cooldown' | 'rate-limit' | 'offline' | 'pending'
     manualAtMs: number | null
     automaticAtMs: number | null
   }

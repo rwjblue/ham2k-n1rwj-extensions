@@ -40,6 +40,6 @@ export function requestFailure(error: unknown): RbnRequestError {
   )
   return new RbnRequestError(
     timeout ? 'timeout' : 'request',
-    `Vail ReRBN ${timeout ? 'request timed out (3-second request budget)' : 'request failed'}; no HTTP response was available.${bounded ? ` Host detail: ${bounded}` : ' The host supplied no error detail.'}`,
+    `Vail ReRBN ${timeout ? 'request timed out in the host' : 'request failed'}; no HTTP response was available.${bounded ? ` Host detail: ${bounded}` : ' The host supplied no error detail.'}`,
   )
 }

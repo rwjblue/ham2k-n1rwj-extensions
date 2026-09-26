@@ -1244,3 +1244,38 @@ verification does not extend the native UI or on-air verification above.
 
 Publication tooling and personal release records are exempt from upstream
 CWT/CQ WW runtime synchronization.
+
+## RBN My Signal background requests — 2026-09-26
+
+My Signal starts one shared request per callsign/window and returns cached
+reports while HTTP is pending. A pending scene adds `tick:1`; after completion
+the next render shows the result and removes that trigger, restoring the
+descriptor's `tick:60`. Manual refresh also returns without awaiting HTTP,
+preserves panel controls, and reuses an existing request. Offline checks,
+server rate-limit backoff, and the per-query network cooldown still apply.
+
+The extension supplies no HTTP timeout override. The inspected host has
+separate 15-second header and 30-second body limits. The SDK has no timer/sleep
+primitive, so this implementation returns the cache immediately instead of
+racing a render wait against the fetch. Genuine host timeout diagnostics are
+retained, and longer successful requests survive cache restoration.
+
+Duration uses real host clock samples and is displayed as an upper bound
+through the render that observes completion. Completion and unobserved server
+retry-delay markers survive restart; developer clock jumps or speed changes
+cannot distort the duration or start a retry early. A separate panel's rate
+limit does not stop one-second ticks for a request already in flight.
+
+Two direct HTTP requests at 21:50 UTC for N1RWJ, a 15-minute window, and
+`limit=500` returned HTTP 200 in 0.217 and 0.137 seconds, including connection
+setup and downloading the body. These requests used curl outside the host
+bridge and did not reproduce the reported timeout.
+
+Deterministic tests cover delayed success/failure, deduplication across renders
+and manual refresh, persisted long requests, request duration, retry timing,
+and dynamic-trigger removal. A packaged-bundle test uses a VM without timers
+and a deferred host fetch to verify rendering returns before HTTP completes.
+`mise run format` and `mise run check` passed **652 tests across 53 files**,
+lint, strict typechecks, builds, and official packaging. These checks do not
+constitute a native Ham2K UI/lifecycle test. RBN-only code, tests, and
+documentation do not affect upstream CWT or CQ WW behavior.

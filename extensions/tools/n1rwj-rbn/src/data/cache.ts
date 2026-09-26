@@ -24,8 +24,8 @@ export function readBackoff(value: unknown, now: number): number {
 export function decodeSnapshots(
   value: JSONValue | null,
   now: number,
-): { snapshots: RbnSnapshot[]; rateLimitedUntil: number } {
-  if (value === null) return { snapshots: [], rateLimitedUntil: 0 }
+): { snapshots: RbnSnapshot[]; rateLimitedUntil: number; pendingRetryDelayMs: number } {
+  if (value === null) return { snapshots: [], rateLimitedUntil: 0, pendingRetryDelayMs: 0 }
   if (typeof value !== 'string' || value.length > 2_000_000)
     throw new Error('Invalid saved reports')
   const data = record(JSON.parse(value))
@@ -44,9 +44,7 @@ export function decodeSnapshots(
       saved.windowMinutes > 120 ||
       !timestamp(saved.lastAttemptMs, now) ||
       saved.lastAttemptMs < now - maxAge ||
-      (saved.lastSuccessMs !== null &&
-        (!timestamp(saved.lastSuccessMs, now) ||
-          saved.lastSuccessMs > saved.lastAttemptMs + 3000)) ||
+      (saved.lastSuccessMs !== null && !timestamp(saved.lastSuccessMs, now)) ||
       !Array.isArray(saved.reports) ||
       saved.reports.length > 500
     )
@@ -105,6 +103,7 @@ export function decodeSnapshots(
         report.receiverLongitude = row.receiverLongitude
       }
     }
+    const pendingTiming = record(saved.pendingRequestTiming)
     snapshots.push({
       call,
       windowMinutes: saved.windowMinutes,
@@ -112,33 +111,80 @@ export function decodeSnapshots(
       status: saved.lastSuccessMs === null ? 'error' : 'stale',
       lastAttemptMs: saved.lastAttemptMs,
       lastSuccessMs: saved.lastSuccessMs,
+      ...(typeof saved.lastRequestDurationMs === 'number' &&
+      Number.isSafeInteger(saved.lastRequestDurationMs) &&
+      saved.lastRequestDurationMs >= 0 &&
+      saved.lastRequestDurationMs <= maxAge
+        ? { lastRequestDurationMs: saved.lastRequestDurationMs }
+        : {}),
+      ...(saved.lastRequestDurationUpperBound === true
+        ? { lastRequestDurationUpperBound: true }
+        : {}),
+      ...(pendingTiming &&
+      timestamp(pendingTiming.startedAtMs, now) &&
+      typeof pendingTiming.succeeded === 'boolean'
+        ? {
+            pendingRequestTiming: {
+              startedAtMs: pendingTiming.startedAtMs,
+              succeeded: pendingTiming.succeeded,
+            },
+          }
+        : {}),
       error: null,
       capped: saved.capped === true,
     })
   }
-  return { snapshots, rateLimitedUntil: readBackoff(data.rateLimitedUntil, now) }
+  const pendingRetryDelayMs =
+    typeof data.pendingRetryDelayMs === 'number' &&
+    Number.isSafeInteger(data.pendingRetryDelayMs) &&
+    data.pendingRetryDelayMs > 0 &&
+    data.pendingRetryDelayMs <= 24 * 60 * 60_000
+      ? data.pendingRetryDelayMs
+      : 0
+  return {
+    snapshots,
+    rateLimitedUntil: readBackoff(data.rateLimitedUntil, now),
+    pendingRetryDelayMs,
+  }
 }
 
 export function encodeSnapshots(
   snapshots: RbnSnapshot[],
   rateLimitedUntil: number,
   now: number,
+  pendingRetryDelayMs = 0,
 ): string {
   return JSON.stringify({
     version: 1,
     rateLimitedUntil,
+    pendingRetryDelayMs,
     snapshots: snapshots
       .filter(
         (snapshot) => snapshot.lastAttemptMs !== null && snapshot.lastAttemptMs >= now - maxAge,
       )
       .slice(-8)
-      .map(({ call, windowMinutes, reports, lastAttemptMs, lastSuccessMs, capped }) => ({
-        call,
-        windowMinutes,
-        lastAttemptMs,
-        lastSuccessMs,
-        capped,
-        reports: reports.filter((report) => report.timeMs >= now - windowMinutes * 60_000),
-      })),
+      .map(
+        ({
+          call,
+          windowMinutes,
+          reports,
+          lastAttemptMs,
+          lastSuccessMs,
+          lastRequestDurationMs,
+          lastRequestDurationUpperBound,
+          pendingRequestTiming,
+          capped,
+        }) => ({
+          call,
+          windowMinutes,
+          lastAttemptMs,
+          lastSuccessMs,
+          lastRequestDurationMs,
+          lastRequestDurationUpperBound,
+          pendingRequestTiming,
+          capped,
+          reports: reports.filter((report) => report.timeMs >= now - windowMinutes * 60_000),
+        }),
+      ),
   })
 }

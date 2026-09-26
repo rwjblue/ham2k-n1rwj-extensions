@@ -10,8 +10,6 @@ const endpoint = 'https://vailrerbn.com/api/v1/spots'
 const maxReports = 500
 const maxEntries = 8
 const maxResponseLength = 1_000_000
-// One bounded snapshot request leaves time to render within the host's five-second deadline.
-const requestTimeoutMs = 3000
 const rateLimitMessage = 'Vail ReRBN rate limit reached (HTTP 429). Waiting before retrying.'
 
 export interface RbnQuery {
@@ -27,15 +25,21 @@ export interface RbnClientOptions {
 }
 
 export interface RbnClient {
-  getSnapshot(
-    query: RbnQuery,
-    options?: { force?: boolean; online?: boolean; realNowMillis?: number },
-  ): Promise<RbnSnapshot>
+  getSnapshot(query: RbnQuery, options?: RbnRequestOptions): Promise<RbnSnapshot>
+}
+
+interface RbnRequestOptions {
+  force?: boolean
+  online?: boolean
+  realNowMillis?: number
+  /** Return the current cache while a shared request continues independently. */
+  waitForRequest?: boolean
 }
 
 interface Entry {
   snapshot: RbnSnapshot
   inFlight?: Promise<RbnSnapshot>
+  timingSampleRevision?: number
 }
 
 export function createRbnClient(options: RbnClientOptions): RbnClient {
@@ -43,11 +47,40 @@ export function createRbnClient(options: RbnClientOptions): RbnClient {
   const refreshIntervalMs = Math.max(30_000, options.refreshIntervalMs ?? 60_000)
   const cache = new Map<string, Entry>()
   let rateLimitedUntil = 0
+  let pendingRetryDelayMs = 0
+  let pendingRetrySampleRevision: number | undefined
   let restored = !options.storage
   let restoring: Promise<void> | undefined
   let restoreAfter = 0
   let storageWarning: string | undefined
   let writing = Promise.resolve()
+  let realClockSample: number | undefined
+  let sampleRevision = 0
+  // Date follows the developer's virtual clock and cannot measure real elapsed
+  // time between host samples. Completion timing is finalized by the next sample.
+  const requestNow = () => realClockSample ?? now()
+
+  function finalizeTiming(time: number, newSample: boolean): boolean {
+    if (realClockSample !== undefined && !newSample) return false
+    let changed = false
+    for (const entry of cache.values()) {
+      const timing = entry.snapshot.pendingRequestTiming
+      if (!timing || entry.timingSampleRevision === sampleRevision) continue
+      entry.snapshot.lastRequestDurationMs = Math.max(0, time - timing.startedAtMs)
+      entry.snapshot.lastRequestDurationUpperBound = true
+      if (timing.succeeded) entry.snapshot.lastSuccessMs = time
+      delete entry.snapshot.pendingRequestTiming
+      delete entry.timingSampleRevision
+      changed = true
+    }
+    if (pendingRetryDelayMs > 0 && pendingRetrySampleRevision !== sampleRevision) {
+      rateLimitedUntil = Math.max(rateLimitedUntil, time + pendingRetryDelayMs)
+      pendingRetryDelayMs = 0
+      pendingRetrySampleRevision = undefined
+      changed = true
+    }
+    return changed
+  }
 
   async function restore(time: number) {
     const storage = options.storage
@@ -58,6 +91,7 @@ export function createRbnClient(options: RbnClientOptions): RbnClient {
         try {
           const saved = decodeSnapshots(value, time)
           rateLimitedUntil = Math.max(rateLimitedUntil, saved.rateLimitedUntil)
+          pendingRetryDelayMs = Math.max(pendingRetryDelayMs, saved.pendingRetryDelayMs)
           for (const snapshot of saved.snapshots) {
             const key = `${snapshot.call}|${snapshot.windowMinutes}`
             const current = cache.get(key)
@@ -91,6 +125,7 @@ export function createRbnClient(options: RbnClientOptions): RbnClient {
       [...cache.values()].map((entry) => entry.snapshot),
       rateLimitedUntil,
       time,
+      pendingRetryDelayMs,
     )
     writing = writing.then(async () => {
       try {
@@ -104,10 +139,10 @@ export function createRbnClient(options: RbnClientOptions): RbnClient {
     await writing
   }
 
-  async function getJson(url: string, requestNow: () => number) {
+  async function getJson(url: string) {
     let response: FetchResponse
     try {
-      response = await options.fetch(url, { timeout: requestTimeoutMs })
+      response = await options.fetch(url)
     } catch (error) {
       throw requestFailure(error)
     }
@@ -125,9 +160,11 @@ export function createRbnClient(options: RbnClientOptions): RbnClient {
         typeof retryAfter === 'number' && Number.isFinite(retryAfter) && retryAfter > 0
           ? Math.max(30_000, retryAfter * 1000)
           : 60_000
-      // Supplied panel clocks are frozen at render start. Allow the whole request
-      // budget so the response's retryAfter period cannot expire early.
-      rateLimitedUntil = Math.max(rateLimitedUntil, requestNow() + requestTimeoutMs + delay)
+      rateLimitedUntil = Math.max(rateLimitedUntil, requestNow() + delay)
+      if (realClockSample !== undefined) {
+        pendingRetryDelayMs = Math.max(pendingRetryDelayMs, Math.ceil(delay))
+        pendingRetrySampleRevision = sampleRevision
+      }
       throw new RbnRequestError('rate-limit', rateLimitMessage, { retryAtMs: rateLimitedUntil })
     }
     const success = response.status >= 200 && response.status < 300
@@ -148,13 +185,12 @@ export function createRbnClient(options: RbnClientOptions): RbnClient {
     }
   }
 
-  function getReports(query: RbnQuery, requestNow: () => number) {
+  function getReports(query: RbnQuery) {
     const since = Math.floor(requestNow() / 1000) - query.windowMinutes * 60
     // Vail's call search is partial; the parser enforces an exact callsign match.
     // Fetch a fresh, bounded window across modes instead of accumulating a stream.
     return getJson(
       `${endpoint}?call=${encodeURIComponent(query.call)}&since=${since}&limit=${maxReports}`,
-      requestNow,
     )
   }
 
@@ -171,9 +207,9 @@ export function createRbnClient(options: RbnClientOptions): RbnClient {
       storageWarning,
       refresh: {
         state,
-        manualAtMs: state === 'offline' ? null : rateLimitedUntil,
+        manualAtMs: state === 'offline' || state === 'pending' ? null : rateLimitedUntil,
         automaticAtMs:
-          state === 'offline'
+          state === 'offline' || state === 'pending'
             ? null
             : Math.max(rateLimitedUntil, (snapshot.lastAttemptMs ?? 0) + refreshIntervalMs),
       },
@@ -187,6 +223,19 @@ export function createRbnClient(options: RbnClientOptions): RbnClient {
     }
   }
 
+  function pendingSnapshot(entry: Entry): RbnSnapshot {
+    return clip(
+      {
+        ...entry.snapshot,
+        status: entry.snapshot.lastSuccessMs === null ? 'empty' : 'stale',
+        error: null,
+        failureKind: undefined,
+      },
+      requestNow(),
+      'pending',
+    )
+  }
+
   function pruneCache(): void {
     for (const [key, entry] of cache) {
       if (cache.size <= maxEntries) break
@@ -196,13 +245,16 @@ export function createRbnClient(options: RbnClientOptions): RbnClient {
 
   async function getSnapshot(
     query: RbnQuery,
-    requestOptions: { force?: boolean; online?: boolean; realNowMillis?: number } = {},
+    requestOptions: RbnRequestOptions = {},
   ): Promise<RbnSnapshot> {
     // SDK panel clocks supply real epoch milliseconds independently of developer
     // time travel. Older hosts omit this field, so retain the injected fallback.
     const suppliedTime = requestOptions.realNowMillis
-    const requestNow =
-      typeof suppliedTime === 'number' && Number.isFinite(suppliedTime) ? () => suppliedTime : now
+    const newSample = typeof suppliedTime === 'number' && Number.isFinite(suppliedTime)
+    if (newSample) {
+      realClockSample = Math.max(realClockSample ?? suppliedTime, suppliedTime)
+      sampleRevision++
+    }
     const call = normalizeCall(query.call)
     const windowMinutes = Number.isFinite(query.windowMinutes)
       ? Math.min(120, Math.max(5, Math.round(query.windowMinutes)))
@@ -222,7 +274,15 @@ export function createRbnClient(options: RbnClientOptions): RbnClient {
       return { ...initial, error: 'Set a valid station callsign to see RBN reports.' }
     if (options.storage) await restore(time)
     const key = `${call}|${windowMinutes}`
+    const wasAwaitingTiming = cache.get(key)?.snapshot.pendingRequestTiming !== undefined
+    if (finalizeTiming(requestNow(), newSample) && options.storage) await save(requestNow())
     let entry = cache.get(key)
+    // Offline/backoff prevent new requests; neither cancels a request already
+    // running. Keep its pending status so the panel continues its short tick.
+    if (entry?.inFlight)
+      return requestOptions.waitForRequest === false
+        ? pendingSnapshot(entry)
+        : entry.inFlight.then((snapshot) => clip(snapshot, requestNow()))
     if (requestOptions.online === false) {
       const previous = entry?.snapshot ?? initial
       return clip(
@@ -252,7 +312,8 @@ export function createRbnClient(options: RbnClientOptions): RbnClient {
     if (entry) {
       cache.delete(key)
       cache.set(key, entry)
-      if (entry.inFlight) return entry.inFlight.then((snapshot) => clip(snapshot, requestNow()))
+      if (wasAwaitingTiming && !entry.snapshot.pendingRequestTiming && !requestOptions.force)
+        return clip(entry.snapshot, requestNow(), 'attempted')
       if (
         !requestOptions.force &&
         entry.snapshot.lastAttemptMs !== null &&
@@ -277,12 +338,16 @@ export function createRbnClient(options: RbnClientOptions): RbnClient {
     const current = entry
     const previousAttempt = current.snapshot.lastAttemptMs
     current.inFlight = (async () => {
+      let fetchStartedAt: number | undefined
+      let succeeded = false
+      let requestSent = true
       try {
         // Persist the attempt before sending so restarting cannot reset the budget.
         // Keep the old attempt if the shared transport reports no request was sent.
         current.snapshot = { ...current.snapshot, lastAttemptMs: time }
         if (options.storage) await save(time)
-        const response = await getReports(normalized, requestNow)
+        fetchStartedAt = requestNow()
+        const response = await getReports(normalized)
         let result: ReturnType<typeof parseRbnPayload>
         try {
           result = parseRbnPayload(response.payload, call, windowMinutes, requestNow(), maxReports)
@@ -300,8 +365,10 @@ export function createRbnClient(options: RbnClientOptions): RbnClient {
           lastSuccessMs: requestNow(),
           error: null,
         }
+        succeeded = true
       } catch (error) {
         const failure = requestFailure(error)
+        requestSent = failure.requestSent
         if (failure.retryAtMs !== undefined)
           rateLimitedUntil = Math.max(rateLimitedUntil, failure.retryAtMs)
         current.snapshot = {
@@ -312,6 +379,17 @@ export function createRbnClient(options: RbnClientOptions): RbnClient {
           error: failure.message,
         }
       } finally {
+        if (fetchStartedAt !== undefined && requestSent) {
+          if (realClockSample === undefined) {
+            current.snapshot.lastRequestDurationMs = Math.max(0, requestNow() - fetchStartedAt)
+            current.snapshot.lastRequestDurationUpperBound = false
+          } else {
+            delete current.snapshot.lastRequestDurationMs
+            delete current.snapshot.lastRequestDurationUpperBound
+            current.snapshot.pendingRequestTiming = { startedAtMs: fetchStartedAt, succeeded }
+            current.timingSampleRevision = sampleRevision
+          }
+        }
         if (options.storage) await save(requestNow())
         current.inFlight = undefined
         pruneCache()
@@ -319,10 +397,10 @@ export function createRbnClient(options: RbnClientOptions): RbnClient {
       return clip(
         current.snapshot,
         requestNow(),
-        time < rateLimitedUntil ? 'rate-limit' : 'attempted',
+        requestNow() < rateLimitedUntil ? 'rate-limit' : 'attempted',
       )
     })()
-    return current.inFlight
+    return requestOptions.waitForRequest === false ? pendingSnapshot(current) : current.inFlight
   }
 
   return { getSnapshot }

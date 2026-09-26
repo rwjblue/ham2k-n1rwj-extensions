@@ -1,3 +1,4 @@
+import type { FetchResponse } from '@ham2k/extension-sdk'
 import { describe, expect, it, vi } from 'vitest'
 import { createRbnClient } from '../../src/data/client.ts'
 import { createRbnTransport } from '../../src/data/transport.ts'
@@ -9,7 +10,7 @@ const response = (data: unknown, status = 200) => ({ status, body: JSON.stringif
 describe('Vail ReRBN client', () => {
   it.each([
     [
-      new Error('TimeoutException after 0:00:03.000000: Future not completed'),
+      new Error('TimeoutException after 0:00:15.000000: Future not completed'),
       'timeout',
       'TimeoutException',
     ],
@@ -28,6 +29,7 @@ describe('Vail ReRBN client', () => {
     expect(failed).toMatchObject({ failureKind: kind, lastAttemptMs: NOW, lastSuccessMs: null })
     expect(failed.error).toContain(detail)
     expect(failed.error).toContain('no HTTP response was available')
+    expect(failed.error).not.toContain('request budget')
     expect(failed.error).not.toContain('Check your connection')
   })
 
@@ -131,7 +133,6 @@ describe('Vail ReRBN client', () => {
     expect(snapshot.reports.map((report) => report.mode).sort()).toEqual(['FT4', 'FT8'])
     expect(fetch).toHaveBeenCalledExactlyOnceWith(
       `https://vailrerbn.com/api/v1/spots?call=N1RWJ%2FP&since=${NOW / 1000 - 1800}&limit=500`,
-      { timeout: 3000 },
     )
   })
 
@@ -186,6 +187,117 @@ describe('Vail ReRBN client', () => {
     clock += 1
     await client.getSnapshot(query)
     expect(fetch).toHaveBeenCalledTimes(3)
+  })
+
+  it('returns an uncached pending snapshot before HTTP completes and shares the background request', async () => {
+    let clock = NOW
+    let complete!: (result: FetchResponse) => void
+    const fetch = vi.fn(
+      () =>
+        new Promise<FetchResponse>((resolve) => {
+          complete = resolve
+        }),
+    )
+    const client = createRbnClient({ fetch, now: () => clock })
+    const pending = await client.getSnapshot(query, { waitForRequest: false })
+    expect(pending).toMatchObject({
+      reports: [],
+      lastAttemptMs: NOW,
+      lastSuccessMs: null,
+      refresh: { state: 'pending' },
+    })
+    expect(pending.lastRequestDurationMs).toBeUndefined()
+    expect(fetch).toHaveBeenCalledExactlyOnceWith(
+      `https://vailrerbn.com/api/v1/spots?call=N1RWJ&since=${NOW / 1000 - 1800}&limit=500`,
+    )
+    clock += 70_000
+    expect(await client.getSnapshot(query, { force: true, waitForRequest: false })).toMatchObject({
+      refresh: { state: 'pending' },
+      lastAttemptMs: NOW,
+    })
+    expect(fetch).toHaveBeenCalledTimes(1)
+    const settled = client.getSnapshot(query)
+    complete(response(payload()))
+    expect(await settled).toMatchObject({
+      status: 'ready',
+      lastAttemptMs: NOW,
+      lastSuccessMs: clock,
+      lastRequestDurationMs: 70_000,
+    })
+    expect(fetch).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps cached reports visible while refreshing and records a late host timeout', async () => {
+    let clock = NOW
+    let reject!: (reason: Error) => void
+    const fetch = vi
+      .fn<() => Promise<FetchResponse>>()
+      .mockResolvedValueOnce(response(payload()))
+      .mockImplementationOnce(
+        () =>
+          new Promise<FetchResponse>((_resolve, fail) => {
+            reject = fail
+          }),
+      )
+    const client = createRbnClient({ fetch, now: () => clock })
+    const first = await client.getSnapshot(query)
+    clock += 60_000
+    const pending = await client.getSnapshot(query, { waitForRequest: false })
+    expect(pending.reports).toEqual(first.reports)
+    expect(pending).toMatchObject({
+      lastAttemptMs: clock,
+      lastSuccessMs: NOW,
+      refresh: { state: 'pending' },
+    })
+    const settled = client.getSnapshot(query)
+    clock += 15_000
+    reject(new Error('TimeoutException after 0:00:15.000000: Future not completed'))
+    const failed = await settled
+    expect(failed).toMatchObject({
+      status: 'stale',
+      failureKind: 'timeout',
+      lastAttemptMs: NOW + 60_000,
+      lastSuccessMs: NOW,
+      lastRequestDurationMs: 15_000,
+    })
+    expect(failed.reports).toEqual(first.reports)
+    expect(failed.error).not.toContain('request budget')
+    expect(failed.refresh?.state).not.toBe('pending')
+    expect(fetch).toHaveBeenCalledTimes(2)
+  })
+
+  it('measures background completion from the supplied real clock and applies retryAfter then', async () => {
+    let developerTime = NOW + 365 * 24 * 60 * 60_000
+    let complete!: (result: FetchResponse) => void
+    const fetch = vi.fn(
+      () =>
+        new Promise<FetchResponse>((resolve) => {
+          complete = resolve
+        }),
+    )
+    const client = createRbnClient({ fetch, now: () => developerTime })
+    await client.getSnapshot(query, { realNowMillis: NOW, waitForRequest: false })
+    developerTime += 8_000
+    const settled = client.getSnapshot(query, { realNowMillis: NOW + 8_000 })
+    complete(response({ error: { retryAfter: 120 } }, 429))
+    expect((await settled).lastRequestDurationMs).toBeUndefined()
+    expect(await client.getSnapshot(query, { realNowMillis: NOW + 8_000 })).toMatchObject({
+      failureKind: 'rate-limit',
+      lastAttemptMs: NOW,
+      lastRequestDurationMs: 8_000,
+      refresh: {
+        state: 'rate-limit',
+        manualAtMs: NOW + 128_000,
+        automaticAtMs: NOW + 128_000,
+      },
+    })
+    expect(
+      await client.getSnapshot(
+        { ...query, call: 'W1AW' },
+        { force: true, realNowMillis: NOW + 127_999, waitForRequest: false },
+      ),
+    ).toMatchObject({ refresh: { state: 'rate-limit' } })
+    expect(fetch).toHaveBeenCalledTimes(1)
   })
 
   it('keeps cached reports and success time on failure; expires old reports and waits to retry', async () => {
@@ -287,23 +399,26 @@ describe('Vail ReRBN client', () => {
       .mockResolvedValue(response(payload()))
     const client = createRbnClient({ fetch, now: () => NOW + 365 * 24 * 60 * 60_000 })
     await client.getSnapshot(query, { realNowMillis: NOW })
+    await client.getSnapshot(query, { realNowMillis: NOW })
     const limited = await client.getSnapshot(query, { realNowMillis: NOW + 60_000 })
+    // A render observes the completed response and anchors its retry delay.
+    await client.getSnapshot(query, { realNowMillis: NOW + 60_000 })
     expect(limited).toMatchObject({ status: 'stale', lastSuccessMs: NOW })
     expect(limited).toMatchObject({
       failureKind: 'rate-limit',
-      refresh: { manualAtMs: NOW + 183_000, automaticAtMs: NOW + 183_000 },
+      refresh: { manualAtMs: NOW + 180_000, automaticAtMs: NOW + 180_000 },
     })
     expect(limited.error).toContain('rate limit')
     expect(limited.reports).toHaveLength(1)
     for (const call of ['N1RWJ', 'K1ABC']) {
       const waiting = await client.getSnapshot(
         { ...query, call },
-        { force: true, realNowMillis: NOW + 182_999 },
+        { force: true, realNowMillis: NOW + 179_999 },
       )
       expect(waiting.error).toContain('rate limit')
     }
     expect(fetch).toHaveBeenCalledTimes(2)
-    expect(await client.getSnapshot(query, { realNowMillis: NOW + 183_000 })).toMatchObject({
+    expect(await client.getSnapshot(query, { realNowMillis: NOW + 180_000 })).toMatchObject({
       status: 'ready',
     })
     expect(fetch).toHaveBeenCalledTimes(3)
@@ -318,7 +433,7 @@ describe('Vail ReRBN client', () => {
       const fetch = vi.fn(async () => ({ status: 429, body }))
       const client = createRbnClient({ fetch, now: () => clock })
       expect((await client.getSnapshot(query)).error).toContain('rate limit')
-      clock += 62_999
+      clock += 59_999
       await client.getSnapshot({ ...query, call: 'K1ABC' }, { force: true })
       expect(fetch).toHaveBeenCalledTimes(1)
       clock += 1
@@ -337,7 +452,7 @@ describe('Vail ReRBN client', () => {
     expect(first).toEqual(second)
     expect(first).toMatchObject({
       failureKind: 'rate-limit',
-      refresh: { state: 'rate-limit', manualAtMs: NOW + 123_000 },
+      refresh: { state: 'rate-limit', manualAtMs: NOW + 120_000 },
     })
     expect(fetch).toHaveBeenCalledTimes(1)
   })
