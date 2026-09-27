@@ -1,7 +1,7 @@
 // Copyright © 2026 Robert Jackson, N1RWJ
 // SPDX-License-Identifier: MIT
 
-import type { HookContext } from '@ham2k/extension-sdk'
+import type { ActivationApi, HookContext } from '@ham2k/extension-sdk'
 import { type HistoryRecords, matchHistoryCalls } from './history.ts'
 
 /**
@@ -9,7 +9,11 @@ import { type HistoryRecords, matchHistoryCalls } from './history.ts'
  * Remove after host relevance/filter support lands; retain history.ts.
  * See ../README.md for the migration conditions and removal checklist.
  */
-export const callFilterCategory = 'spotCallFilter:v1'
+// New SDKs enumerate native categories. This existing private bridge still
+// routes by its exact string; it is not a new native host capability.
+export const callFilterCategory = 'spotCallFilter:v1' as Parameters<
+  ActivationApi['registerHook']
+>[0]
 export const maxFilterCalls = 2000
 
 export type FilterDescriptor = {
