@@ -1518,3 +1518,25 @@ root dependency changes are shared changes for the next release's notes.
 
 These commits are local. No version bump, push, catalog update or release was
 performed. Existing investigation drafts remain outside the timer commits.
+
+## Release 0.7.0 preparation — 2026-09-27
+
+Reviewed the changes since v0.6.1, including reception info layout, MQTT and
+HTTP scheduling, persistence, visibility cancellation, and SDK compatibility.
+No release-blocking issue was identified. All workspaces and manifests now
+use 0.7.0; the authored release notes select all seven catalog entries because
+the root SDK and extension-tools updates are universal shared changes.
+
+`mise run release:notes v0.7.0`, `mise run format`, and
+`mise run release v0.7.0 --dry-run` passed, including **793 tests across 64 files**,
+lint, strict typechecks, seven ES2020 builds, official packaging, and checksums.
+`mise run verify-host` passed for every extension against the installed kernel,
+including simulated timer wakes. Native UI and app lifecycle testing remain
+outside this verification scope.
+
+The type-only spot-filter adapter matches pushed CWT PR #1 source commit
+`5c261d65bd27e556cf9ebc9a417dea5d646d890d` on `codex/cwt-call-history`.
+Reception runtime changes affect only RBN and PSK Reporter. Personal versioning,
+release notes, and publication records are exempt from upstream synchronization;
+no CQ WW behavior changed. The two existing investigation drafts are excluded
+from the release commit.

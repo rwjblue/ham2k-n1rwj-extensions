@@ -2,7 +2,7 @@
   "key": "n1rwj-wrt",
   "name": "N1RWJ Weekly RTTY Test",
   "shortName": "WRT",
-  "version": "0.6.1",
+  "version": "0.7.0",
   "description": "Weekly RTTY Test with 30-minute sessions, name/QTH exchanges, callsign multipliers and exports.",
   "category": "contest",
   "icon": "clock-fast",
