@@ -21,7 +21,7 @@
 import type { ContestScorer, JSONValue, QsoScoreVerdict, ScoreTally } from '@ham2k/extension-sdk'
 import { annotateCallAgainstCountryFile } from '@ham2k/extension-sdk'
 import { fmtInteger } from '@ham2k/lib-format-tools'
-import { isRtty, qthForCall, qthIsValid, qthMultiplier, RTTY_BANDS } from './rtty.ts'
+import { isRtty, qthForCall, qthIsValid, qthMultiplier, RTTY_BANDS, suggestedQth } from './rtty.ts'
 
 /// CQ WW is an HF contest: the WARC bands are excluded by the rules, not an
 /// oversight.
@@ -34,6 +34,9 @@ export const ZONE_PATTERN = '0?(?:[1-9]|[1-3][0-9]|40)'
 export type CQWWScoresheet = {
   /// call → bands already worked with it (one QSO per band is allowed).
   workedByCall: Record<string, string[]>
+  /// Copied RTTY exchanges inform potential multipliers on other bands.
+  /// Optional so a checkpoint made before this field existed still works.
+  exchangesByCall?: Record<string, { zone: string; qth: string }>
   /// Every `band|Znn` / `band|Cxx` multiplier seen, and the per-band split the
   /// summary breaks out.
   mults: Record<string, number>
@@ -73,12 +76,26 @@ function modeMatches(contestMode: string, qsoMode: string): boolean {
   return qsoMode === contestMode
 }
 
+function multiplierKeys(
+  band: string,
+  zone: string,
+  entity: string | undefined,
+  qth: string,
+): string[] {
+  return [
+    zone ? `${band}|Z${zone}` : '',
+    entity ? `${band}|C${entity}` : '',
+    qth ? `${band}|Q${qth}` : '',
+  ].filter(Boolean)
+}
+
 export const CQWWScorer: ContestScorer<CQWWScoresheet> = {
   startScoresheet({ operation, ref }): CQWWScoresheet {
     const rtty = ref?.mode === 'RTTY'
     const ours = annotateCallAgainstCountryFile(str(operation.stationCall), { wae: rtty })
     return {
       workedByCall: {},
+      exchangesByCall: {},
       mults: {},
       bandMults: {},
       bands: {},
@@ -155,7 +172,28 @@ export const CQWWScorer: ContestScorer<CQWWScoresheet> = {
       base.rtty &&
       (!zone || (!maritime && (!base.ourEntity || !entity || !qthIsValid(qth, entity))))
     ) {
-      return { scoresheet: base, score: { value: 0, alerts: ['missingExchange'] } }
+      // Spots carry no received exchange. Report potential multipliers from
+      // the information available, without crediting points, multipliers or
+      // a worked-call slot. The SDK uses this same verdict for live drafts.
+      // Explicit corrections/clearing win over copied exchanges and hints.
+      const copied = base.exchangesByCall?.[call]
+      const guess = (their.guess as Record<string, JSONValue>) ?? {}
+      const potentialZone =
+        contestRef && 'theirZone' in contestRef
+          ? zone
+          : normalizeZone(
+              copied?.zone ?? (maritime ? undefined : (guess.cqZone ?? theirInfo.cqZone)),
+            )
+      const potentialQth =
+        contestRef && 'theirQth' in contestRef ? qth : (copied?.qth ?? suggestedQth(call, guess))
+      const mults = multiplierKeys(band, potentialZone, entity, qthMultiplier(call, potentialQth))
+      const notices: string[] = []
+      if (mults.some((mult) => base.mults[mult] === undefined)) notices.push('newMult')
+      if (worked.length > 0) notices.push('newBand')
+      return {
+        scoresheet: base,
+        score: { value: 0, band, dupe: false, notices, alerts: ['missingExchange'] },
+      }
     }
 
     // Points are relative to us: our own entity is worth nothing, our own
@@ -178,12 +216,7 @@ export const CQWWScorer: ContestScorer<CQWWScoresheet> = {
     const hadPreviousBand = worked.length > 0
     // Zone and country each multiply, once per band.
     const newMults: string[] = []
-    for (const mult of [
-      zone ? `${band}|Z${zone}` : '',
-      entity ? `${band}|C${entity}` : '',
-      locationMult ? `${band}|Q${locationMult}` : '',
-    ]) {
-      if (!mult) continue
+    for (const mult of multiplierKeys(band, zone, entity, locationMult)) {
       if (base.mults[mult] === undefined) newMults.push(mult)
       base.mults[mult] = (base.mults[mult] ?? 0) + 1
       base.bandMults[band] ??= {}
@@ -192,6 +225,10 @@ export const CQWWScorer: ContestScorer<CQWWScoresheet> = {
 
     if (worked.length > 0) base.workedByCall[call].push(band)
     else base.workedByCall[call] = [band]
+    if (base.rtty) {
+      base.exchangesByCall ??= {}
+      base.exchangesByCall[call] = { zone, qth }
+    }
 
     base.bands[band] = (base.bands[band] ?? 0) + 1
     base.bandPoints[band] = (base.bandPoints[band] ?? 0) + points

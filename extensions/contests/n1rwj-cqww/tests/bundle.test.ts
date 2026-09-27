@@ -62,6 +62,28 @@ test('the temporary bundle registers cqww and scores/exports RTTY without host I
   const scoring = hooks.get('scoring')?.hook as ScoringHook
   const result = await scoring.scoreQsos({ operation, ref, qsos: [qso] }, ctx)
   expect(result.operationSummary.cqww.total).toBe(3)
+  const candidates = await scoring.scoreCandidates?.(
+    {
+      operation,
+      ref,
+      resumeFrom: result.scoresheet,
+      resumeDay: result.scoresheetDay,
+      candidates: [
+        {
+          key: 'new-country',
+          qso: { band: '20m', mode: 'RTTY', their: { call: 'DL1ABC' }, refs: [] },
+        },
+        {
+          key: 'worked',
+          qso: { band: '20m', mode: 'RTTY-USB', their: { call: 'W1AW' }, refs: [] },
+        },
+      ],
+    },
+    ctx,
+  )
+  expect(candidates?.['new-country'].notices).toContain('newMult')
+  expect(candidates?.worked.alerts).toContain('duplicate')
+  expect(result.operationSummary.cqww.total).toBe(3)
   const exporter = hooks.get('export')?.hook as ExportHook
   const file = await exporter.generateExport(
     { operation, qsos: [qso], exportType: 'cqww-cabrillo' },
