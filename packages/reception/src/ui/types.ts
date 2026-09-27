@@ -20,7 +20,16 @@ export type UiSort = 'age' | 'call' | 'snr' | 'distance' | 'frequency' | 'wpm'
 export type UiDirection = 'asc' | 'desc'
 export type UiView = 'both' | 'map' | 'list'
 
+export interface UiDetails {
+  purpose: string
+  status?: string
+  facts: Array<{ label: string; value: string }>
+  activity?: string[]
+  sections: Array<{ title: string; paragraphs: string[] }>
+}
+
 export interface UiModel {
+  details?: UiDetails
   title: string
   presentation?: {
     source: string

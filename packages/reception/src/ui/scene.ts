@@ -7,6 +7,7 @@ import type {
 } from '@ham2k/extension-sdk'
 import { layoutReceptionMap } from '../map/index.ts'
 import { receptionMapTheme } from '../map/theme.ts'
+import { type DetailsTab, layoutReceptionDetails } from './details.ts'
 import type { UiDirection, UiModel, UiReport, UiSort, UiView } from './types.ts'
 
 export interface SceneSelection {
@@ -17,6 +18,7 @@ export interface SceneSelection {
   /** Zero based; clamped whenever the data or available space changes. */
   page: number
   details?: boolean
+  detailsTab?: DetailsTab
 }
 
 export interface SceneResult {
@@ -118,6 +120,7 @@ export function renderReceptionScene(
     muted: color(raw?.onSurfaceVariant, dark ? '#b4c5cd' : '#526876'),
     accent: color(raw?.accent, dark ? '#72ded0' : '#086f63'),
     border: color(raw?.outline, dark ? '#48606a' : '#cbd8df'),
+    warning: color(environment?.colors.error, dark ? '#ffb4ab' : '#ba1a1a'),
   }
   const label = environment?.typography.label ?? fallbackRole(13)
   const body = environment?.typography.body ?? fallbackRole(15)
@@ -136,6 +139,7 @@ export function renderReceptionScene(
     direction: requested.direction ?? model.defaultDirection ?? 'desc',
     page: finite(requested.page) ? Math.max(0, Math.floor(requested.page)) : 0,
     details: requested.details === true,
+    detailsTab: requested.detailsTab ?? 'status',
   }
   const rows = sortedSceneReports(
     model.rows.filter((row) => selection.band === 'all' || row.band === selection.band),
@@ -197,7 +201,12 @@ export function renderReceptionScene(
     x: number,
     y: number,
     bw: number,
-    options: { event?: string; menu?: SvgSceneControl['menu']; label?: string } = {},
+    options: {
+      event?: string
+      menu?: SvgSceneControl['menu']
+      label?: string
+      selected?: boolean
+    } = {},
   ): void {
     if (bw < 44 || y + buttonHeight > bottom) return
     art(
@@ -206,7 +215,7 @@ export function renderReceptionScene(
       y,
       bw,
       buttonHeight,
-      `<rect x=".5" y=".5" width="${bw - 1}" height="${buttonHeight - 1}" rx="8" fill="${colors.card}" stroke="${colors.border}"/>`,
+      `<rect x=".5" y=".5" width="${bw - 1}" height="${buttonHeight - 1}" rx="8" fill="${colors.card}" stroke="${options.selected ? colors.accent : colors.border}" stroke-width="${options.selected ? 2 : 1}"/>${options.selected ? `<path d="M12 ${buttonHeight - 5}H${bw - 12}" stroke="${colors.accent}" stroke-width="3"/>` : ''}`,
     )
     text(
       `${id}-label`,
@@ -260,7 +269,9 @@ export function renderReceptionScene(
   // filter beside refresh/details instead of spending a row on a title.
   text(
     'status',
-    `${testObservation ? 'TEST · ' : ''}${model.status ?? `${stationLabel} reports`}`,
+    selection.details
+      ? 'Report info'
+      : `${testObservation ? 'TEST · ' : ''}${model.status ?? `${stationLabel} reports`}`,
     left,
     y,
     w - 112,
@@ -269,9 +280,11 @@ export function renderReceptionScene(
   )
   text(
     'summary',
-    w >= 600 * (label.scaledFontSize / label.fontSize)
-      ? `${bandLabel} · ${summary}`
-      : `${bandLabel} · ${receivers} ${station}${receivers === 1 ? '' : 's'}`,
+    selection.details
+      ? `${source} · ${model.watchCall || 'No callsign'}`
+      : w >= 600 * (label.scaledFontSize / label.fontSize)
+        ? `${bandLabel} · ${summary}`
+        : `${bandLabel} · ${receivers} ${station}${receivers === 1 ? '' : 's'}`,
     left,
     y + labelLine,
     w - 112,
@@ -290,65 +303,129 @@ export function renderReceptionScene(
     {
       event: 'details:toggle',
       label: selection.details
-        ? 'Close report details'
-        : `Report details, provenance${model.warnings?.length ? ` and ${model.warnings.length} warnings` : ''}`,
+        ? 'Close report info and return to reports'
+        : `Report info${model.warnings?.length ? `, ${model.warnings.length} warnings` : ''}`,
     },
   )
   y += Math.max(labelLine * 2, buttonHeight) + 6
 
   if (selection.details) {
-    const paragraphs = [
-      `${model.watchCall} · ${bandLabel} · ${summary}`,
-      ...(model.warnings ?? []),
-      model.note,
-      model.locationLabel,
-      `Data checked: ${model.fetchedAt ?? 'never'}. Last report: ${model.lastReport ?? 'none'}. Report ages as of ${model.generatedAt ?? 'unknown'}.`,
-      ...(model.presentation?.details ?? []),
-      'Map geography: Natural Earth. Station locations are approximate. No map tiles are downloaded.',
-    ].filter((paragraph): paragraph is string => Boolean(paragraph))
-    const characters = Math.max(12, Math.floor(w / (body.scaledFontSize * 0.58)))
-    const lines: string[] = []
-    for (const paragraph of [...new Set(paragraphs)]) {
-      let current = ''
-      for (const word of paragraph.split(/\s+/)) {
-        if (current && current.length + word.length + 1 > characters) {
-          lines.push(current)
-          current = ''
-        }
-        current = current ? `${current} ${word}` : word
-      }
-      if (current) lines.push(current)
-      lines.push('')
+    // A readable measure on desktop; the same cards reflow to narrow panels.
+    const infoWidth = Math.min(w, 840 * (body.scaledFontSize / body.fontSize))
+    const infoX = left + (w - infoWidth) / 2
+    const tab = selection.detailsTab ?? 'status'
+    const tabWidth = (infoWidth - 8) / 2
+    for (const [index, key] of (['status', 'about'] as const).entries()) {
+      const caption =
+        key === 'status'
+          ? `Status${model.warnings?.length ? ` (${model.warnings.length})` : ''}`
+          : 'About'
+      button(`details-${key}`, caption, infoX + index * (tabWidth + 8), y, tabWidth, {
+        event: `details:${key}`,
+        selected: tab === key,
+        label: `${caption}${tab === key ? ', selected' : ''}`,
+      })
     }
-    result.pageSize = Math.max(
-      1,
-      Math.min(100, Math.floor((bottom - y - buttonHeight - 8) / bodyLine)),
-    )
-    result.pageCount = Math.max(1, Math.ceil(lines.length / result.pageSize))
-    selection.page = Math.min(selection.page, result.pageCount - 1)
-    for (const [index, value] of lines
-      .slice(selection.page * result.pageSize, (selection.page + 1) * result.pageSize)
-      .entries())
-      text(`detail-${index}`, value, left, y + index * bodyLine, w, body)
-    const pagerY = bottom - buttonHeight
-    button('previous', '‹', left, pagerY, 48, {
-      event: selection.page > 0 ? 'page:previous' : undefined,
-      label: 'Previous details page',
-    })
-    button('next', '›', right - 48, pagerY, 48, {
-      event: selection.page + 1 < result.pageCount ? 'page:next' : undefined,
-      label: 'Next details page',
-    })
-    text(
-      'page-count',
-      `Details ${selection.page + 1}/${result.pageCount}`,
-      left + 56,
-      pagerY + (buttonHeight - labelLine) / 2,
-      w - 112,
+    y += buttonHeight + 12
+    // Reserve navigation only when needed. This keeps ordinary status panes
+    // compact without spending a permanent row on a disabled 1/1 pager.
+    let pages = layoutReceptionDetails(
+      model,
+      rows,
+      selection.band,
+      summary,
+      tab,
+      infoWidth,
+      bottom - y,
       label,
-      colors.muted,
-      'center',
+      body,
     )
+    if (pages.length > 1)
+      pages = layoutReceptionDetails(
+        model,
+        rows,
+        selection.band,
+        summary,
+        tab,
+        infoWidth,
+        bottom - y - buttonHeight - 8,
+        label,
+        body,
+      )
+    if (!pages.length) {
+      text('details-compact', 'Enlarge this panel to read report info.', infoX, y, infoWidth)
+      return result
+    }
+    result.pageCount = pages.length
+    result.pageSize = pages[0].reduce((count, card) => count + card.rows.length, 0)
+    selection.page = Math.min(selection.page, pages.length - 1)
+    for (const [index, card] of pages[selection.page].entries()) {
+      const cy = y + card.y
+      art(
+        `info-${index}-background`,
+        infoX,
+        cy,
+        infoWidth,
+        card.height,
+        `<rect x=".5" y=".5" width="${infoWidth - 1}" height="${card.height - 1}" rx="10" fill="${colors.card}"${card.warning ? ` stroke="${colors.warning}"` : ''}/>`,
+      )
+      for (const [lineIndex, caption] of card.title.entries())
+        text(
+          `info-${index}-heading-${lineIndex}`,
+          caption,
+          infoX + 12,
+          cy + 12 + lineIndex * labelLine,
+          infoWidth - 24,
+          label,
+          card.warning ? colors.warning : colors.accent,
+          'start',
+          600,
+        )
+      const factStarts = new Map<number, number>()
+      const readingOrder = card.rows
+        .flatMap((row, rowIndex) => {
+          if (row.factGroup !== undefined && !factStarts.has(row.factGroup))
+            factStarts.set(row.factGroup, row.y)
+          return row.cells.map((cell, cellIndex) => ({
+            ...cell,
+            y: row.y,
+            groupY: row.factGroup === undefined ? row.y : (factStarts.get(row.factGroup) ?? row.y),
+            id: `info-${index}-${rowIndex}-${cellIndex}`,
+          }))
+        })
+        .sort((a, b) => a.groupY - b.groupY || a.x - b.x || a.y - b.y)
+      for (const cell of readingOrder)
+        text(
+          cell.id,
+          cell.text,
+          infoX + 12 + cell.x,
+          cy + cell.y,
+          cell.width,
+          cell.role === 'label' ? label : body,
+          cell.role === 'label' ? colors.muted : colors.text,
+        )
+    }
+    if (pages.length > 1) {
+      const pagerY = bottom - buttonHeight
+      button('previous', '‹', infoX, pagerY, 48, {
+        event: selection.page > 0 ? 'page:previous' : undefined,
+        label: `Previous ${tab} page`,
+      })
+      button('next', '›', infoX + infoWidth - 48, pagerY, 48, {
+        event: selection.page + 1 < pages.length ? 'page:next' : undefined,
+        label: `Next ${tab} page`,
+      })
+      text(
+        'page-count',
+        `${tab === 'status' ? 'Status' : 'About'} · ${selection.page + 1} of ${pages.length}`,
+        infoX + 56,
+        pagerY + (buttonHeight - labelLine) / 2,
+        infoWidth - 112,
+        label,
+        colors.muted,
+        'center',
+      )
+    }
     return result
   }
 

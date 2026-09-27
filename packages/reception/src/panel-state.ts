@@ -6,6 +6,7 @@ export interface PanelState {
   signature: string
   config: PanelConfig
   selection: Partial<SceneSelection>
+  reportPage?: number
 }
 
 /** One store per extension; placements may disappear without a teardown hook. */
@@ -26,6 +27,7 @@ export function createPanelStateStore() {
         if (state.config[field] !== config[field]) delete state.selection[field]
       }
       state.selection.page = 0
+      state.reportPage = 0
       state.config = config
     }
     return state
@@ -64,6 +66,21 @@ export function applySceneEvent(
       ),
     }
   } else if (controlId === 'details' && action === 'details:toggle') {
-    state.selection = { ...state.selection, details: !state.selection.details, page: 0 }
+    const opening = !state.selection.details
+    if (opening) state.reportPage = state.selection.page ?? 0
+    state.selection = {
+      ...state.selection,
+      details: opening,
+      detailsTab: 'status',
+      page: opening ? 0 : (state.reportPage ?? 0),
+    }
+  } else if (
+    state.selection.details &&
+    (value === 'status' || value === 'about') &&
+    controlId === `details-${value}` &&
+    prefix === 'details'
+  ) {
+    if (state.selection.detailsTab !== value)
+      state.selection = { ...state.selection, detailsTab: value, page: 0 }
   }
 }

@@ -121,6 +121,23 @@ function event(controlId: string, action: string, extra: Partial<PanelRenderArgs
     event: { controlId, action, phase: 'activate' as const, sequence: 1 },
   }
 }
+async function detailsText(panel: ReturnType<typeof createRbnPanel>, renderArgs: PanelRenderArgs) {
+  const pages: string[] = []
+  for (let page = 0; page < 30; page++) {
+    const content = await panel.render(renderArgs, { online: true })
+    pages.push(sceneText(content))
+    if (
+      content.kind !== 'svgScene' ||
+      !content.scene.controls?.some(
+        (control) => control.id === 'next' && control.event === 'page:next',
+      )
+    )
+      return pages.join('\n')
+    await panel.onEvent?.(event('next', 'page:next', renderArgs), { online: true })
+  }
+  throw new Error('Status details did not reach their final page')
+}
+
 function deferred<T>() {
   let resolve!: (value: T) => void
   let reject!: (reason: unknown) => void
@@ -132,7 +149,61 @@ function deferred<T>() {
 }
 
 describe('RBN native panel integration', () => {
-  it('puts the failure and attempt/retry times on the first phone details page without duplicating the error', async () => {
+  it('separates snapshot freshness, report interpretation, and request diagnostics', () => {
+    const model = panelModel(args, { ...snapshot, lastRequestDurationMs: 217 }, now)
+    expect(model.details?.facts).toEqual([
+      { label: 'Direction', value: 'Who hears me' },
+      { label: 'Window', value: 'Last 15 minutes' },
+      { label: 'Last successful check', value: '14:00:00 UTC' },
+      { label: 'Source', value: 'RBN via Vail ReRBN' },
+    ])
+    expect(model.lastReport).toBe('1 min ago')
+    expect(model.details?.activity).toEqual(['Last request duration: 217 ms.'])
+    expect(model.warnings).toContain(
+      'TEST OPERATION — observing K8BTU; these reports belong to that station.',
+    )
+    const about = model.details?.sections.flatMap((section) => section.paragraphs).join(' ')
+    expect(about).toContain('Changing the watched callsign does not move the map origin')
+    expect(about).toContain('one receiver, band, and mode')
+    expect(about).toContain('An empty result does not prove')
+    expect(about).toContain('includes time until the next panel render observed completion')
+    expect(about).toContain('A recent check can return older reports or no reports')
+    expect(model.note).toBeUndefined()
+    expect(model.presentation?.details).toBeUndefined()
+  })
+
+  it('keeps a complete failure once and never reports an unsuccessful check as successful', () => {
+    const error = 'Request failed. Host detail: an exact diagnostic; retry later.'
+    const model = panelModel(
+      args,
+      {
+        ...snapshot,
+        status: 'error',
+        reports: [],
+        error,
+        storageWarning: error,
+        lastSuccessMs: null,
+        lastRequestDurationMs: 1000,
+        lastRequestDurationUpperBound: true,
+        refresh: { state: 'rate-limit', manualAtMs: now + 120000, automaticAtMs: now + 120000 },
+      },
+      now,
+    )
+    expect(model.warnings?.filter((warning) => warning === error)).toHaveLength(1)
+    expect(model.fetchedAt).toBeUndefined()
+    expect(model.details?.facts).toContainEqual({
+      label: 'Last successful check',
+      value: 'None yet',
+    })
+    expect(model.details?.activity).toEqual([
+      'Last request attempt: 14:00:00 UTC.',
+      'Last request duration: up to 1000 ms.',
+      'Requests paused after HTTP 429; wait until the retry time below.',
+      'Manual refresh allowed from 14:02:00 UTC. Automatic check eligible from 14:02:00 UTC while visible.',
+    ])
+  })
+
+  it('keeps failure and request diagnostics readable across phone status pages without duplicating the error', async () => {
     const fetch = vi.fn().mockRejectedValue(new Error('TimeoutException: Future not completed'))
     const panel = createRbnPanel({ client: createRbnClient({ fetch }), settings: async () => ({}) })
     const phoneArgs = {
@@ -144,14 +215,14 @@ describe('RBN native panel integration', () => {
     await panel.onEvent?.(event('details', 'details:toggle', phoneArgs), { online: true })
     // Observe completion before checking the following render's cooldown details.
     await panel.render(phoneArgs, { online: true })
-    const result = sceneText(await panel.render(phoneArgs, { online: true })).replace(/\s+/g, ' ')
+    const result = (await detailsText(panel, phoneArgs)).replace(/\s+/g, ' ')
     expect(result).toContain('request timed out')
     expect(result).not.toContain('request budget')
     expect(result).toContain('Host detail: TimeoutException: Future not completed')
     expect(result).toContain('Last request attempt: 14:00:00 UTC')
-    expect(result).toContain('Last successful check: never')
-    expect(result).toContain('No new request sent: local refresh cooldown')
-    expect(result).toContain('Manual refresh is available now and bypasses the local cooldown')
+    expect(result).toContain('None yet')
+    expect(result).toContain('Local refresh cooldown')
+    expect(result).toContain('Manual refresh is available now')
     expect(result).toContain('Automatic check eligible from 14:01:00 UTC')
     expect(result.match(/Host detail:/g)).toHaveLength(1)
     expect(fetch).toHaveBeenCalledTimes(1)
@@ -171,7 +242,7 @@ describe('RBN native panel integration', () => {
       now,
     )
     expect(model.status).toBe(`Cached · ${label}`)
-    expect(model.note).not.toContain('Failure detail.')
+    expect(model.details?.activity?.join(' ')).not.toContain('Failure detail.')
     expect(model.warnings?.join(' ')).toContain('Failure detail.')
   })
   it('keeps My Signal queries, maps, and receiver reports independent of Spots filters', async () => {
@@ -273,9 +344,7 @@ describe('RBN native panel integration', () => {
     expect(sceneText(ready)).toContain('W3LPL')
     expect(fetch).toHaveBeenCalledTimes(1)
     await panel.onEvent?.(event('details', 'details:toggle'), { online: true })
-    expect(sceneText(await panel.render(args, { online: true }))).toContain(
-      'Last request duration: 6250 ms.',
-    )
+    expect(await detailsText(panel, args)).toContain('Last request duration: 6250 ms.')
   })
   it('shows a pending refresh and request duration without presenting pending work as a failure', () => {
     const refreshing: RbnSnapshot = {
@@ -286,14 +355,16 @@ describe('RBN native panel integration', () => {
     const pending = panelModel(args, refreshing, now)
     expect(pending.status).toBe('Cached · refreshing')
     expect(pending.statusKind).toBe('cached')
-    expect(pending.note).toContain('A Vail ReRBN request is in progress.')
-    expect(pending.note).toContain('Refresh reuses this request')
-    expect(pending.note).not.toContain('Manual refresh is available')
-    expect(pending.note).not.toContain('Last request duration')
+    expect(pending.details?.activity?.join(' ')).toContain('Request in progress')
+    expect(pending.details?.activity?.join(' ')).toContain('Refresh reuses this request')
+    expect(pending.details?.activity?.join(' ')).not.toContain('Manual refresh is available')
+    expect(pending.details?.activity?.join(' ')).not.toContain('Last request duration')
     expect(pending.warnings?.join(' ')).not.toContain('request')
-    expect(panelModel(args, { ...snapshot, lastRequestDurationMs: 217 }, now).note).toContain(
-      'Last request duration: 217 ms.',
-    )
+    expect(
+      panelModel(args, { ...snapshot, lastRequestDurationMs: 217 }, now).details?.activity?.join(
+        ' ',
+      ),
+    ).toContain('Last request duration: 217 ms.')
     expect(
       panelModel(
         args,
@@ -303,7 +374,7 @@ describe('RBN native panel integration', () => {
           lastRequestDurationUpperBound: true,
         },
         now,
-      ).note,
+      ).details?.activity?.join(' '),
     ).toContain('Last request duration: up to 1000 ms.')
   })
   it('reuses reports on reveal until 60 seconds since the last request, even across placements', async () => {
@@ -466,7 +537,7 @@ describe('RBN native panel integration', () => {
     expect(sceneText(failed)).toContain('Sort: Receiver ▾')
     expect(fetch).toHaveBeenCalledTimes(2)
     await panel.onEvent?.(event('details', 'details:toggle', configured), { online: true })
-    const details = sceneText(await panel.render(configured, { online: true }))
+    const details = await detailsText(panel, configured)
     expect(details).toContain('Last request duration: 15000 ms.')
     expect(details).toContain('Host detail: TimeoutException')
   })
@@ -517,7 +588,7 @@ describe('RBN native panel integration', () => {
     expect(model.rows[0]).toMatchObject({ call: 'W1NT', snrDb: 0, age: '1 min ago' })
     expect(model.rows[0].distanceKm).toBeGreaterThan(800)
     expect(model.rows[1].distanceKm).toBeUndefined()
-    expect(model.note).toContain('TEST OPERATION — observing K8BTU')
+    expect(model.warnings?.join(' ')).toContain('TEST OPERATION — observing K8BTU')
     expect(model.fetchedAt).toBe('14:00:00 UTC')
     expect(model.mapOptions?.stations).toHaveLength(1)
     expect(model.bands).toEqual([
@@ -547,9 +618,15 @@ describe('RBN native panel integration', () => {
     expect(model.rows.map((row) => row.mode)).toEqual(reports.map((report) => report.mode))
     expect(model.rows.map((row) => row.wpm)).toEqual([20, undefined, undefined, undefined])
     expect(model.mapOptions?.stations).toHaveLength(1)
-    expect(model.note).toContain('CW, RTTY, FT8, and FT4 reports')
-    expect(model.note).toContain('Reverse Beacon Network via Vail ReRBN')
-    expect(model.note).toContain('HamDB registered grids')
+    expect(model.details?.sections.flatMap((section) => section.paragraphs).join(' ')).toContain(
+      'CW, RTTY, FT8, and FT4 reports',
+    )
+    expect(model.details?.sections.flatMap((section) => section.paragraphs).join(' ')).toContain(
+      'Reverse Beacon Network via Vail ReRBN',
+    )
+    expect(model.details?.sections.flatMap((section) => section.paragraphs).join(' ')).toContain(
+      'HamDB registered grids',
+    )
   })
   it('handles Home with no operation, keeps explicit overrides, and exposes error provenance', async () => {
     const home = { ...args, operation: undefined } as unknown as PanelRenderArgs
@@ -728,7 +805,7 @@ describe('RBN native panel integration', () => {
     const ascending = sceneText(await panel.render(listArgs, { online: true }))
     expect(ascending.indexOf('UNKNOWN')).toBeLessThan(ascending.indexOf('W1NT'))
     await panel.onEvent?.(event('details', 'details:toggle', listArgs), { online: true })
-    const details = sceneText(await panel.render(listArgs, { online: true }))
+    const details = await detailsText(panel, listArgs)
     expect(details).toContain('503')
     expect(details).toContain('TEST')
     expect(details).toContain('500-report')

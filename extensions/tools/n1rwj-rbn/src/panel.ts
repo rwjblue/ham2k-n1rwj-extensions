@@ -13,7 +13,7 @@ import type { RbnClient } from './data/client.ts'
 import { rbnClient } from './data/host-client.ts'
 import type { RbnReport, RbnSnapshot } from './model.ts'
 import { latestReports, receiverCoordinates } from './model.ts'
-import { rbnPresentation } from './presentation.ts'
+import { rbnDetailsSections, rbnPresentation } from './presentation.ts'
 import { toReceptionReport } from './reception.ts'
 
 const mapTheme: MapTheme = {
@@ -25,29 +25,36 @@ const mapTheme: MapTheme = {
   accent: '#086f63',
 }
 
-function refreshDetails(snapshot: RbnSnapshot): string {
+function refreshDetails(snapshot: RbnSnapshot): string[] {
   const refresh = snapshot.refresh
+  const needsAttention = Boolean(
+    snapshot.error || (refresh && ['pending', 'offline', 'rate-limit'].includes(refresh.state)),
+  )
   return [
-    `Last request attempt: ${snapshot.lastAttemptMs === null ? 'never' : utcLabel(snapshot.lastAttemptMs)}.`,
-    `Last successful check: ${snapshot.lastSuccessMs === null ? 'never' : utcLabel(snapshot.lastSuccessMs)}.`,
+    needsAttention && snapshot.lastAttemptMs !== null
+      ? `Last request attempt: ${utcLabel(snapshot.lastAttemptMs)}.`
+      : '',
     refresh?.state !== 'pending' && snapshot.lastRequestDurationMs !== undefined
       ? `Last request duration: ${snapshot.lastRequestDurationUpperBound ? 'up to ' : ''}${snapshot.lastRequestDurationMs} ms.`
       : '',
-    refresh?.state === 'pending'
-      ? 'A Vail ReRBN request is in progress. Cached reports are shown when available. Refresh reuses this request; the panel checks for its result every second while visible.'
-      : refresh?.state === 'offline'
-        ? 'No request sent: Ham2K reports the device is offline.'
-        : refresh?.state === 'cooldown'
-          ? 'No new request sent: local refresh cooldown; reusing the last result.'
-          : refresh?.state === 'rate-limit'
-            ? 'Requests paused after HTTP 429, shared with other My Signal panels and RBN Spots.'
-            : '',
-    refresh?.state !== 'pending' && refresh?.manualAtMs != null && refresh.automaticAtMs != null
-      ? `${refresh.state === 'rate-limit' ? `Manual refresh allowed from ${utcLabel(refresh.manualAtMs)}.` : 'Manual refresh is available now and bypasses the local cooldown.'} Automatic check eligible from ${utcLabel(refresh.automaticAtMs)} while visible.`
+    !needsAttention
+      ? ''
+      : refresh?.state === 'pending'
+        ? 'Request in progress; cached reports remain available. Refresh reuses this request.'
+        : refresh?.state === 'offline'
+          ? 'No request sent: Ham2K reports the device is offline. Reconnect to resume checks.'
+          : refresh?.state === 'cooldown'
+            ? 'Local refresh cooldown; reusing the last result.'
+            : refresh?.state === 'rate-limit'
+              ? 'Requests paused after HTTP 429; wait until the retry time below.'
+              : '',
+    needsAttention &&
+    refresh?.state !== 'pending' &&
+    refresh?.manualAtMs != null &&
+    refresh.automaticAtMs != null
+      ? `${refresh.state === 'rate-limit' ? `Manual refresh allowed from ${utcLabel(refresh.manualAtMs)}.` : 'Manual refresh is available now.'} Automatic check eligible from ${utcLabel(refresh.automaticAtMs)} while visible.`
       : '',
-  ]
-    .filter(Boolean)
-    .join(' ')
+  ].filter(Boolean)
 }
 
 export function panelModel(
@@ -73,27 +80,20 @@ export function panelModel(
     .split(/[/,]/)
     .some((part) => part === 'TEST' || part === 'T')
   const warnings = [
-    snapshot.error ? `${snapshot.error} ${refreshDetails(snapshot)}` : '',
-    snapshot.storageWarning ?? '',
-    snapshot.capped ? '500-report limit reached; some reports may be missing.' : '',
-    reports.some((report) => !receiverCoordinates(report))
-      ? 'Unlocated receivers are listed but not mapped.'
-      : '',
-  ].filter(Boolean)
-  const notes = [
-    test
-      ? `TEST OPERATION — observing ${snapshot.call}; these reports belong to that station.`
-      : '',
-    snapshot.error ? '' : refreshDetails(snapshot),
-    `Last ${config.windowMinutes} minutes of CW, RTTY, FT8, and FT4 reports from the Reverse Beacon Network via Vail ReRBN. Automatic checks at most once a minute while this panel is visible. Manual refresh bypasses the local cooldown; offline state and server rate limits still apply.`,
-    'Receiver locations and countries use the cached RBN receiver directory, with HamDB registered grids supplied by Vail ReRBN as a fallback. Distances and bearings are estimates. Refresh the receiver directory in Data Files settings.',
-    snapshot.capped
-      ? 'The Vail ReRBN response reached its 500-report limit; additional reports may be missing.'
-      : '',
-    reports.some((report) => !receiverCoordinates(report))
-      ? 'Receivers without a valid grid remain in the list.'
-      : '',
-  ].filter(Boolean)
+    ...new Set(
+      [
+        snapshot.error ?? '',
+        test
+          ? `TEST OPERATION — observing ${snapshot.call}; these reports belong to that station.`
+          : '',
+        snapshot.storageWarning ?? '',
+        snapshot.capped ? '500-report limit reached; some reports may be missing.' : '',
+        reports.some((report) => !receiverCoordinates(report))
+          ? 'Unlocated receivers are listed but not mapped.'
+          : '',
+      ].filter(Boolean),
+    ),
+  ]
   const themeMode = settings.themeMode
   const failureLabel = snapshot.failureKind
     ? {
@@ -144,7 +144,20 @@ export function panelModel(
     locationLabel: origin
       ? `Map origin ${origin.label} · ${origin.latitude.toFixed(3)}°, ${origin.longitude.toFixed(3)}°`
       : 'Set an operation location or a map origin grid in panel settings.',
-    note: notes.join(' '),
+    details: {
+      purpose: `See where ${snapshot.call || 'the watched station'} is being heard.`,
+      facts: [
+        { label: 'Direction', value: 'Who hears me' },
+        { label: 'Window', value: `Last ${config.windowMinutes} minutes` },
+        {
+          label: 'Last successful check',
+          value: snapshot.lastSuccessMs === null ? 'None yet' : utcLabel(snapshot.lastSuccessMs),
+        },
+        { label: 'Source', value: 'RBN via Vail ReRBN' },
+      ],
+      activity: refreshDetails(snapshot),
+      sections: rbnDetailsSections,
+    },
     warnings,
     bands,
     mapOptions: { ...frameOptions, width: 520, height: 360 },

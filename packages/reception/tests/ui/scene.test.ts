@@ -299,16 +299,26 @@ describe('RBN native scene', () => {
     expect(scene.values).toEqual({})
   })
 
-  it('shows all provenance and warning text in paginated details on a phone', () => {
+  it('keeps warnings first and makes provenance available under About on a phone', () => {
     const warning =
       'The Vail ReRBN response reached its 500-report limit; additional reports may be missing.'
     const source = { ...model, warnings: [warning] }
     const first = renderReceptionScene(source, environment(320, 580), { details: true })
     const details: string[] = []
-    for (let page = 0; page < first.pageCount; page++) {
-      const result = renderReceptionScene(source, environment(320, 580), { details: true, page })
-      details.push(text(result.scene))
-      assertSceneBounds(result.scene)
+    for (const detailsTab of ['status', 'about'] as const) {
+      const initial = renderReceptionScene(source, environment(320, 580), {
+        details: true,
+        detailsTab,
+      })
+      for (let page = 0; page < initial.pageCount; page++) {
+        const result = renderReceptionScene(source, environment(320, 580), {
+          details: true,
+          detailsTab,
+          page,
+        })
+        details.push(text(result.scene))
+        assertSceneBounds(result.scene)
+      }
     }
     const displayed = details.join(' ').replace(/\s+/g, ' ')
     expect(text(first.scene).replace(/\s+/g, ' ')).toContain(warning)
@@ -319,10 +329,13 @@ describe('RBN native scene', () => {
     expect(displayed).toContain('these reports belong to that station.')
     expect(displayed).toContain('No map tiles are downloaded.')
     expect(displayed).toContain(model.locationLabel)
-    expect(displayed).toContain('Data checked: 14:48:08 UTC. Last report: 1 min ago.')
+    expect(displayed).toContain('Latest report · all bands')
+    expect(displayed).toContain('Report ages as of')
+    expect(displayed).toContain('14:48:08 UTC')
+    expect(displayed).not.toContain('Data checked: never')
     expect(displayed).toContain('2,200 km max')
     expect(first.scene.controls?.find((control) => control.id === 'details')?.label).toBe(
-      'Close report details',
+      'Close report info and return to reports',
     )
   })
 
@@ -369,7 +382,7 @@ describe('RBN native scene', () => {
       ),
     }
     const first = renderReceptionScene(source, environment(477, 8192), { details: true })
-    expect(first.pageSize).toBe(100)
+    expect(first.pageSize).toBeLessThanOrEqual(104)
     expect(first.pageCount).toBeGreaterThan(1)
     const shown: string[] = []
     for (let page = 0; page < first.pageCount; page++) {

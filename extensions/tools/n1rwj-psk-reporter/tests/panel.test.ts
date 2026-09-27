@@ -111,6 +111,23 @@ function backgroundPanel(fetch: HistoryHost['fetch']) {
   }
 }
 
+async function detailsText(s: ReturnType<typeof backgroundPanel>) {
+  const pages: string[] = []
+  for (let page = 0; page < 30; page++) {
+    const content = await s.render()
+    pages.push(sceneText(content))
+    if (
+      content.kind !== 'svgScene' ||
+      !content.scene.controls?.some(
+        (control) => control.id === 'next' && control.event === 'page:next',
+      )
+    )
+      return pages.join('\n')
+    await s.event('next', 'page:next')
+  }
+  throw new Error('Status details did not reach their final page')
+}
+
 function historyResponse(receiver = 'W1AW'): FetchResponse {
   return {
     status: 200,
@@ -156,6 +173,80 @@ it('keeps suffixes exact and filters stale or unrelated reports', () => {
   ).toEqual([])
   expect(pskPanelModel(args, [report], now + 16 * 60_000, connection).rows).toEqual([])
   expect(pskPanelModel(args, [report], now - 120_000, connection).rows).toEqual([])
+})
+
+it.each(['outgoing', 'incoming'] as const)(
+  'explains %s scope and keeps live connection separate from recent history',
+  (direction) => {
+    const model = pskPanelModel(
+      { ...args, config: { receptionDirection: direction, windowMinutes: 30 } },
+      [report],
+      now,
+      {
+        ...connection,
+        history: { message: 'Collection gap · history queued', pending: false },
+      },
+    )
+    expect(model.details?.facts).toEqual([
+      { label: 'Direction', value: direction === 'incoming' ? 'Who I hear' : 'Who hears me' },
+      { label: 'Window', value: 'Last 30 minutes' },
+      { label: 'Live feed', value: 'Connected' },
+      { label: 'Recent history', value: 'Collection gap · history queued' },
+    ])
+    expect(model.details?.purpose).toContain(
+      direction === 'incoming' ? 'reports hearing' : 'is being heard',
+    )
+    expect(model.details?.purpose).toContain('N1RWJ')
+    expect(model.details?.status).toBe(
+      direction === 'incoming' ? 'Connected · waiting for reports' : 'Live reception',
+    )
+    expect(model.details?.status).not.toContain('history')
+    expect(model.fetchedAt).toBeUndefined()
+    expect(JSON.stringify(model.details)).not.toMatch(/Data checked|Last successful check|never/)
+    expect(model.details?.activity).toEqual([])
+    const about = model.details?.sections.flatMap((section) => section.paragraphs).join(' ')
+    expect(about).toContain('requires uploads from your receiving software')
+    expect(about).toContain('Changing the watched callsign does not move the map origin')
+    expect(about).toContain('one station, band, and mode')
+    expect(about).toContain('An empty result does not prove')
+  },
+)
+
+it('preserves history diagnostics once and exposes pending, retry, and duration states accurately', () => {
+  const warning = 'History unavailable: HTTP 503. Full response diagnostic.'
+  const retrying = pskPanelModel(args, [report], now, {
+    state: 'retrying',
+    message: 'Connection closed',
+    retryAt: now + 5000,
+    capped: true,
+    cacheWarning: warning,
+    history: {
+      message: 'History unavailable',
+      pending: false,
+      warning,
+      lastRequestDurationMs: 1234,
+      lastRequestDurationUpperBound: true,
+    },
+  })
+  expect(retrying.warnings).toEqual([
+    'Report capacity reached; this window is incomplete.',
+    warning,
+  ])
+  expect(retrying.details?.activity).toEqual([
+    'Last history request duration: up to 1234 ms.',
+    'Live feed retries at 18:00:05 UTC.',
+    'Force reload retries recent history, bypassing the automatic cooldown.',
+  ])
+  expect(retrying.details?.sections.flatMap((section) => section.paragraphs).join(' ')).toContain(
+    'includes time until the next panel render observed completion',
+  )
+  const pending = pskPanelModel(args, [report], now, {
+    ...connection,
+    history: { message: 'Loading recent reports', pending: true, lastRequestDurationMs: 999 },
+  })
+  expect(pending.details?.activity?.join(' ')).toContain('History request in progress')
+  expect(pending.details?.activity?.join(' ')).not.toContain('duration')
+  expect(pending.warnings).toEqual([])
 })
 
 it('does not open a socket or fabricate reports while offline', async () => {
@@ -266,7 +357,7 @@ it.each(['success', 'failure'] as const)(
     expect(fetch).toHaveBeenCalledTimes(2)
 
     await s.event('details', 'details:toggle')
-    expect(sceneText(await s.render())).toMatch(/(?:request|history).*duration:.*15000 ms/i)
+    expect(await detailsText(s)).toMatch(/(?:request|history).*duration:.*15000 ms/i)
   },
 )
 

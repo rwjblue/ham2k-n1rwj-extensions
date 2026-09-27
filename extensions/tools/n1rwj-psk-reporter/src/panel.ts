@@ -57,6 +57,27 @@ export function pskPanelModel(
       report.timeMs >= now - config.windowMinutes * 60_000 && report.timeMs <= now + 60_000,
   )
   const view = receptionView(selected, call, incoming ? 'incoming' : 'outgoing', now, origin)
+  const feedState = {
+    idle: 'Not connected',
+    connecting: 'Connecting',
+    subscribing: 'Subscribing',
+    live: 'Connected',
+    retrying: 'Reconnecting',
+    invalid: 'Callsign required',
+    limit: 'Subscription limit reached',
+    offline: 'Paused while offline',
+  }[live.state]
+  const liveStatus =
+    live.state === 'live'
+      ? view.rows.length
+        ? 'Live reception'
+        : 'Connected · waiting for reports'
+      : live.state === 'retrying'
+        ? `${live.message} · retry in ${Math.max(0, Math.ceil(((live.retryAt ?? now) - now) / 1000))}s`
+        : live.message ||
+          (live.state === 'subscribing'
+            ? 'Subscribing to reception reports'
+            : 'Connecting to PSK Reporter')
   return {
     title: call ? `PSK Reporter · ${call}` : 'PSK Reporter',
     watchCall: call,
@@ -64,21 +85,7 @@ export function pskPanelModel(
     lastReport: view.rows.length
       ? ageLabel(Math.max(...view.rows.map((row) => row.timeMs ?? 0)), now)
       : undefined,
-    status: [
-      live.state === 'live'
-        ? view.rows.length
-          ? 'Live reception'
-          : 'Connected · waiting for reports'
-        : live.state === 'retrying'
-          ? `${live.message} · retry in ${Math.max(0, Math.ceil(((live.retryAt ?? now) - now) / 1000))}s`
-          : live.message ||
-            (live.state === 'subscribing'
-              ? 'Subscribing to reception reports'
-              : 'Connecting to PSK Reporter'),
-      live.history?.message,
-    ]
-      .filter(Boolean)
-      .join(' · '),
+    status: [liveStatus, live.history?.message].filter(Boolean).join(' · '),
     statusKind:
       live.state === 'live'
         ? 'live'
@@ -88,20 +95,64 @@ export function pskPanelModel(
             ? 'error'
             : 'empty',
     warnings: [
-      ...(live.capped ? ['Report capacity reached; this window is incomplete.'] : []),
-      ...(live.history?.warning ? [live.history.warning] : []),
-      ...(live.cacheWarning ? [live.cacheWarning] : []),
+      ...new Set([
+        ...(live.capped ? ['Report capacity reached; this window is incomplete.'] : []),
+        ...(live.history?.warning ? [live.history.warning] : []),
+        ...(live.cacheWarning ? [live.cacheWarning] : []),
+      ]),
     ],
-    note: [
-      live.history?.pending
-        ? 'Recent history is loading. Cached and live reports remain available. The panel checks for completion every second while visible; repeated refresh clicks share the pending request.'
-        : live.history?.lastRequestDurationMs !== undefined
-          ? `Last history request duration: ${live.history.lastRequestDurationUpperBound ? 'up to ' : ''}${live.history.lastRequestDurationMs} ms.`
+    details: {
+      status: liveStatus,
+      purpose: incoming
+        ? `See which transmitters ${call || 'the watched station'} reports hearing.`
+        : `See where ${call || 'the watched station'} is being heard.`,
+      facts: [
+        { label: 'Direction', value: incoming ? 'Who I hear' : 'Who hears me' },
+        { label: 'Window', value: `Last ${config.windowMinutes} minutes` },
+        { label: 'Live feed', value: feedState },
+        { label: 'Recent history', value: live.history?.message || 'Not requested' },
+      ],
+      activity: [
+        live.history?.pending
+          ? 'History request in progress; cached and live reports remain available. Repeated reloads share this request.'
+          : live.history?.lastRequestDurationMs !== undefined
+            ? `Last history request duration: ${live.history.lastRequestDurationUpperBound ? 'up to ' : ''}${live.history.lastRequestDurationMs} ms.`
+            : '',
+        live.state === 'retrying' && live.retryAt !== undefined
+          ? `Live feed retries at ${utcLabel(live.retryAt)}.`
+          : live.state === 'offline'
+            ? 'Reconnect this device to resume live reports and history requests.'
+            : '',
+        live.state !== 'offline' && live.history?.warning?.startsWith('History unavailable:')
+          ? 'Force reload retries recent history, bypassing the automatic cooldown.'
           : '',
-      'Live reports while this panel is visible, with recent history requested on opening and after collection gaps. Automatic history requests are shared across panels and spaced at least five minutes apart. Force reload bypasses that cooldown. History is best effort and may be delayed or incomplete. Who I hear requires uploads from your receiving software. Reports are observations, not confirmed contacts.',
-    ]
-      .filter(Boolean)
-      .join(' '),
+      ].filter(Boolean),
+      sections: [
+        {
+          title: 'Reading the reports',
+          paragraphs: [
+            'Live reports: PSK Reporter via M0LTE’s MQTT service. Recent history: PSK Reporter. Rows keep the latest report for one station, band, and mode; the map shows each located station once.',
+            'Who hears me shows receivers reporting the watched callsign. Who I hear shows transmitters it reports and requires uploads from your receiving software. SNR is measured at the receiver.',
+            'Reports are observations, not contacts. An empty result does not prove your signal cannot be heard: missing uploads, reporting delays, and collection gaps affect completeness.',
+          ],
+        },
+        {
+          title: 'Map and location',
+          paragraphs: [
+            'Paths connect the map origin to stations in this view; they are not a coverage boundary. Reported grids give approximate locations, distances, and bearings. Unlocated stations remain in the list.',
+            'Changing the watched callsign does not move the map origin. Set a matching origin grid in panel settings when observing another station.',
+          ],
+        },
+        {
+          title: 'Live feed and recent history',
+          paragraphs: [
+            'Live reports arrive while visible. History is requested on opening and after collection gaps, shared across panels at least five minutes apart. Failures can delay retries further. Force reload bypasses this cooldown.',
+            'History may be delayed or incomplete. Pending requests retain cached and live reports, share repeated reloads, and check for completion each second while visible.',
+            'Live connection and history are separate; connected does not guarantee recent reports. Latest report is when the signal was heard, relative to the shown age reference. A duration marked “up to” includes time until the next panel render observed completion.',
+          ],
+        },
+      ],
+    },
     locationLabel: origin
       ? `Map origin ${origin.label}`
       : 'Set an operation location or map origin grid.',
@@ -110,9 +161,6 @@ export function pskPanelModel(
       stationLabel: incoming ? 'Transmitter' : 'Receiver',
       cwSpeed: false,
       refreshLabel: 'Force reload recent history (bypasses five-minute cooldown)',
-      details: [
-        'Feed: PSK Reporter via the MQTT service operated by M0LTE. SNR is measured at the receiver.',
-      ],
     },
     bands: [...new Set([...receptionBands, ...view.rows.map((row) => row.band)])],
     rows: view.rows,
