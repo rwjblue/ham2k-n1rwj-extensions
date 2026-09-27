@@ -1,3 +1,4 @@
+import type { TimerDriver } from '../../../../../packages/reception/src/timers.ts'
 import { pskEndpoint, pskProtocols } from '../data/subscriptions.ts'
 import {
   connectPacket,
@@ -10,11 +11,12 @@ import type { OpenSocket, ReceptionSocket } from './socket.ts'
 
 export type ConnectionState = 'idle' | 'connecting' | 'subscribing' | 'live' | 'retrying'
 
-/** One clean MQTT session. Only tick() may open/reopen; callbacks never retry. */
+/** One clean MQTT session. The owner controls visibility and desired subscriptions. */
 export function createMqttClient(options: {
   open: OpenSocket
   now: () => number
   random?: () => number
+  timers?: TimerDriver
   onReport: (topic: string, payload: string) => void
 }) {
   const random = options.random ?? Math.random
@@ -34,9 +36,35 @@ export function createMqttClient(options: {
   let pingAt: number | undefined
   let connected = false
   let liveAt: number | undefined
+  type TimerKind = 'acknowledgement' | 'heartbeat' | 'reconnect' | 'stable'
+  const timers = new Map<TimerKind, { id?: number }>()
+
+  function cancelTimer(kind: TimerKind) {
+    const timer = timers.get(kind)
+    timers.delete(kind)
+    if (timer?.id !== undefined) options.timers?.clearTimeout(timer.id)
+  }
+
+  function schedule(kind: TimerKind, delay: number, callback: () => void) {
+    if (!options.timers) return
+    cancelTimer(kind)
+    const timer: { id?: number } = {}
+    const current = generation
+    timers.set(kind, timer)
+    timer.id = options.timers.setTimeout(() => {
+      if (generation !== current || timers.get(kind) !== timer) return
+      timers.delete(kind)
+      try {
+        callback()
+      } catch {
+        fail('Connection send failed')
+      }
+    }, delay)
+  }
 
   function close() {
     generation++
+    for (const kind of timers.keys()) cancelTimer(kind)
     const old = socket
     socket = undefined
     connected = false
@@ -63,7 +91,12 @@ export function createMqttClient(options: {
     state = 'retrying'
     message = reason
     const delay = Math.min(60_000, 5_000 * 2 ** Math.min(attempt++, 4))
-    retryAt = options.now() + delay + Math.floor(random() * delay * 0.2)
+    const wait = delay + Math.floor(random() * delay * 0.2)
+    // This timestamp is presentation only; host timers use real elapsed time.
+    retryAt = options.now() + wait
+    schedule('reconnect', wait, () => {
+      if (desired.size) start()
+    })
   }
 
   function send(bytes: Uint8Array) {
@@ -73,6 +106,9 @@ export function createMqttClient(options: {
 
   function reconcile() {
     if (!connected) return
+    // One deadline covers the whole batch, even if desired topics change while
+    // ACKs are outstanding. Waiting also avoids a timer for each subscription.
+    if (options.timers && pending.size) return
     // Await previous ACKs before reversing an in-flight subscribe/unsubscribe.
     const busy = new Set([...pending.values()].map((item) => item.topic))
     for (const topic of new Set([...subscribed, ...desired])) {
@@ -83,7 +119,23 @@ export function createMqttClient(options: {
       send(subscriptionPacket(sequence, topic, remove))
     }
     state = pending.size ? 'subscribing' : 'live'
-    if (state === 'live' && liveAt === undefined) liveAt = options.now()
+    if (pending.size)
+      schedule('acknowledgement', 10_000, () => fail('Connection or subscription timed out'))
+    if (state === 'live' && liveAt === undefined) {
+      liveAt = options.now()
+      // Briefly successful connections must not reset a failure loop.
+      schedule('stable', 60_000, () => {
+        attempt = 0
+      })
+    }
+  }
+
+  function schedulePing() {
+    schedule('heartbeat', 15_000, () => {
+      pingAt = lastPing = options.now()
+      send(pingPacket)
+      schedule('heartbeat', 15_000, () => fail('Feed heartbeat timed out'))
+    })
   }
 
   function start() {
@@ -97,10 +149,11 @@ export function createMqttClient(options: {
     try {
       const opened = options.open(pskEndpoint, { protocols: [...pskProtocols] })
       socket = opened
+      schedule('acknowledgement', 10_000, () => fail('Connection or subscription timed out'))
       const guarded = (fn: () => void) => {
         if (generation !== current || socket !== opened) return
         // A hidden/removed last panel cannot keep consuming traffic indefinitely.
-        if (lastTick !== undefined && options.now() - lastTick > 30_000) {
+        if (!options.timers && lastTick !== undefined && options.now() - lastTick > 30_000) {
           close()
           state = 'idle'
           return
@@ -124,12 +177,15 @@ export function createMqttClient(options: {
             if (packet.kind === 'connack') {
               if (connected || packet.code !== 0) throw new Error('MQTT connection refused')
               connected = true
+              cancelTimer('acknowledgement')
+              schedulePing()
               reconcile()
             } else {
               if (!connected) throw new Error('MQTT connection not acknowledged')
               if (packet.kind === 'publish') {
                 if (!packet.retained) options.onReport(packet.topic, packet.payload)
               } else if (packet.kind === 'pingresp') {
+                if (pingAt !== undefined) schedulePing()
                 pingAt = undefined
               } else {
                 const request = pending.get(packet.id)
@@ -142,6 +198,7 @@ export function createMqttClient(options: {
                 pending.delete(packet.id)
                 if (request.remove) subscribed.delete(request.topic)
                 else subscribed.add(request.topic)
+                if (!pending.size) cancelTimer('acknowledgement')
                 reconcile()
               }
             }
@@ -164,14 +221,23 @@ export function createMqttClient(options: {
       if (!desired.size) {
         close()
         state = 'idle'
+        retryAt = 0
         return
       }
-      if (resumed && socket) {
+      if (!options.timers && resumed && socket) {
         close()
         state = 'idle'
       }
       if (!socket) {
-        if (now >= retryAt) start()
+        if (options.timers ? state !== 'retrying' : now >= retryAt) start()
+        return
+      }
+      if (options.timers) {
+        try {
+          reconcile()
+        } catch {
+          fail('Connection send failed')
+        }
         return
       }
       if (
@@ -204,6 +270,7 @@ export function createMqttClient(options: {
       desired.clear()
       close()
       state = 'idle'
+      retryAt = 0
     },
   }
 }

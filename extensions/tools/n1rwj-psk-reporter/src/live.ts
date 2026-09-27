@@ -3,6 +3,7 @@ import type {
   ReceptionDirection,
   ReceptionReport,
 } from '../../../../packages/reception/src/reports.ts'
+import { createTimerSlot, type TimerDriver } from '../../../../packages/reception/src/timers.ts'
 import { createReportCache } from './data/cache.ts'
 import { parsePskPayload } from './data/parser.ts'
 import { createReportStore } from './data/store.ts'
@@ -27,35 +28,46 @@ export function createLiveReception(
   now = Date.now,
   random = Math.random,
   historyHost?: HistoryHost,
+  timers?: TimerDriver,
 ) {
+  // Host samples are epoch timestamps. Relative timer delays, not the sandbox's
+  // virtual Date, own protocol deadlines and the lifetime of a visible view.
+  let realSample: number | undefined
+  const reportNow = () => (timers ? (realSample ?? now()) : now())
   const leases = new Map<
     string,
     { call: string; direction: ReceptionDirection; topic: string; seen: number }
   >()
+  const expiry = new Map<string, ReturnType<typeof createTimerSlot>>()
   const store = createReportStore()
   const cache = historyHost ? createReportCache(historyHost, store, now) : undefined
   const history = historyHost
     ? createHistoryClient(
         historyHost,
         (reports) => {
-          for (const report of reports) store.ingestReport(report, now())
+          for (const report of reports) store.ingestReport(report, reportNow())
         },
-        now,
+        reportNow,
         (call, direction) =>
           [...leases.values()].some(
             (lease) =>
-              lease.call === call && lease.direction === direction && now() - lease.seen <= 30_000,
+              lease.call === call &&
+              lease.direction === direction &&
+              (timers || now() - lease.seen <= 30_000),
           ),
       )
     : undefined
   const prune = () => {
+    if (timers && realSample === undefined) return
+    const time = reportNow()
     for (const [id, lease] of leases) {
-      if (now() - lease.seen > 30_000 || now() < lease.seen) leases.delete(id)
+      if (time - lease.seen > 30_000 || time < lease.seen) leases.delete(id)
     }
   }
   const client = createMqttClient({
     open,
-    now,
+    now: reportNow,
+    timers,
     random,
     onReport(topic, payload) {
       prune()
@@ -78,9 +90,36 @@ export function createLiveReception(
             lease.call,
         )
       )
-        store.ingest(payload, now())
+        store.ingest(payload, reportNow())
     },
   })
+  function subscriptions(renew?: string) {
+    const topics = new Set([...leases.values()].map((lease) => lease.topic))
+    for (const [topic, timer] of expiry) {
+      if (!topics.has(topic)) {
+        timer.cancel()
+        expiry.delete(topic)
+      }
+    }
+    // One expiry per distinct topic, shared by every placement watching it.
+    // Eight topics plus protocol/cache/history deadlines fit the host budget.
+    if (timers && renew && topics.has(renew)) {
+      const timer = expiry.get(renew) ?? createTimerSlot(timers)
+      expiry.set(renew, timer)
+      timer.schedule(30_000, () => {
+        expiry.delete(renew)
+        for (const [id, lease] of leases) if (lease.topic === renew) leases.delete(id)
+        subscriptions()
+      })
+    }
+    client.tick([...topics])
+  }
+  function pause() {
+    for (const timer of expiry.values()) timer.cancel()
+    expiry.clear()
+    leases.clear()
+    client.stop()
+  }
   return {
     restore: () => cache?.ready() ?? Promise.resolve(),
     snapshot(
@@ -91,6 +130,8 @@ export function createLiveReception(
       online: boolean,
       realNowMillis?: number,
     ): LiveSnapshot {
+      if (typeof realNowMillis === 'number' && Number.isFinite(realNowMillis))
+        realSample = Math.max(realSample ?? realNowMillis, realNowMillis)
       prune()
       leases.delete(instance)
       const topic = pskTopic(call, direction)
@@ -99,9 +140,9 @@ export function createLiveReception(
       if (!online) error = 'offline'
       else if (!topic) error = 'invalid'
       else if (leases.size >= 32 || (!topics.has(topic) && topics.size >= 8)) error = 'limit'
-      else leases.set(instance, { call: normalizeCall(call), direction, topic, seen: now() })
+      else leases.set(instance, { call: normalizeCall(call), direction, topic, seen: reportNow() })
       if (!online) leases.clear()
-      client.tick([...new Set([...leases.values()].map((lease) => lease.topic))])
+      subscriptions(error ? undefined : topic)
       const historyStatus = history?.observe(
         call,
         direction,
@@ -111,7 +152,7 @@ export function createLiveReception(
         realNowMillis,
       )
       const stored = {
-        ...store.snapshot(now(), windowMinutes),
+        ...store.snapshot(reportNow(), windowMinutes),
         history: historyStatus,
         cacheWarning: cache?.warning,
       }
@@ -135,6 +176,7 @@ export function createLiveReception(
         }
       return { ...stored, ...client.status() }
     },
+    pause,
     forceHistory(
       call: string,
       direction: ReceptionDirection,
@@ -148,8 +190,7 @@ export function createLiveReception(
     stop: () => {
       cache?.stop()
       history?.stop()
-      leases.clear()
-      client.stop()
+      pause()
       store.clear()
     },
   }

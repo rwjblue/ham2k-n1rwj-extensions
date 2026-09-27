@@ -5,7 +5,7 @@ import { createContext, runInContext } from 'node:vm'
 import type { ExtensionDefinition, JSONValue, PanelHook } from '@ham2k/extension-sdk'
 import { expect, it } from 'vitest'
 import { environment } from '../../../../packages/reception/tests/environment.ts'
-import { verifyPskBundle } from '../../../../scripts/lib/psk-smoke.ts'
+import { createHostTimerHarness, verifyPskBundle } from '../../../../scripts/lib/psk-smoke.ts'
 import manifest from '../manifest.json'
 
 function required<T>(value: T | undefined): T {
@@ -13,14 +13,14 @@ function required<T>(value: T | undefined): T {
   return value
 }
 
-it('loads the normal API-2 bundle and receives binary MQTT reports through the published SDK', async () => {
-  expect(manifest.api).toBe(2)
+it('loads the API-3 bundle with binary MQTT and host timers through the published SDK', async () => {
+  expect(manifest.api).toBe(3)
   expect(manifest.webSockets).toEqual(['mqtt.pskreporter.info'])
   expect(manifest.domains).toEqual(['retrieve.pskreporter.info'])
   await verifyPskBundle(fileURLToPath(new URL('../build/index.js', import.meta.url)), manifest)
 })
 
-it('keeps initial and manual history requests outside rendering in a timerless SDK sandbox', async () => {
+it('keeps initial and manual history requests outside rendering with only SDK timer access', async () => {
   const source = await readFile(new URL('../build/index.js', import.meta.url), 'utf8')
   const sharedModules = Object.fromEntries(
     await Promise.all(
@@ -31,6 +31,7 @@ it('keeps initial and manual history requests outside rendering in a timerless S
     ),
   )
   const now = Date.UTC(2026, 8, 26, 18)
+  const timers = createHostTimerHarness()
   let clock = now
   let definition: ExtensionDefinition | undefined
   let panel: PanelHook | undefined
@@ -67,6 +68,7 @@ it('keeps initial and manual history requests outside rendering in a timerless S
   expect(runInContext('typeof setInterval', sandbox)).toBe('undefined')
   runInContext(source, sandbox, { timeout: 5000 })
   required(definition).onActivation({
+    timers: timers.api,
     registerHook: (category, hook) => {
       if (category === 'panel') panel = hook.hook as PanelHook
     },
@@ -147,6 +149,7 @@ it('keeps initial and manual history requests outside rendering in a timerless S
   expect(JSON.stringify(failed)).toContain('History unavailable')
   expect(JSON.stringify(failed)).toContain('W1AW')
   expect(requests).toBe(2)
+  await required(definition).onHide?.()
 })
 
 it.each(['n1rwj-rbn', 'n1rwj-psk-reporter'])('preserves shared map notices in %s', async (key) => {

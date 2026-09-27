@@ -2,15 +2,58 @@ import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import { setImmediate as settleHostCalls } from 'node:timers/promises'
 import { createContext, runInContext } from 'node:vm'
-import type { ExtensionDefinition, JSONValue, PanelHook } from '@ham2k/extension-sdk'
+import type { ActivationApi, ExtensionDefinition, JSONValue, PanelHook } from '@ham2k/extension-sdk'
 import { environment } from '../../packages/reception/tests/environment.ts'
 import type { Manifest } from './extensions.ts'
 
-/** Exercises the selected SDK's actual binary bridge in a timerless VM.
+/** A deterministic host timer bridge, without installing timer globals in the VM. */
+export function createHostTimerHarness() {
+  let elapsed = 0
+  let sequence = 0
+  const pending = new Map<number, { at: number; callback: () => void }>()
+  const api: NonNullable<ActivationApi['timers']> = {
+    set(callback, delay, repeat, args) {
+      assert.equal(repeat, false, 'Reception work uses one-shot timers')
+      assert.ok(typeof callback === 'function')
+      assert.ok(typeof delay === 'number' && Number.isFinite(delay) && delay >= 0)
+      assert.ok(pending.size < 16, 'Extension stays within the host timer limit')
+      const id = ++sequence
+      pending.set(id, { at: elapsed + delay, callback: () => callback(...args) })
+      return id
+    },
+    clear(id) {
+      assert.equal(typeof id, 'number')
+      pending.delete(id as number)
+    },
+  }
+  return {
+    api,
+    get pendingCount() {
+      return pending.size
+    },
+    advance(millis: number) {
+      const until = elapsed + millis
+      while (true) {
+        const due = [...pending.entries()]
+          .filter(([, timer]) => timer.at <= until)
+          .sort((a, b) => a[1].at - b[1].at)[0]
+        if (!due) break
+        const [id, timer] = due
+        pending.delete(id)
+        elapsed = timer.at
+        timer.callback()
+      }
+      elapsed = until
+    },
+  }
+}
+
+/** Exercises the selected SDK's actual binary and timer bridges in a sandbox VM.
  * This stand-in for the host is not a native Ham2K runtime test.
  */
 export async function verifyPskBundle(path: string, manifest: Manifest) {
-  let clock = Date.now()
+  const clock = Date.now()
+  const timers = createHostTimerHarness()
   const definitions: ExtensionDefinition[] = []
   const calls: { method: string; params: Record<string, unknown> }[] = []
   const saved: Record<string, JSONValue> = {
@@ -42,32 +85,32 @@ export async function verifyPskBundle(path: string, manifest: Manifest) {
       }),
     ),
   )
-  runInContext(
-    await readFile(path, 'utf8'),
-    createContext({
-      Date: class extends Date {
-        static now() {
-          return clock
-        }
+  const sandbox = createContext({
+    Date: class extends Date {
+      static now() {
+        return clock
+      }
+    },
+    __polo: {
+      sharedModules,
+      defineExtension: (definition: ExtensionDefinition) => definitions.push(definition),
+      registerSocket: (callback: typeof listener) => {
+        listener = callback
+        return 1
       },
-      __polo: {
-        sharedModules,
-        defineExtension: (definition: ExtensionDefinition) => definitions.push(definition),
-        registerSocket: (callback: typeof listener) => {
-          listener = callback
-          return 1
-        },
-        log: (message: string) => {
-          throw new Error(message)
-        },
+      log: (message: string) => {
+        throw new Error(message)
       },
-    }),
-    { timeout: 5000 },
-  )
+    },
+  })
+  for (const name of ['setTimeout', 'setInterval', 'WebSocket', 'fetch', 'Buffer', 'process'])
+    assert.equal(runInContext(`typeof ${name}`, sandbox), 'undefined')
+  runInContext(await readFile(path, 'utf8'), sandbox, { timeout: 5000 })
   assert.equal(definitions.length, 1)
   assert.ok('api' in definitions[0])
-  assert.equal(definitions[0].api, 2)
+  assert.equal(definitions[0].api, 3)
   definitions[0].onActivation({
+    timers: timers.api,
     registerHook: (category, registration) => {
       assert.equal(category, 'panel')
       panel = registration.hook as PanelHook
@@ -153,7 +196,7 @@ export async function verifyPskBundle(path: string, manifest: Manifest) {
     },
     { online: true },
   )
-  // The event returns before HTTP; settle the fixture host outside the timerless VM.
+  // The event returns before HTTP; settle fixture host calls outside the sandbox VM.
   await settleHostCalls()
   const fetched = calls.find((call) => call.method === 'fetch')
   assert.ok(fetched)
@@ -164,8 +207,11 @@ export async function verifyPskBundle(path: string, manifest: Manifest) {
     ),
   )
   assert.ok(JSON.stringify(await panel.render(args, { online: true })).includes('W1AW'))
-  clock += 30_000
-  await panel.render(args, { online: false })
+  // Real timer delays advance while sandbox Date stays frozen and no panel renders.
+  timers.advance(15_000)
+  assert.equal(sent()[sent().length - 1][0], 0xc0)
+  receive([0xd0, 0])
+  timers.advance(15_000)
   assert.equal(sent()[sent().length - 1][0], 0xe0)
   const socketCalls = calls.filter((call) => call.method.startsWith('webSocket'))
   assert.equal(socketCalls[socketCalls.length - 1]?.method, 'webSocketClose')
@@ -174,7 +220,18 @@ export async function verifyPskBundle(path: string, manifest: Manifest) {
   assert.ok(String(saved['psk-reports-v1']).includes('CU3AT'))
   assert.equal(saved.unrelated, 'preserved')
   assert.ok(!calls.some((call) => call.method === 'kvGet' || call.method === 'kvSet'))
+  await panel.render(args, { online: true })
+  const opens = calls.filter((call) => call.method === 'webSocketOpen').length
+  assert.equal(opens, 2)
+  assert.ok(definitions[0].onHide)
+  await definitions[0].onHide()
+  timers.advance(120_000)
+  await settleHostCalls()
+  assert.equal(calls.filter((call) => call.method === 'webSocketOpen').length, opens)
+  assert.equal(timers.pendingCount, 0)
+  for (const name of ['setTimeout', 'setInterval', 'WebSocket', 'fetch', 'Buffer', 'process'])
+    assert.equal(runInContext(`typeof ${name}`, sandbox), 'undefined')
   console.log(
-    'Candidate SDK bundle smoke passed: socket grant, MQTT handshake, binary report, HTTP history, force reload, persistent settings, native scene, disconnect.',
+    'Candidate SDK bundle smoke passed: socket grant, MQTT handshake, binary report, HTTP history, force reload, persistent settings, native scene, host timers, silent lease expiry, hide teardown.',
   )
 }
