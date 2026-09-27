@@ -8,6 +8,22 @@ each submission before operators can install it from the catalog.
 
 ## Current release status
 
+[v0.7.0](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.7.0)
+was published from signed commit `919f9c02b02cbd6e5afb5bd2358dc04b9522445f`
+on September 27, 2026 at 13:36 UTC. All seven bundles and seven checksum files
+are available. The [release workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/36322961213)
+passed both upload and catalog jobs. Downloaded assets passed
+`mise run release:catalog v0.7.0 --dry-run`, and all seven catalog submissions
+returned **approved** on `stable` at 13:36 UTC.
+
+This release adds timer-driven reception scheduling and clearer report info.
+PSK Reporter and RBN require extension API 3; contests retain API 1. The shared
+SDK/tooling update selects all extensions for catalog publication. See the
+[release notes](releases/v0.7.0.md) and
+[verification record](VERIFICATION.md#release-070-publication--2026-09-27).
+
+### Previous releases
+
 [v0.6.1](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.6.1)
 was published from signed commit `7d51767f60692339bc19160c5d76260dda87cc14`
 on September 27, 2026 at 06:04 UTC. All seven bundles and seven checksum files
@@ -22,8 +38,6 @@ and duplicate handling. The synchronized fix is pushed to
 [Ham2K/extensions PR #2](https://github.com/ham2k/extensions/pull/2).
 See the [release notes](releases/v0.6.1.md) and
 [verification record](VERIFICATION.md#release-061-publication--2026-09-27).
-
-### Previous releases
 
 [v0.6.0](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.6.0)
 was published from signed commit `1edadb2f32aa5220df9173d1d1c1230e6d0b1b69`

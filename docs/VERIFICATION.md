@@ -1540,3 +1540,23 @@ Reception runtime changes affect only RBN and PSK Reporter. Personal versioning,
 release notes, and publication records are exempt from upstream synchronization;
 no CQ WW behavior changed. The two existing investigation drafts are excluded
 from the release commit.
+
+## Release 0.7.0 publication — 2026-09-27
+
+Published [v0.7.0](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.7.0)
+from signed commit `919f9c02b02cbd6e5afb5bd2358dc04b9522445f` at 13:36 UTC.
+GitHub verifies the signature; the release tag resolves to this tested commit.
+The [check workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/36322949241)
+and [release workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/36322961213)
+succeeded. GitHub contains all seven bundles and seven checksum files, and
+the published body matches `docs/releases/v0.7.0.md` exactly.
+
+`mise run release:catalog v0.7.0 --dry-run` downloaded and validated every
+published asset and selected all seven extensions for the shared toolchain
+update. The catalog job returned **approved** on `stable` for CQ WW, CWT,
+MST, PSK Reporter, RBN, SST, and WRT at 13:36 UTC.
+
+The preparation checks above remain the runtime verification scope; publication
+does not establish native timer, UI, or sleep/resume behavior. These publication
+records are personal repository documentation, exempt from upstream behavior
+synchronization. Existing investigation drafts remain uncommitted.
