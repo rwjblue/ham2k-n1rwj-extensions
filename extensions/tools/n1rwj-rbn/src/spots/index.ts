@@ -3,26 +3,26 @@ import type {
   DynamicSettingsPanel,
   FetchOptions,
   FetchResponse,
+  HookContext,
   JSONValue,
   Spot,
   SpotsHook,
 } from '@ham2k/extension-sdk'
 import { host } from '@ham2k/extension-sdk'
 import manifest from '../../manifest.json'
-import { type Continent, continents } from '../data/continents.ts'
+import type { Continent } from '../data/continents.ts'
 import { createSpotFeed } from './feed.ts'
 import { allCalls, discoverFilters, type FilterBridge, matchFilter } from './filters.ts'
 import { type ReceiverLookup, selectSpots } from './model.ts'
 import {
   ownSettings,
-  radiusIssue,
   readPreferences,
-  speedIssue,
   spotModes,
   tokens,
   validateEdit,
   validation,
 } from './preferences.ts'
+import { settingsDefinition } from './settings.ts'
 
 interface Options {
   fetch(url: string, options?: FetchOptions): Promise<FetchResponse>
@@ -58,8 +58,9 @@ export function createRbnSpots(options: Options) {
   function defaultContinents(raw: Record<string, unknown>): Continent[] {
     const local = location && options.continentNear?.(location)
     if (local) return [local]
-    return validation('spotContinents', raw.spotLastContinents) === null
-      ? (raw.spotLastContinents as Continent[])
+    const previous = raw.spotLastContinents ?? raw.spotContinents
+    return validation('spotContinents', previous) === null
+      ? [...new Set(previous as Continent[])]
       : []
   }
   // Called inside the settings queue. Explicit [] means all continents and is
@@ -123,7 +124,15 @@ export function createRbnSpots(options: Options) {
           ? provider?.reason ||
             'The selected call-history extension is unavailable. Enable it or choose another filter.'
           : ''
-      return { raw, key, provider, unavailable, providers: discovered.providers, generation }
+      return {
+        raw,
+        key,
+        provider,
+        unavailable,
+        providers: discovered.providers,
+        discoveryFailed: discovered.failed,
+        generation,
+      }
     })
   }
   const spots: SpotsHook = {
@@ -173,144 +182,79 @@ export function createRbnSpots(options: Options) {
       }
     },
   }
-  const settings: DynamicSettingsPanel = {
+  const resetGroups = {
+    mode: { spotMode: 'all' },
+    speed: { spotMinWpm: '', spotMaxWpm: '' },
+    skimmers: { spotSkimmers: '' },
+    grids: { spotGrids: '' },
+    distance: { spotRadiusGrid: '', spotRadiusMiles: '' },
+    allContinents: { spotContinents: [] },
+  } satisfies Record<string, Record<string, JSONValue>>
+  async function reset(
+    group: keyof typeof resetGroups | 'all' | 'history' | 'continents',
+    online: boolean,
+  ) {
+    return serialized(async () => {
+      const raw = ownSettings(await getSettings())
+      const values: Record<string, JSONValue> = {}
+      if (group === 'all') {
+        for (const [key, defaults] of Object.entries(resetGroups)) {
+          if (key !== 'allContinents') Object.assign(values, defaults)
+        }
+      } else if (group in resetGroups) {
+        Object.assign(values, resetGroups[group as keyof typeof resetGroups])
+      }
+      if (
+        group === 'allContinents' &&
+        validation('spotContinents', raw.spotContinents) === null &&
+        (raw.spotContinents as string[]).length
+      ) {
+        values.spotLastContinents = raw.spotContinents as Continent[]
+      }
+      if (group === 'all' || group === 'history') {
+        const discovered = await discoverFilters(online, options.bridge)
+        if (discovered.failed)
+          throw new Error(
+            'Call-history defaults are unavailable. Retry the reset when extensions have loaded.',
+          )
+        values.spotCallFilter =
+          discovered.providers.find((provider) => provider.defaultSelected)?.key ?? allCalls
+      }
+      if (group === 'all' || group === 'continents') {
+        const defaults = defaultContinents(raw)
+        values.spotContinents = defaults
+        if (defaults.length) values.spotLastContinents = defaults
+      }
+      // Reset related fields together, even if the saved pair is invalid.
+      // Never write the whole extension group: it also holds reception caches.
+      generation++
+      await setSettings(values)
+      status = ''
+      return group === 'all'
+        ? 'All RBN spot settings reset. Changes apply on the next Spots refresh.'
+        : 'RBN spot filter reset. Changes apply on the next Spots refresh.'
+    })
+  }
+  const actions = {
+    resetAllSpotSettings: (_args: unknown, ctx: HookContext) => reset('all', ctx.online),
+    resetSpotCallFilter: (_args: unknown, ctx: HookContext) => reset('history', ctx.online),
+    resetSpotMode: (_args: unknown, ctx: HookContext) => reset('mode', ctx.online),
+    resetSpotSpeed: (_args: unknown, ctx: HookContext) => reset('speed', ctx.online),
+    resetSpotSkimmers: (_args: unknown, ctx: HookContext) => reset('skimmers', ctx.online),
+    resetSpotGrids: (_args: unknown, ctx: HookContext) => reset('grids', ctx.online),
+    resetSpotContinents: (_args: unknown, ctx: HookContext) => reset('continents', ctx.online),
+    clearSpotContinents: (_args: unknown, ctx: HookContext) => reset('allContinents', ctx.online),
+    resetSpotDistance: (_args: unknown, ctx: HookContext) => reset('distance', ctx.online),
+  }
+  const settings: DynamicSettingsPanel & typeof actions = {
+    ...actions,
     kind: 'dynamic',
     async getPanels() {
       return [{ key: manifest.key, title: 'RBN', icon: 'radar' }]
     },
     async getDefinition(_args, ctx) {
       const selected = await selection(ctx.online, true)
-      const choices = [
-        { label: 'All calls', value: allCalls },
-        ...selected.providers.map((provider) => ({
-          label: provider.label + (provider.available ? '' : ' (file unavailable)'),
-          value: provider.key,
-        })),
-      ]
-      if (!choices.some((entry) => entry.value === selected.key))
-        choices.push({ label: `Unavailable: ${selected.key}`, value: selected.key })
-      return {
-        elements: [
-          {
-            type: 'header',
-            style: 'section',
-            title: 'My Signal — Who hears me',
-          },
-          {
-            type: 'markdown',
-            text: 'The My Signal map and receiver reports show who hears your station. Configure them with the tune button beside the My Signal panel title in your operation. The Spots filters below never affect My Signal.',
-          },
-          {
-            type: 'header',
-            style: 'section',
-            title: 'Spots — Who I might hear',
-          },
-          {
-            type: 'markdown',
-            text: 'All settings below apply only to the RBN source in Spots, across operations. Nearby receivers can help you find stations to try; reception at your station is not guaranteed.',
-          },
-          {
-            type: 'field',
-            fieldType: 'select',
-            key: 'spotCallFilter',
-            label: 'Call-history filter',
-            options: choices,
-            value: selected.key,
-          },
-          {
-            type: 'field',
-            fieldType: 'select',
-            key: 'spotMode',
-            label: 'Spot mode',
-            description: 'Choose All to filter modes on the Spots page.',
-            value: selected.raw.spotMode ?? 'all',
-            options: spotModes.map((value) => ({ label: value === 'all' ? 'All' : value, value })),
-          },
-          { type: 'header', title: 'CW speed range' },
-          {
-            type: 'markdown',
-            text: 'Default: no speed limit. Leave either end blank for an open-ended range. Limits include the entered speeds and apply only to CW, including in All mode. CW reports without a known positive speed are excluded while a limit is set.',
-          },
-          {
-            type: 'field',
-            fieldType: 'number',
-            key: 'spotMinWpm',
-            label: 'Minimum CW speed (WPM)',
-            placeholder: 'No minimum',
-            value: selected.raw.spotMinWpm ?? '',
-          },
-          {
-            type: 'field',
-            fieldType: 'number',
-            key: 'spotMaxWpm',
-            label: 'Maximum CW speed (WPM)',
-            placeholder: 'No maximum',
-            value: selected.raw.spotMaxWpm ?? '',
-          },
-          {
-            type: 'field',
-            fieldType: 'text',
-            key: 'spotSkimmers',
-            label: 'Only these skimmers',
-            value: selected.raw.spotSkimmers ?? '',
-            uppercase: true,
-          },
-          {
-            type: 'field',
-            fieldType: 'text',
-            key: 'spotGrids',
-            label: 'Receiver grid regions',
-            value: selected.raw.spotGrids ?? '',
-            uppercase: true,
-          },
-          {
-            type: 'markdown',
-            text: 'Separate entries with spaces or commas. Leave blank for all receivers. Use exact skimmer IDs (for example KM3T-5). Regions are Maidenhead prefixes such as FN, EM, JO, or FN42. Every enabled receiver filter must match.',
-          },
-          {
-            type: 'field',
-            fieldType: 'multiselect',
-            key: 'spotContinents',
-            label: 'Receiver continents',
-            description:
-              'Initially suggests your local continent using nearby receivers when device location is available; otherwise remembers your last selection. No selection explicitly allows all continents. Uses the skimmer location, not the spotted station.',
-            value: selected.raw.spotContinents ?? [],
-            options: Object.entries(continents).map(([value, label]) => ({ value, label })),
-          },
-          {
-            type: 'field',
-            fieldType: 'text',
-            key: 'spotRadiusGrid',
-            label: 'Distance origin grid',
-            description:
-              'Your grid for distance filtering, shared across operations. Update it when you move.',
-            placeholder: 'e.g. FN42FK',
-            value: selected.raw.spotRadiusGrid ?? '',
-            uppercase: true,
-          },
-          {
-            type: 'field',
-            fieldType: 'number',
-            key: 'spotRadiusMiles',
-            label: 'Maximum receiver distance (miles)',
-            description: 'Leave blank for no distance limit. Set the origin grid first.',
-            value: selected.raw.spotRadiusMiles ?? '',
-          },
-          {
-            type: 'markdown',
-            text: 'Distance is approximate, measured between grid centers. Refresh the RBN receiver directory in Data Files to load continents and updated grids. Receivers with no known continent are excluded when continents are selected; receivers with no known grid are excluded when a grid region or distance limit is set.',
-          },
-          {
-            type: 'markdown',
-            text:
-              selected.unavailable ||
-              radiusIssue(selected.raw) ||
-              speedIssue(selected.raw) ||
-              status ||
-              'Reports cover the last ten minutes on 160–10m, including WARC bands. Busy bands may exceed the bounded snapshot. Changes apply on the next Spots refresh.',
-          },
-        ],
-      }
+      return settingsDefinition(selected, defaultContinents(selected.raw), status)
     },
     async validateField({ fieldKey, value, state }) {
       return validateEdit(fieldKey, value, state)
@@ -319,12 +263,21 @@ export function createRbnSpots(options: Options) {
       await serialized(async () => {
         // Recheck persisted siblings inside the queue: simultaneous edits must
         // not save a distance limit with no origin even if form state is stale.
-        const error = validateEdit(fieldKey, value, ownSettings(await getSettings()))
+        const raw = ownSettings(await getSettings())
+        const error = validateEdit(fieldKey, value, raw)
         if (error) throw new Error(error)
         generation++
         await setSettings({
-          ...(fieldKey === 'spotContinents' && Array.isArray(value) && value.length
-            ? { spotLastContinents: [...new Set(value as string[])] }
+          ...(fieldKey === 'spotContinents' &&
+          Array.isArray(value) &&
+          (value.length ||
+            (validation('spotContinents', raw.spotContinents) === null &&
+              (raw.spotContinents as string[]).length))
+            ? {
+                spotLastContinents: [
+                  ...new Set((value.length ? value : raw.spotContinents) as string[]),
+                ],
+              }
             : {}),
           [fieldKey]: (fieldKey === 'spotSkimmers' || fieldKey === 'spotGrids'
             ? tokens(value).join(', ')

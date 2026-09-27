@@ -296,9 +296,58 @@ it('keeps settings repairable during failed discovery, and honors an explicit al
     (await runtime.settings.getDefinition({ panelKey: 'n1rwj-rbn' }, { online: true })).elements
       .length,
   ).toBeGreaterThan(0)
+  await expect(runtime.settings.resetAllSpotSettings({}, { online: true })).rejects.toThrow()
+  await runtime.settings.resetSpotSpeed({}, { online: true })
+  expect(preferences).toEqual({ spotMinWpm: '', spotMaxWpm: '' })
   await runtime.settings.onChangeField(
     { panelKey: 'n1rwj-rbn', fieldKey: 'spotCallFilter', value: 'none', state: {} },
     { online: true },
   )
   expect(await runtime.spots.fetchSpots({}, { online: true })).toHaveLength(1)
+})
+
+it('invalidates an in-flight fetch on reset and serializes later edits against reset defaults', async () => {
+  let preferences = {
+    spotCallFilter: 'none',
+    spotMinWpm: 30,
+    spotRadiusGrid: 'FN42',
+    spotRadiusMiles: 100,
+  }
+  let finish: () => void = () => {}
+  const pending = new Promise<void>((resolve) => {
+    finish = resolve
+  })
+  const fetch = vi.fn(async () => {
+    await pending
+    return { status: 200, body: JSON.stringify({ spots: [row({ wpm: 35 })] }) }
+  })
+  const runtime = createRbnSpots({
+    fetch,
+    now: () => now,
+    lookup: () => undefined,
+    getSettings: async () => ({ extensions: { 'extension_n1rwj-rbn': { ...preferences } } }),
+    setSettings: async (values) => {
+      preferences = { ...preferences, ...values }
+    },
+    bridge: { invokeAll: async () => [], invokeOne: async () => [] },
+  })
+  const fetching = runtime.spots.fetchSpots({}, { online: true })
+  await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(9))
+  await runtime.settings.resetAllSpotSettings({}, { online: true })
+  finish()
+  expect(await fetching).toEqual([])
+  expect(await runtime.spots.fetchSpots({}, { online: false })).toHaveLength(1)
+  const results = await Promise.allSettled([
+    runtime.settings.resetSpotDistance({}, { online: true }),
+    runtime.settings.onChangeField(
+      {
+        panelKey: 'n1rwj-rbn',
+        fieldKey: 'spotRadiusMiles',
+        value: 50,
+        state: { spotRadiusGrid: 'FN42' },
+      },
+      { online: true },
+    ),
+  ])
+  expect(results.map((result) => result.status)).toEqual(['fulfilled', 'rejected'])
 })

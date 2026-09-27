@@ -10,6 +10,10 @@ import type {
 } from '@ham2k/extension-sdk'
 import { expect, it, vi } from 'vitest'
 import manifest from '../../manifest.json'
+import type { createRbnSpots } from '../../src/spots/index.ts'
+
+type RbnSettings = ReturnType<typeof createRbnSpots>['settings']
+type ResetMethod = keyof Omit<RbnSettings, keyof DynamicSettingsPanel>
 
 /** Actual bundles, separate SDK copies, the documented kernel dispatch boundary. */
 async function harness(saved: Record<string, JSONValue> = {}, contests = ['cwt', 'mst', 'sst']) {
@@ -113,7 +117,7 @@ async function harness(saved: Record<string, JSONValue> = {}, contests = ['cwt',
     return entry.hook as T
   }
   const spots = hook<SpotsHook>('n1rwj-rbn', 'spots')
-  const settings = hook<DynamicSettingsPanel>('n1rwj-rbn', 'settingsPanel')
+  const settings = hook<RbnSettings>('n1rwj-rbn', 'settingsPanel')
   const ctx = { online: true, locale: 'en' }
   // Settle the optional one-shot device-location probe in this locationless host.
   await settings.getDefinition({ panelKey: 'n1rwj-rbn' }, ctx)
@@ -125,6 +129,7 @@ async function harness(saved: Record<string, JSONValue> = {}, contests = ['cwt',
     hook,
     spots,
     settings,
+    action: (method: ResetMethod) => settings[method]({ panelKey: 'n1rwj-rbn', state: {} }, ctx),
     fetch: () => spots.fetchSpots({}, ctx),
     choose: (value: string) =>
       settings.onChangeField(
@@ -255,4 +260,107 @@ it('persists CW speed bounds across bundle restarts and rejects stale crossing e
   expect(await runtime.fetch()).toHaveLength(3)
   const results = await Promise.allSettled([edit('spotMaxWpm', 25), edit('spotMinWpm', 26)])
   expect(results.map((result) => result.status)).toEqual(['fulfilled', 'rejected'])
+})
+
+it('resets all spot settings in the bundle while preserving reception caches and unrelated values', async () => {
+  const runtime = await harness({
+    'extension_n1rwj-rbn': {
+      spotCallFilter: 'none',
+      spotMode: 'CW',
+      spotMinWpm: 30,
+      spotMaxWpm: 20, // Reset repairs inconsistent saved pairs.
+      spotSkimmers: 'KM3T-5',
+      spotGrids: 'FN',
+      spotContinents: ['NA'], // A preference from before continent memory existed.
+      spotRadiusGrid: '',
+      spotRadiusMiles: 100,
+      receptionCache: { marker: 'preserve' },
+      unrelated: 42,
+    },
+  })
+  const form = await runtime.settings.getDefinition({ panelKey: 'n1rwj-rbn' }, { online: true })
+  const heading = form.elements.findIndex(
+    (element) => element.type === 'header' && element.title === 'Spots — Who I might hear',
+  )
+  expect(form.elements[heading + 1]).toMatchObject({
+    type: 'action',
+    method: 'resetAllSpotSettings',
+  })
+  expect(form.elements).toContainEqual(
+    expect.objectContaining({
+      method: 'resetSpotContinents',
+      label: 'Reset continents — North America',
+    }),
+  )
+  await runtime.action('resetAllSpotSettings')
+  const expected = {
+    spotCallFilter: 'n1rwj-cwt',
+    spotMode: 'all',
+    spotMinWpm: '',
+    spotMaxWpm: '',
+    spotSkimmers: '',
+    spotGrids: '',
+    spotContinents: ['NA'],
+    spotLastContinents: ['NA'],
+    spotRadiusGrid: '',
+    spotRadiusMiles: '',
+    receptionCache: { marker: 'preserve' },
+    unrelated: 42,
+  }
+  expect(runtime.preferences['extension_n1rwj-rbn']).toEqual(expected)
+  expect((await harness(runtime.preferences)).preferences['extension_n1rwj-rbn']).toEqual(expected)
+})
+
+it('each bundled reset changes only its filter and displays the persisted defaults', async () => {
+  const saved = {
+    spotCallFilter: 'missing',
+    spotMode: 'CW',
+    spotMinWpm: 10,
+    spotMaxWpm: 20,
+    spotSkimmers: 'KM3T-5',
+    spotGrids: 'FN',
+    spotContinents: ['EU'],
+    spotLastContinents: ['NA'],
+    spotRadiusGrid: 'FN42',
+    spotRadiusMiles: 100,
+  }
+  const cases: [ResetMethod, Record<string, JSONValue>][] = [
+    ['resetSpotCallFilter', { spotCallFilter: 'none' }],
+    ['resetSpotMode', { spotMode: 'all' }],
+    ['resetSpotSpeed', { spotMinWpm: '', spotMaxWpm: '' }],
+    ['resetSpotSkimmers', { spotSkimmers: '' }],
+    ['resetSpotGrids', { spotGrids: '' }],
+    ['resetSpotContinents', { spotContinents: ['NA'], spotLastContinents: ['NA'] }],
+    ['clearSpotContinents', { spotContinents: [], spotLastContinents: ['EU'] }],
+    ['resetSpotDistance', { spotRadiusGrid: '', spotRadiusMiles: '' }],
+  ]
+  for (const [method, patch] of cases) {
+    const runtime = await harness({ 'extension_n1rwj-rbn': saved }, [])
+    const form = await runtime.settings.getDefinition({ panelKey: 'n1rwj-rbn' }, { online: true })
+    expect(form.elements).toContainEqual(expect.objectContaining({ type: 'action', method }))
+    await runtime.action(method)
+    expect(runtime.preferences['extension_n1rwj-rbn']).toEqual({ ...saved, ...patch })
+    const updated = await runtime.settings.getDefinition(
+      { panelKey: 'n1rwj-rbn' },
+      { online: true },
+    )
+    for (const [key, value] of Object.entries(patch)) {
+      if (key === 'spotLastContinents') continue
+      expect(updated.elements).toContainEqual(
+        expect.objectContaining({ type: 'field', key, value }),
+      )
+    }
+  }
+})
+
+it('clears and restores a legacy continent preference without reviving it after explicit clearing', async () => {
+  const runtime = await harness({ 'extension_n1rwj-rbn': { spotContinents: ['NA'] } }, [])
+  await runtime.action('clearSpotContinents')
+  const restarted = await harness(runtime.preferences, [])
+  expect(restarted.preferences['extension_n1rwj-rbn']).toMatchObject({
+    spotContinents: [],
+    spotLastContinents: ['NA'],
+  })
+  await restarted.action('resetSpotContinents')
+  expect(restarted.preferences['extension_n1rwj-rbn']).toMatchObject({ spotContinents: ['NA'] })
 })

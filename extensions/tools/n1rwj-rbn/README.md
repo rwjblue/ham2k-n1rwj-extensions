@@ -47,6 +47,22 @@ Open **Settings → RBN → Spots — Who I might hear** to choose:
   Leave blank for no limit. Set the origin first; clear the limit before
   clearing its origin. Distances use the great-circle path between grid centers.
 
+**Reset all spot settings**, at the top of that section, restores the default
+call-history provider (CWT when it requests the default, otherwise All calls),
+All modes, no CW speed limits, all skimmers and grid regions, the local/last
+receiver-continent selection, and no distance limit or origin. The defaults are
+listed beside the reset control. If call-history discovery fails, retry the
+full reset once extensions have loaded; individual receiver/mode/speed resets
+remain available.
+
+Each filter also has a reset button naming its default. **Reset CW speed range**
+clears both bounds; **Reset distance** clears both origin and limit, including
+inconsistent saved values. **Clear continent filter — All continents** explicitly
+allows every receiver continent, while **Reset continents** restores the local
+suggestion or last nonempty selection. Resets update the settings form and take
+effect on the next Spots refresh. They preserve My Signal settings, reception
+caches, receiver data, and every other extension's settings.
+
 Separate skimmers or regions with spaces or commas. Blank means unrestricted.
 The initial continent suggestion may request location permission. It uses a
 single device-location fix per runtime while the preference is unset, without
