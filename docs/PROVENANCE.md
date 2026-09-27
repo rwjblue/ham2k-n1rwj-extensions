@@ -147,10 +147,11 @@ configuration, geography, and panel state. RBN and PSK Reporter
 consume that source in independent bundles; each retains the map notices.
 The PSK payload parser follows the [M0LTE MQTT feed documentation](https://www.mqtt.pskreporter.info/).
 Its original MQTT subscriber follows the [MQTT 3.1.1 specification](https://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html).
-The live build uses the published SDK 0.6.0 socket contract, first verified in
+The live build uses the published SDK 0.8.1 socket and timer contracts. The
+socket contract was first verified in
 [Ham2K/halo 17b15fdcafdd](https://github.com/ham2k/halo/commit/17b15fdcafdd).
-No SDK implementation is vendored. Normal packaging uses API 2 and published
-tools 0.5.0. The extension does not submit reports or log QSOs.
+No SDK implementation is vendored. Normal packaging uses API 3 and published
+tools 0.7.0. The extension does not submit reports or log QSOs.
 These reception-only changes and packaging work do not affect CWT behavior
 and are exempt from the upstream CWT synchronization requirement.
 

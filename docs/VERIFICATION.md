@@ -1473,3 +1473,48 @@ Native UI and on-air verification remain pending.
 
 Personal versioning and publication records are exempt from upstream runtime
 synchronization. No CWT behavior changed and its PR branch was not edited.
+
+
+## Reception timers — 2026-09-27
+
+Upgraded the shared development toolchain to `@ham2k/extension-sdk` 0.8.1 and
+`@ham2k/extension-tools` 0.7.0. RBN and PSK Reporter declare API 3; contest
+manifests retain API 1. No shared-library compatibility ranges changed.
+
+PSK Reporter now uses host timeouts for MQTT acknowledgment deadlines,
+heartbeats, reconnect backoff, topic visibility expiry, cache checkpoints and
+queued HTTP history. RBN uses timeouts for visible My Signal queries and shared
+HTTP 429 backoff. Renders still supply visibility and real epoch samples;
+relative deadlines remain independent of the sandbox's virtual `Date`.
+Timers do not renew their own visibility. PSK topics expire after 30 seconds;
+RBN placements expire after 75 seconds and `onHide` pauses both feeds.
+
+Deterministic tests cover cancellation, missing render ticks, frozen/shifted
+virtual clocks, delayed storage and network responses, persisted cooldowns,
+multiple placements, force requests, cache-write coalescing and failures.
+A render awaiting cache restoration cannot reopen reception after `onHide`;
+only a fresh render can resume it.
+Pending relative HTTP cooldowns survive reload conservatively; serialized
+writes prevent an older expiry from clearing a newer reservation. Bundle
+fixtures exercise the published SDK's timer bridge without ambient timers,
+including autonomous refresh, heartbeat, lease expiry and hide cancellation.
+
+`mise run format` and `mise run check` passed **793 tests across 64 files**,
+lint, strict typechecks, all seven ES2020 builds and official packages.
+The installed Ham2K Mac Logger (Next) 26.9.0 build 175 JavaScript kernel passed
+activation timer bindings, wake messages, one-shot execution, cancellation,
+visibility callbacks and bundle compatibility probes. This is a Node VM check
+of the installed kernel with simulated native dispatch, not a native timer,
+UI, background/foreground or sleep/resume test. Those app checks remain pending.
+
+The SDK's narrowed hook categories required a type-only adapter for the
+existing private spot-filter bridge. The exact adapter was mirrored to the
+verified source branch `codex/cwt-call-history` for
+[Ham2K/extensions PR #1](https://github.com/Ham2K/extensions/pull/1) in a separate
+local workspace. Its 123 CWT tests, typecheck, build and package checks passed.
+Upstream `main` and the CQ WW branch were not changed. Reception runtime work
+only affects RBN and PSK Reporter and is exempt from CWT/CQ WW synchronization;
+root dependency changes are shared changes for the next release's notes.
+
+These commits are local. No version bump, push, catalog update or release was
+performed. Existing investigation drafts remain outside the timer commits.

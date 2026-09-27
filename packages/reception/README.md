@@ -14,6 +14,7 @@ through synchronized release bumps; the lockfile pins its resolution.
 | `callsign.ts`, `geography.ts` | Exact callsigns, distance and bearing |
 | `config.ts` | Operation location/callsign defaults and configurable panel fields |
 | `panel-state.ts` | Bounded per-placement state and validated scene controls |
+| `timers.ts` | Injected host timeouts with one pending callback per slot and cancellation guards |
 | `map/` | Bundled geography, projections, paths, label placement and themes |
 | `ui/` | Pure native SVG scenes, responsive cards/tables, sorting, report info and pagination |
 
@@ -26,7 +27,12 @@ Feed adapters own transport, parsing, rate limits, connection state, and
 location enrichment. Presentation options supply attribution, endpoint labels,
 optional CW-speed sorting and the refresh action. Shared rendering performs no
 network or storage operations. RBN retains HTTP snapshot caching and its
-receiver-directory adapter; PSK will manage an MQTT stream independently.
+receiver-directory adapter; PSK manages an MQTT stream independently.
+
+Reception schedulers use API-3 host timeouts for relative deadlines and finite
+visibility leases. Panel-provided real-time samples supply epoch timestamps;
+virtual sandbox `Date` does not drive timer deadlines. Feed adapters own timer
+budgets and persistence. The shared helper neither polls nor renews visibility.
 
 The info button opens **Status** (scope, freshness, warnings, refresh guidance)
 and **About** (interpretation, sources, and map origin). Feed-specific facts

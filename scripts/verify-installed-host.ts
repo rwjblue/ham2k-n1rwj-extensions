@@ -4,6 +4,7 @@ import { access, readdir, readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { performance } from 'node:perf_hooks'
 import { createContext, runInContext } from 'node:vm'
+import type { ActivationApi } from '@ham2k/extension-sdk'
 import { satisfies } from 'semver'
 import type { Manifest } from './lib/extensions.ts'
 import { selectExtensions } from './lib/extensions.ts'
@@ -67,11 +68,16 @@ interface Kernel {
   sharedVersions: Record<string, string>
   registerSocket?: unknown
   socketEvent?: unknown
+  runTimers?(): void
+  setAppVisible?(visible: boolean): void
   hostResponse(callId: string, success: boolean, value: string): void
   defineExtension(extension: {
     key: string
     version: string
+    onShow?(): void
+    onHide?(): void
     onActivation(context: {
+      timers?: ActivationApi['timers']
       registerHook(
         category: string,
         definition: {
@@ -144,10 +150,20 @@ export async function verifyInstalledHost(
   }
 
   const probeKey = 'n1rwj-host-probe'
+  let timerBindings: ActivationApi['timers']
+  let shown = 0
+  let hidden = 0
   kernel.defineExtension({
     key: probeKey,
     version: '0.0.0',
-    onActivation({ registerHook }) {
+    onShow() {
+      shown++
+    },
+    onHide() {
+      hidden++
+    },
+    onActivation({ registerHook, timers }) {
+      timerBindings = timers
       registerHook('lookup', {
         key: probeKey,
         hook: { probe: async (_args, ctx) => Object.keys(ctx) },
@@ -161,6 +177,47 @@ export async function verifyInstalledHost(
     problems.push(
       'HookContext.getHistoryForCall is unavailable; cross-operation history cannot run',
     )
+  }
+
+  // The SDK adopts activation's owner-bound set/clear pair; the installed
+  // kernel posts timerWake and the native host responds through runTimers.
+  // Exercise only that JavaScript contract here, with no wall-clock waiting.
+  let fired = 0
+  let cancelledFired = 0
+  const timerCapabilities = {
+    activationBindings:
+      typeof timerBindings?.set === 'function' && typeof timerBindings?.clear === 'function',
+    runTimers: typeof kernel.runTimers === 'function',
+    wakeMessage: false,
+    oneShot: false,
+    cancellation: false,
+    visibilityCallbacks: false,
+  }
+  if (timerCapabilities.activationBindings && timerCapabilities.runTimers && timerBindings) {
+    timerBindings.set(() => fired++, 0, false, [])
+    const cancelled = timerBindings.set(() => cancelledFired++, 0, false, [])
+    timerBindings.clear(cancelled)
+    kernel.runTimers?.()
+    kernel.runTimers?.()
+    timerCapabilities.wakeMessage = messages.some((message) => message.type === 'timerWake')
+    timerCapabilities.oneShot = fired === 1
+    timerCapabilities.cancellation = cancelledFired === 0
+  }
+  if (typeof kernel.setAppVisible === 'function') {
+    kernel.setAppVisible(false)
+    kernel.setAppVisible(true)
+    timerCapabilities.visibilityCallbacks = hidden === 1 && shown === 1
+  }
+  for (const manifest of manifests) {
+    if (
+      typeof manifest.api === 'number' &&
+      manifest.api >= 3 &&
+      !Object.values(timerCapabilities).every(Boolean)
+    ) {
+      problems.push(
+        `${manifest.key}: installed kernel lacks working API-3 timers or visibility callbacks; update Ham2K Logger`,
+      )
+    }
   }
 
   const registeredHooks: string[] = []
@@ -191,10 +248,12 @@ export async function verifyInstalledHost(
         kernelSha256: createHash('sha256').update(kernelSource).digest('hex'),
         sharedVersions: kernel.sharedVersions,
         contextCapabilities,
+        timerCapabilities,
         registeredHooks,
         compatible: problems.length === 0,
         problems,
-        scope: 'Installed JavaScript kernel under Node VM; this does not exercise native app UI.',
+        scope:
+          'Installed JavaScript kernel under Node VM; timer wake delivery is simulated. This does not exercise native scheduling or app UI.',
       },
       null,
       2,
