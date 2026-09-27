@@ -32,8 +32,13 @@ Open **Settings → RBN → Spots — Who I might hear** to choose:
 - **Only these skimmers:** exact IDs, including suffixes such as `KM3T-5`.
 - **Receiver grid regions:** Maidenhead prefixes, for example `FN, EM`, `JO`,
   or `FN42`. These select the receiving skimmers, not the spotted stations.
-- **Receiver continents:** select one or more continents; no selection allows
-  all. Uses the receiver's continent from the RBN directory. Refresh that data
+- **Receiver continents:** select one or more continents; an explicit empty
+  selection allows all. On first use, device location suggests a continent when
+  known receivers within 250 km all agree, otherwise the last nonempty selection
+  is restored. This is an approximate local suggestion, not a boundary lookup;
+  verify it near coasts and continental borders. Saved selections, including
+  **all continents**, survive restarts and are never overwritten automatically.
+  Uses the receiver's continent from the RBN directory. Refresh that data
   file after upgrading to populate this field in older caches. Unknown
   continents are excluded only while this filter is enabled.
 - **Distance origin grid:** your 4, 6, or 8 character grid, such as `FN42FK`.
@@ -43,6 +48,14 @@ Open **Settings → RBN → Spots — Who I might hear** to choose:
   clearing its origin. Distances use the great-circle path between grid centers.
 
 Separate skimmers or regions with spaces or commas. Blank means unrestricted.
+The initial continent suggestion may request location permission. It uses a
+single device-location fix per runtime while the preference is unset, without
+holding the settings screen or spot hook open. Spots wait for that attempt to
+finish; after it completes, refresh Spots to apply the result. Denied or unavailable
+location falls back to the last selection, or all continents if none is known.
+No device coordinates are sent to a network service or saved in settings.
+If the receiver directory loads later, the next settings view or Spots refresh
+can use the same fix to suggest a continent, provided no explicit choice was made.
 All these settings apply only to Spots, across operations. They never filter
 the **My Signal** map or its receiver reports. The **My Signal — Who hears me**
 section points to that panel's separate tune settings in your operation.

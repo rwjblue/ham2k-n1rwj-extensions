@@ -17,6 +17,7 @@ defineExtension({
     const { spots, settings } = createRbnSpots({
       fetch: rbnFetch,
       lookup: receivers.lookup,
+      continentNear: receivers.continentNear,
       setSettings: setRbnSettings,
     })
     registerHook('spots', { hook: spots })

@@ -1,5 +1,5 @@
 import type { DataFileDefinition } from '@ham2k/extension-sdk'
-import { normalizeCall, type RbnReport } from '../model.ts'
+import { type Coordinates, distanceKm, normalizeCall, type RbnReport } from '../model.ts'
 import { type Continent, continentCode } from './continents.ts'
 import { isValidReceiver, receiverLocation, record } from './parser.ts'
 
@@ -171,5 +171,27 @@ export function createReceiverData() {
       }
     })
   }
-  return { dataFile, enrichReports, lookup: (call: string) => current.get(call) }
+  /** A local suggestion, not a country-boundary lookup. Ambiguity stays unknown. */
+  function continentNear(location: Coordinates): Continent | null {
+    if (
+      !Number.isFinite(location.latitude) ||
+      !Number.isFinite(location.longitude) ||
+      Math.abs(location.latitude) > 90 ||
+      Math.abs(location.longitude) > 180
+    )
+      return null
+    const nearby = new Set<Continent>()
+    for (const node of current.values()) {
+      if (!node.continent) continue
+      const [latitude, longitude] = receiverLocation(node.grid)
+      if (
+        latitude !== null &&
+        longitude !== null &&
+        distanceKm(location, { latitude, longitude }) <= 250
+      )
+        nearby.add(node.continent)
+    }
+    return nearby.size === 1 ? [...nearby][0] : null
+  }
+  return { dataFile, enrichReports, continentNear, lookup: (call: string) => current.get(call) }
 }

@@ -11,6 +11,7 @@
   "keywords": ["rbn", "reverse-beacon", "cw", "rtty", "ft8", "ft4", "map", "propagation", "signal"],
   "hooks": ["panel", "dataFile", "spots", "settingsPanel"],
   "domains": ["vailrerbn.com", "www.reversebeacon.net"],
+  "requiresLocation": true,
   "relevance": {
     "interests": ["cw"]
   },

@@ -101,6 +101,7 @@ async function harness(saved: Record<string, JSONValue> = {}, contests = ['cwt',
           return null
         }
         if (method === 'kvGet' || method === 'kvSet') return null
+        if (method === 'getLocation') return null
         if (method === 'fetch') return requests(String(params.url))
         throw new Error(`Unexpected host call: ${method}`)
       },
@@ -114,6 +115,9 @@ async function harness(saved: Record<string, JSONValue> = {}, contests = ['cwt',
   const spots = hook<SpotsHook>('n1rwj-rbn', 'spots')
   const settings = hook<DynamicSettingsPanel>('n1rwj-rbn', 'settingsPanel')
   const ctx = { online: true, locale: 'en' }
+  // Settle the optional one-shot device-location probe in this locationless host.
+  await settings.getDefinition({ panelKey: 'n1rwj-rbn' }, ctx)
+  await new Promise((resolve) => setTimeout(resolve, 0))
   return {
     preferences,
     requests,
@@ -203,6 +207,7 @@ it('persists geography settings, needs directory continents, and rejects stale o
     spotRadiusGrid: 'FN42',
     spotRadiusMiles: 100,
     spotContinents: ['NA'],
+    spotLastContinents: ['NA'],
   })
   const restored = await harness(runtime.preferences, [])
   expect(await restored.fetch()).toEqual([]) // Unknown continent is excluded.

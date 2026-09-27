@@ -1,4 +1,5 @@
 import type {
+  DeviceLocation,
   DynamicSettingsPanel,
   FetchOptions,
   FetchResponse,
@@ -8,7 +9,7 @@ import type {
 } from '@ham2k/extension-sdk'
 import { host } from '@ham2k/extension-sdk'
 import manifest from '../../manifest.json'
-import { continents } from '../data/continents.ts'
+import { type Continent, continents } from '../data/continents.ts'
 import { createSpotFeed } from './feed.ts'
 import { allCalls, discoverFilters, type FilterBridge, matchFilter } from './filters.ts'
 import { type ReceiverLookup, selectSpots } from './model.ts'
@@ -20,6 +21,7 @@ import {
   spotModes,
   tokens,
   validateEdit,
+  validation,
 } from './preferences.ts'
 
 interface Options {
@@ -29,6 +31,8 @@ interface Options {
   bridge?: FilterBridge
   getSettings?: typeof host.getSettings
   setSettings?: typeof host.setSettings
+  getLocation?: typeof host.getLocation
+  continentNear?: (location: DeviceLocation) => Continent | null
 }
 
 export function createRbnSpots(options: Options) {
@@ -40,6 +44,9 @@ export function createRbnSpots(options: Options) {
   )
   let status = ''
   let generation = 0
+  let location: DeviceLocation | null = null
+  let locationStarted = false
+  let locating = false
   // Serialize default selection and explicit edits so a slow discovery cannot
   // overwrite an operator's choice. Persist the provider even if its file is absent.
   let queue: Promise<unknown> = Promise.resolve()
@@ -48,11 +55,53 @@ export function createRbnSpots(options: Options) {
     queue = result.catch(() => undefined)
     return result
   }
+  function defaultContinents(raw: Record<string, unknown>): Continent[] {
+    const local = location && options.continentNear?.(location)
+    if (local) return [local]
+    return validation('spotContinents', raw.spotLastContinents) === null
+      ? (raw.spotLastContinents as Continent[])
+      : []
+  }
+  // Called inside the settings queue. Explicit [] means all continents and is
+  // never replaced by an automatic suggestion, even after a restart.
+  async function initializeContinents(raw: Record<string, unknown>) {
+    if (raw.spotContinents !== undefined) return
+    const values = defaultContinents(raw)
+    if (!values.length) return
+    generation++
+    await setSettings({ spotContinents: values, spotLastContinents: values })
+    raw.spotContinents = values
+    raw.spotLastContinents = values
+  }
+  function locateOnce() {
+    if (locationStarted || !options.continentNear) return
+    locationStarted = true
+    locating = true
+    // GPS can prompt or take longer than a hook deadline. Never hold the
+    // settings queue or a Spots fetch open while it resolves.
+    void Promise.resolve()
+      .then(() => (options.getLocation ?? host.getLocation)())
+      .then(async (value) => {
+        location = value
+        await serialized(async () => {
+          const raw = ownSettings(await getSettings())
+          await initializeContinents(raw)
+        })
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        locating = false
+      })
+  }
   // Temporary source-side preference/discovery. Native relevance will instead
   // follow the operation in the logger; migrate explicit choices before removal.
   async function selection(online: boolean, forSettings = false) {
     return serialized(async () => {
       const raw = ownSettings(await getSettings())
+      if (raw.spotContinents === undefined) {
+        locateOnce()
+        await initializeContinents(raw)
+      }
       const discovered = await discoverFilters(online, options.bridge).catch((error: unknown) => {
         if (!forSettings && raw.spotCallFilter !== allCalls) throw error
         status = 'Call-history filters could not be loaded. Retry after enabling the extension.'
@@ -74,15 +123,19 @@ export function createRbnSpots(options: Options) {
           ? provider?.reason ||
             'The selected call-history extension is unavailable. Enable it or choose another filter.'
           : ''
-      return { raw, key, provider, unavailable, providers: discovered.providers }
+      return { raw, key, provider, unavailable, providers: discovered.providers, generation }
     })
   }
   const spots: SpotsHook = {
     sourceName: 'RBN',
     async fetchSpots(_args, ctx) {
-      const started = generation
       try {
         const selected = await selection(ctx.online)
+        if (selected.raw.spotContinents === undefined && locating) {
+          status =
+            'Finding a local receiver continent. Refresh Spots after location is available, or choose a continent in RBN settings.'
+          return []
+        }
         if (selected.unavailable) {
           status = selected.unavailable
           return []
@@ -111,7 +164,7 @@ export function createRbnSpots(options: Options) {
                 options.bridge,
               )
         // A settings edit while the network was pending invalidates this answer.
-        if (started !== generation) return []
+        if (selected.generation !== generation) return []
         return selectSpots(reports, allowed, prefs, options.lookup, now())
       } catch (error) {
         status =
@@ -220,7 +273,7 @@ export function createRbnSpots(options: Options) {
             key: 'spotContinents',
             label: 'Receiver continents',
             description:
-              'No selection allows all continents. Uses the skimmer location, not the spotted station.',
+              'Initially suggests your local continent using nearby receivers when device location is available; otherwise remembers your last selection. No selection explicitly allows all continents. Uses the skimmer location, not the spotted station.',
             value: selected.raw.spotContinents ?? [],
             options: Object.entries(continents).map(([value, label]) => ({ value, label })),
           },
@@ -270,6 +323,9 @@ export function createRbnSpots(options: Options) {
         if (error) throw new Error(error)
         generation++
         await setSettings({
+          ...(fieldKey === 'spotContinents' && Array.isArray(value) && value.length
+            ? { spotLastContinents: [...new Set(value as string[])] }
+            : {}),
           [fieldKey]: (fieldKey === 'spotSkimmers' || fieldKey === 'spotGrids'
             ? tokens(value).join(', ')
             : fieldKey === 'spotRadiusGrid'

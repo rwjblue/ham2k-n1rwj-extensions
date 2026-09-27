@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { parseRbnPayload } from '../../src/data/parser.ts'
+import { parseRbnPayload, receiverLocation } from '../../src/data/parser.ts'
 import {
   createReceiverData,
   parseReceiverDirectory,
@@ -33,6 +33,29 @@ async function refresh(data: ReturnType<typeof createReceiverData>, body = direc
 }
 
 describe('RBN receiver directory', () => {
+  it('suggests a local continent only when known receivers within 250 km agree', () => {
+    const data = createReceiverData()
+    const [latitude, longitude] = receiverLocation('FN42')
+    if (latitude === null || longitude === null) throw new Error('Invalid fixture')
+    const location = { latitude, longitude }
+    expect(data.continentNear(location)).toBeNull()
+    const nodes = [
+      { call: 'KM3T-5', grid: 'FN42', continent: 'NA', country: null },
+      { call: 'DL1ABC', grid: 'JO31', continent: 'EU', country: null },
+    ]
+    data.dataFile.onLoadRawData({ schema: 1, nodes })
+    expect(data.continentNear(location)).toBe('NA')
+    expect(data.continentNear({ latitude: -32, longitude: 116 })).toBeNull()
+    expect(data.continentNear({ latitude: NaN, longitude })).toBeNull()
+    expect(data.continentNear({ latitude: 91, longitude })).toBeNull()
+    data.dataFile.onLoadRawData({
+      schema: 1,
+      nodes: [...nodes, { call: 'W1OTHER', grid: 'FN42', continent: 'EU', country: null }],
+    })
+    expect(data.continentNear(location)).toBeNull()
+    data.dataFile.onLoadRawData({ schema: 1, nodes: [{ ...nodes[0], continent: null }] })
+    expect(data.continentNear(location)).toBeNull()
+  })
   it('locates every receiver from the reported screenshot using verified directory locations', () => {
     expect(parseReceiverDirectory(directory).sort((a, b) => a.call.localeCompare(b.call))).toEqual([
       { call: 'BD8CS', grid: 'OM30BP', country: 'China', continent: 'AS' },
