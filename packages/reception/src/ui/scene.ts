@@ -7,7 +7,7 @@ import type {
 } from '@ham2k/extension-sdk'
 import { layoutReceptionMap } from '../map/index.ts'
 import { receptionMapTheme } from '../map/theme.ts'
-import { type DetailsTab, layoutReceptionDetails } from './details.ts'
+import { type DetailsTab, layoutReceptionDetails, wrapInfoText } from './details.ts'
 import type { UiDirection, UiModel, UiReport, UiSort, UiView } from './types.ts'
 
 export interface SceneSelection {
@@ -265,6 +265,9 @@ export function renderReceptionScene(
   )
   const bandLabel = selection.band === 'all' ? 'All bands' : selection.band
   const summary = `${receivers} ${station}${receivers === 1 ? '' : 's'} · ${bands} band${bands === 1 ? '' : 's'}${farthest ? ` · ${Math.round(farthest).toLocaleString('en-US')} km max` : ''}`
+  const identityLines = selection.details
+    ? wrapInfoText(`${source} · ${model.watchCall || 'No callsign'}`, w - 112, label)
+    : []
   // The host tab already names the watched call. Keep status and the active
   // filter beside refresh/details instead of spending a row on a title.
   text(
@@ -278,17 +281,25 @@ export function renderReceptionScene(
     label,
     colors.accent,
   )
-  text(
-    'summary',
-    selection.details
-      ? `${source} · ${model.watchCall || 'No callsign'}`
-      : w >= 600 * (label.scaledFontSize / label.fontSize)
+  if (selection.details) {
+    for (const [index, identity] of identityLines.entries())
+      text(
+        index === 0 ? 'summary' : `summary-${index}`,
+        identity,
+        left,
+        y + (index + 1) * labelLine,
+        w - 112,
+      )
+  } else
+    text(
+      'summary',
+      w >= 600 * (label.scaledFontSize / label.fontSize)
         ? `${bandLabel} · ${summary}`
         : `${bandLabel} · ${receivers} ${station}${receivers === 1 ? '' : 's'}`,
-    left,
-    y + labelLine,
-    w - 112,
-  )
+      left,
+      y + labelLine,
+      w - 112,
+    )
   if (model.presentation?.refreshLabel)
     button('refresh', '↻', right - 104, y, 48, {
       event: 'refresh:reports',
@@ -307,7 +318,7 @@ export function renderReceptionScene(
         : `Report info${model.warnings?.length ? `, ${model.warnings.length} warnings` : ''}`,
     },
   )
-  y += Math.max(labelLine * 2, buttonHeight) + 6
+  y += Math.max(labelLine * Math.max(2, 1 + identityLines.length), buttonHeight) + 6
 
   if (selection.details) {
     // A readable measure on desktop; the same cards reflow to narrow panels.

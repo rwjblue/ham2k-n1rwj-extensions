@@ -38,6 +38,15 @@ const text = (scene: SvgScene) =>
   scene.layers.flatMap((layer) => layer.text?.literal ?? []).join(' ')
 
 describe('report info layout', () => {
+  it('wraps the source and callsign above the tabs at large text sizes', () => {
+    const { scene } = renderReceptionScene(model, environment(320, 640, 1.5), { details: true })
+    const identity = scene.layers.filter((layer) => layer.id.startsWith('summary'))
+    expect(identity.length).toBeGreaterThan(1)
+    expect(identity.map((layer) => layer.text?.literal).join(' ')).toBe('PSK Reporter · N1RWJ')
+    const tabs = scene.controls?.find((control) => control.id === 'details-status')
+    const lastLine = identity[identity.length - 1]
+    expect(tabs?.y).toBeGreaterThanOrEqual(lastLine.y + lastLine.height)
+  })
   it('shows scoped freshness rather than a newer report from a hidden band', () => {
     const { scene, pageCount } = renderReceptionScene(model, environment(390, 740), {
       details: true,
