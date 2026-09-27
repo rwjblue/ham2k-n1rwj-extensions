@@ -11,6 +11,7 @@ install only the ones you want.
 | [CWops CWT](extensions/contests/n1rwj-cwt/README.md) (`n1rwj-cwt`) | CWT sessions, exchange suggestions, scoring, and exports |
 | [ICWC MST](extensions/contests/n1rwj-mst/README.md) (`n1rwj-mst`) | MST sessions, name suggestions, outgoing serials, scoring, and exports |
 | [K1USN SST](extensions/contests/n1rwj-sst/README.md) (`n1rwj-sst`) | SST sessions, name/location suggestions, scoring, and exports |
+| [Weekly RTTY Test](extensions/contests/n1rwj-wrt/README.md) (`n1rwj-wrt`) | Half-hour RTTY sessions, name/QTH suggestions, callsign multipliers, and exports (prepared for v0.6.0) |
 
 The [PSK Reporter extension](extensions/tools/n1rwj-psk-reporter/README.md)
 now builds with live MQTT reception using the published SDK and tools. It shares
@@ -134,6 +135,20 @@ uploads. The [CWT](extensions/contests/n1rwj-cwt/README.md),
 contest, its data sources, exchange suggestions, and scoring, including how
 MST serial numbers work. [Verification](docs/VERIFICATION.md) separates
 automated checks from tests performed in the native Ham2K app.
+
+### Weekly RTTY Test
+
+[WRT](extensions/contests/n1rwj-wrt/README.md) runs Fridays 0145–0215 UTC on
+80, 40, 20, 15, and 10m RTTY. Its exchange is name plus state/province for W/VE,
+or country prefix for DX. Score eligible QSOs × unique callsigns across the
+session, with one contact per station per band. Select QRP (5 W) or low power
+(100 W), configure your sent exchange, and report your summary on 3830 Scores.
+
+Build the new extension with `mise run pack n1rwj-wrt` and install its local
+bundle; it is prepared for v0.6.0 and is not in the published v0.5.1 release.
+WRT suggests exchanges from previous WRT contacts and ordinary host lookups.
+It has no downloadable history file or history-file spot filter. Its guide
+covers RTTY mode selection, prefix handling, exports, and verification limits.
 
 ## Develop
 

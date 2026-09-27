@@ -1,5 +1,38 @@
 # Verification and compatibility
 
+## WRT implementation — 2026-09-26
+
+Prepared v0.6.0 with `n1rwj-wrt`, extending only the MST/SST mini-contest
+engine. After rebasing onto the RBN mode-default change on main, full checks passed
+**698 tests across 57 files**, lint, strict
+TypeScript checks, ES2020 builds, and official packaging for seven extensions.
+WRT adds 18 tests for UTC sessions, mode/band restrictions, duplicates,
+callsign multipliers, checkpoint resume, exchange hints, explicit clearing,
+ADIF/Cabrillo fields, and sandbox activation without network hooks.
+Existing MST/SST tests remain passing.
+
+`mise run verify-host n1rwj-wrt` loaded all five WRT hooks against the running
+**Ham2K 26.9.0 build 175** kernel from
+`/Applications/Ham2K Mac Logger (Next).app`, with no compatibility problems.
+Kernel SHA-256:
+`ee7338084608394a7a9409f4feda32a5438ec642ca8876db249f684d614dee63`.
+The declared shared-library ranges remain unchanged. The published SDK
+contract and host `ExchangeFieldsModel` confirm that typed values and deliberate
+clearing take precedence over `suggestedValue`.
+
+This is deterministic unit/bundle verification and installed JavaScript kernel
+execution under Node VM, **not native UI or on-air testing**. Test those before
+claiming an end-to-end operating verification. The prepared version and local
+bundles have not been published to GitHub Releases or the catalog.
+
+The WRT rules and sponsor-linked N1MM definition were checked directly;
+[provenance](PROVENANCE.md#weekly-rtty-test) records those sources and the
+unlisted ADIF contest identifier. WRT does not download history or submit
+scores. Its operation-history adapter is consumed unchanged; changes to the
+mini-contest engine affect only MST, SST, and WRT. CWT/CQ WW runtime source
+is unchanged, so their temporary upstream PR synchronization is not required.
+
+
 ## Release 0.4.2 publication — 2026-09-25
 
 Published [v0.4.2](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.4.2)

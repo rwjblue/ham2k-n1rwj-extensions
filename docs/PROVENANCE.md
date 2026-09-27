@@ -4,7 +4,7 @@
 The setup, scheduling, scoring, exchange controls, translations, ADIF fields,
 and Cabrillo behavior in `extensions/contests/n1rwj-cwt/` derive from his
 official Ham2K CWT extension. This monorepo adds personal exchange suggestions,
-MST and SST extensions, an RBN reception panel, shared code, and independent
+MST, SST, and WRT extensions, an RBN reception panel, shared code, and independent
 packaging; it is not an official Ham2K release.
 
 ## Original installable archive
@@ -71,7 +71,7 @@ published SDK dependency, export identifiers, storage keys, and build tools.
 
 The monorepo move preserves that CWT behavior and data identity. Generic N1MM
 CSV parsing, callsign handling, and downloads now live in `packages/n1mm/`.
-`packages/contest-history/` provides the shared CWT/MST/SST operation-history
+`packages/contest-history/` provides the shared CWT/MST/SST/WRT operation-history
 adapter; CWT-specific membership interpretation and exchange precedence
 remain in the CWT workspace. Recognition of MST/SST file markers, source-date
 variants, and numbered N1MM download slugs is synchronized with the upstream
@@ -103,6 +103,28 @@ CWT and the separate CQ WW preview are subject to their own temporary
 upstream-PR synchronization requirements.
 These new contests and the monorepo's personal tooling and release layout do
 not modify the official CWT extension.
+
+### Weekly RTTY Test
+
+`extensions/contests/n1rwj-wrt/` follows the
+[WRT sponsor rules](https://radiosport.world/wrt.html) and its linked
+[N1MM WRT definition](https://radiosport.world/WRT.udc), revision 1.0.2 dated
+January 4, 2024, checked September 26, 2026. The definition's `DupeType=2`
+and `IsMultPer=4` mean per-band duplicate checking and contest-wide
+multipliers under the [N1MM UDC contract](https://n1mmwp.hamdocs.com/appendices/udc-editor/).
+Its Cabrillo name is `WRT`, with name/QTH columns and no signal report.
+The exchange text is preserved rather than turned into SST state/DX multipliers.
+
+ADIF uses the same `WRT` string; it is not listed in the
+[ADIF 3.1.6 contest enumeration](https://www.adif.org/316/ADIF_316.htm#CONTEST_ID),
+but `CONTEST_ID` is a string field. The RTTY Cabrillo mode adaptation follows
+the existing CQ WW approach for the host's shared writer. No CQ WW source or
+translations are changed or imported into WRT.
+
+WRT extends `packages/mini-contest/`, used by MST and SST, while retaining
+its original MPL-2.0 notices. The shared CWT operation-history adapter is
+consumed unchanged. This work does not affect CWT behavior, and therefore
+requires no update to its temporary upstream PR; CQ WW's PR is also unchanged.
 
 ### RBN reception panel
 

@@ -31,6 +31,16 @@ Earlier v0.2.1, v0.3.0, and v0.3.1 runs failed with HTTP 403 from a Cloudflare
 challenge. The v0.3.2 retry and v0.3.3/v0.3.4 publications succeeded; inspect each earlier
 version's submission history before retrying it.
 
+## Prepared v0.6.0
+
+The working source prepares WRT and synchronized 0.6.0 versions for all seven
+extensions; v0.5.1 remains the published release. Use
+[the authored v0.6.0 notes](releases/v0.6.0.md) when publishing. WRT is new;
+MST/SST consume the updated contest engine, and RBN now defaults to all
+supported spot modes, so all four have catalog notes. CWT, CQ WW, and PSK
+Reporter have no runtime changes in this release and are skipped by catalog
+publication. No external dependency versions changed.
+
 ## Configure the token
 
 The catalog account needs the approved `n1rwj-*` namespace grant and a token
