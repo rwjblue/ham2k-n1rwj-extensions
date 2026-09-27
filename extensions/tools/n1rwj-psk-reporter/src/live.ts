@@ -34,18 +34,23 @@ export function createLiveReception(
   // virtual Date, own protocol deadlines and the lifetime of a visible view.
   let realSample: number | undefined
   const reportNow = () => (timers ? (realSample ?? now()) : now())
+  function observeTime(value?: number) {
+    if (typeof value === 'number' && Number.isFinite(value))
+      realSample = Math.max(realSample ?? value, value)
+  }
   const leases = new Map<
     string,
     { call: string; direction: ReceptionDirection; topic: string; seen: number }
   >()
   const expiry = new Map<string, ReturnType<typeof createTimerSlot>>()
   const store = createReportStore()
-  const cache = historyHost ? createReportCache(historyHost, store, now) : undefined
+  const cache = historyHost ? createReportCache(historyHost, store, reportNow, timers) : undefined
   const history = historyHost
     ? createHistoryClient(
         historyHost,
         (reports) => {
           for (const report of reports) store.ingestReport(report, reportNow())
+          cache?.changed()
         },
         reportNow,
         (call, direction) =>
@@ -89,8 +94,9 @@ export function createLiveReception(
             (lease.direction === 'incoming' ? report.receiver.call : report.transmitter.call) ===
             lease.call,
         )
-      )
-        store.ingest(payload, reportNow())
+      ) {
+        if (store.ingest(payload, reportNow())) cache?.changed()
+      }
     },
   })
   function subscriptions(renew?: string) {
@@ -110,6 +116,7 @@ export function createLiveReception(
         expiry.delete(renew)
         for (const [id, lease] of leases) if (lease.topic === renew) leases.delete(id)
         subscriptions()
+        if (!leases.size) void cache?.flush()
       })
     }
     client.tick([...topics])
@@ -119,9 +126,13 @@ export function createLiveReception(
     expiry.clear()
     leases.clear()
     client.stop()
+    void cache?.flush()
   }
   return {
-    restore: () => cache?.ready() ?? Promise.resolve(),
+    restore(realNowMillis?: number) {
+      observeTime(realNowMillis)
+      return cache?.ready() ?? Promise.resolve()
+    },
     snapshot(
       instance: string,
       call: string,
@@ -130,8 +141,7 @@ export function createLiveReception(
       online: boolean,
       realNowMillis?: number,
     ): LiveSnapshot {
-      if (typeof realNowMillis === 'number' && Number.isFinite(realNowMillis))
-        realSample = Math.max(realSample ?? realNowMillis, realNowMillis)
+      observeTime(realNowMillis)
       prune()
       leases.delete(instance)
       const topic = pskTopic(call, direction)

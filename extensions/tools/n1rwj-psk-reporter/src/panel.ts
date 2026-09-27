@@ -206,7 +206,7 @@ export function createPskPanel(live: LiveReception): PanelHook {
       const config = readConfig(args.config)
       const realTime = realNowMillis(args)
       const now = realTime ?? Date.now()
-      await live.restore()
+      await live.restore(realTime)
       const snapshot = live.snapshot(
         args.instanceId,
         watchedCall(args.operation, config.watchCall),

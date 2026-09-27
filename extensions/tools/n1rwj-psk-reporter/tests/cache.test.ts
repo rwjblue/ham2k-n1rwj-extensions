@@ -1,6 +1,7 @@
 import type { JSONValue } from '@ham2k/extension-sdk'
 import { expect, it, vi } from 'vitest'
 import { createPersistentStorage } from '../../../../packages/reception/src/storage.ts'
+import type { TimerDriver } from '../../../../packages/reception/src/timers.ts'
 import { createReportCache, reportCacheKey } from '../src/data/cache.ts'
 import { createReportStore } from '../src/data/store.ts'
 import { createHistoryClient } from '../src/history/client.ts'
@@ -24,7 +25,7 @@ const payload = (overrides = {}) =>
 const flush = async () => {
   for (let i = 0; i < 60; i++) await Promise.resolve()
 }
-function setup() {
+function setup(timers?: TimerDriver) {
   let now = initial
   let values: Record<string, JSONValue> = { unrelated: 'preserved' }
   const host = {
@@ -35,7 +36,7 @@ function setup() {
   }
   const storage = createPersistentStorage(host, key)
   const store = createReportStore()
-  const cache = createReportCache(storage, store, () => now)
+  const cache = createReportCache(storage, store, () => now, timers)
   return {
     host,
     storage,
@@ -46,6 +47,38 @@ function setup() {
       now += ms
     },
     now: () => now,
+  }
+}
+
+function clock() {
+  let elapsed = 0
+  let nextId = 0
+  const pending = new Map<number, { callback: () => void; due: number }>()
+  const timers = {
+    setTimeout: vi.fn((callback: () => void, delay: number) => {
+      const id = ++nextId
+      pending.set(id, { callback, due: elapsed + delay })
+      return id
+    }),
+    clearTimeout: vi.fn((id: number) => {
+      pending.delete(id)
+    }),
+  }
+  return {
+    timers,
+    pending: () => pending.size,
+    async advance(ms: number) {
+      const target = elapsed + ms
+      while (true) {
+        const next = [...pending.entries()].sort((a, b) => a[1].due - b[1].due)[0]
+        if (!next || next[1].due > target) break
+        elapsed = next[1].due
+        pending.delete(next[0])
+        next[1].callback()
+        await flush()
+      }
+      elapsed = target
+    },
   }
 }
 
@@ -238,4 +271,167 @@ it('persists the HTTP cooldown through settings and serializes it with report wr
   expect(fetch).toHaveBeenCalledTimes(1)
   await restarted.force('EA8/N1RWJ/P', 'outgoing', 15, true)
   expect(fetch).toHaveBeenCalledTimes(2)
+})
+
+it('checkpoints after ingestion without more renders or advancing the sandbox date', async () => {
+  const c = clock()
+  const s = setup(c.timers)
+  await s.cache.ready()
+  s.store.ingest(payload(), initial)
+  s.cache.changed()
+  await flush()
+  expect(c.pending()).toBe(1)
+  await c.advance(20_000)
+  s.store.ingest(payload({ rc: 'W1AW' }), initial)
+  s.cache.changed()
+  await flush()
+  expect(c.pending()).toBe(1)
+  await c.advance(9_999)
+  expect(s.host.setSettings).not.toHaveBeenCalled()
+  await c.advance(1)
+  expect(s.host.setSettings).toHaveBeenCalledTimes(1)
+  expect(JSON.parse(String(s.values()[reportCacheKey])).reports).toHaveLength(2)
+  await c.advance(60_000)
+  expect(s.host.setSettings).toHaveBeenCalledTimes(1)
+  expect(c.pending()).toBe(0)
+})
+
+it('automatically checkpoints changes received during a write without overlapping writes', async () => {
+  const c = clock()
+  const s = setup(c.timers)
+  await s.cache.ready()
+  let finish!: () => void
+  s.host.setSettings.mockImplementationOnce(
+    () =>
+      new Promise<void>((resolve) => {
+        finish = resolve
+      }),
+  )
+  s.store.ingest(payload(), initial)
+  s.cache.changed()
+  await flush()
+  await c.advance(30_000)
+  s.store.ingest(payload({ rc: 'W1AW' }), initial)
+  s.cache.changed()
+  await c.advance(30_000)
+  expect(s.host.setSettings).toHaveBeenCalledTimes(1)
+  finish()
+  await flush()
+  await c.advance(0)
+  expect(s.host.setSettings).toHaveBeenCalledTimes(2)
+  expect(JSON.parse(String(s.values()[reportCacheKey])).reports).toHaveLength(2)
+  await c.advance(30_000)
+  expect(c.pending()).toBe(0)
+})
+
+it('retries unavailable storage before writing and retries a failed checkpoint on elapsed timers', async () => {
+  const c = clock()
+  const s = setup(c.timers)
+  s.host.getSettings.mockRejectedValueOnce(new Error('unavailable'))
+  s.host.setSettings.mockRejectedValueOnce(new Error('disk full'))
+  await s.cache.ready()
+  s.store.ingest(payload(), initial)
+  s.cache.changed()
+  await flush()
+  expect(s.cache.warning).toContain('unavailable')
+  await c.advance(29_999)
+  expect(s.host.setSettings).not.toHaveBeenCalled()
+  await c.advance(1)
+  expect(s.host.getSettings).toHaveBeenCalledTimes(2)
+  expect(s.host.setSettings).toHaveBeenCalledTimes(1)
+  expect(s.cache.warning).toContain('could not be saved')
+  await c.advance(30_000)
+  expect(s.host.setSettings).toHaveBeenCalledTimes(2)
+  expect(s.cache.warning).toBeUndefined()
+  expect(JSON.parse(String(s.values()[reportCacheKey])).reports).toHaveLength(1)
+})
+
+it.each(['read', 'write'] as const)(
+  'bounds automatic %s failures and preserves the retry cooldown when activity resumes',
+  async (kind) => {
+    const c = clock()
+    const s = setup(c.timers)
+    const failing = kind === 'read' ? s.host.getSettings : s.host.setSettings
+    failing.mockRejectedValue(new Error('unavailable'))
+    await s.cache.ready()
+    s.store.ingest(payload(), initial)
+    s.cache.changed()
+    await flush()
+    await c.advance(kind === 'read' ? 60_000 : 90_000)
+    expect(failing).toHaveBeenCalledTimes(3)
+    s.store.ingest(payload({ rc: 'W1AW' }), initial)
+    s.cache.changed()
+    await flush()
+    await c.advance(29_999)
+    expect(failing).toHaveBeenCalledTimes(3)
+    await c.advance(1)
+    expect(failing).toHaveBeenCalledTimes(4)
+    await c.advance(300_000)
+    expect(failing).toHaveBeenCalledTimes(6)
+    expect(c.pending()).toBe(0)
+    expect(s.store.snapshot(initial, 60).reports).toHaveLength(2)
+  },
+)
+
+it('flushes on visibility expiry while retaining the store and the write cooldown', async () => {
+  const c = clock()
+  const s = setup(c.timers)
+  await s.cache.ready()
+  s.store.ingest(payload(), initial)
+  s.cache.changed()
+  await flush()
+  await s.cache.flush()
+  expect(s.host.setSettings).toHaveBeenCalledTimes(1)
+  s.store.ingest(payload({ rc: 'W1AW' }), initial)
+  s.cache.changed()
+  await s.cache.flush()
+  expect(s.host.setSettings).toHaveBeenCalledTimes(1)
+  await c.advance(30_000)
+  expect(s.host.setSettings).toHaveBeenCalledTimes(2)
+  expect(s.store.snapshot(initial, 60).reports).toHaveLength(2)
+})
+
+it('cancels pending saves and ignores already queued timer callbacks after stopping', async () => {
+  const c = clock()
+  const s = setup(c.timers)
+  await s.cache.ready()
+  s.store.ingest(payload(), initial)
+  s.cache.changed()
+  await flush()
+  const queued = c.timers.setTimeout.mock.calls[0][0]
+  s.cache.stop()
+  expect(c.pending()).toBe(0)
+  queued()
+  s.cache.changed()
+  await s.cache.flush()
+  await c.advance(60_000)
+  expect(s.host.setSettings).not.toHaveBeenCalled()
+  expect(s.store.snapshot(initial, 60).reports).toHaveLength(1)
+})
+
+it('does not restore or schedule work when an outstanding storage read finishes after stopping', async () => {
+  const c = clock()
+  let finish!: (value: JSONValue) => void
+  const write = vi.fn(async () => {})
+  const store = createReportStore()
+  const cache = createReportCache(
+    {
+      read: () =>
+        new Promise<JSONValue>((resolve) => {
+          finish = resolve
+        }),
+      write,
+    },
+    store,
+    () => initial,
+    c.timers,
+  )
+  const loading = cache.ready()
+  cache.stop()
+  finish(JSON.stringify({ version: 1, reports: [{ ...JSON.parse(payload()), id: '42' }] }))
+  await loading
+  await c.advance(60_000)
+  expect(store.snapshot(initial, 60).reports).toHaveLength(0)
+  expect(write).not.toHaveBeenCalled()
+  expect(c.pending()).toBe(0)
 })

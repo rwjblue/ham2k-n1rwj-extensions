@@ -1,10 +1,13 @@
+import type { JSONValue } from '@ham2k/extension-sdk'
 import { expect, it } from 'vitest'
-import { fakeTimers } from '../../../../packages/reception/tests/timers.ts'
+import { fakeTimers, settle } from '../../../../packages/reception/tests/timers.ts'
+import { reportCacheKey } from '../src/data/cache.ts'
+import type { HistoryHost } from '../src/history/client.ts'
 import { createLiveReception } from '../src/live.ts'
-import { fakeSocket } from './socket-fixture.ts'
+import { fakeSocket, publication } from './socket-fixture.ts'
 
 const initial = Date.UTC(2026, 8, 27, 12)
-function setup() {
+function setup(historyHost?: HistoryHost) {
   const timers = fakeTimers(initial)
   const sockets: ReturnType<typeof fakeSocket>[] = []
   const live = createLiveReception(
@@ -15,7 +18,7 @@ function setup() {
     },
     () => initial - 86_400_000,
     () => 0,
-    undefined,
+    historyHost,
     timers.driver,
   )
   const snapshot = (id = 'one', call = 'N1RWJ', online = true) =>
@@ -40,6 +43,55 @@ it('expires the final visible lease without another render or incoming frame', (
   expect(s.timers.pending.size).toBe(0)
   s.timers.advance(120_000)
   expect(s.sockets).toHaveLength(1)
+})
+
+it('saves reports received after the last render, then restores using real panel time', async () => {
+  const saved = new Map<string, JSONValue>()
+  const storage: HistoryHost = {
+    read: async (key) => saved.get(key) ?? null,
+    write: async (key, value) => {
+      saved.set(key, value)
+    },
+    fetch: async () => ({ status: 200, body: '<pskreporter/>' }),
+  }
+  const s = setup(storage)
+  await s.live.restore(initial)
+  s.connect()
+  await settle()
+  s.sockets[0].receive(
+    publication(
+      'pskr/filter/v2/20m/FT8/N1RWJ/W1AW/FN42/FN31/291/291',
+      JSON.stringify({
+        sc: 'N1RWJ',
+        rc: 'W1AW',
+        sl: 'FN42',
+        rl: 'FN31',
+        t: initial / 1000,
+        f: 14074000,
+        md: 'FT8',
+        b: '20m',
+        rp: -12,
+      }),
+    ),
+  )
+  await settle()
+  s.live.pause()
+  await settle()
+  s.timers.advance(30_000)
+  await settle()
+  expect(JSON.parse(String(saved.get(reportCacheKey))).reports).toHaveLength(1)
+  const restored = createLiveReception(
+    () => fakeSocket().socket,
+    () => initial + 86_400_000,
+    () => 0,
+    storage,
+    s.timers.driver,
+  )
+  await restored.restore(initial + 30_000)
+  expect(
+    restored.snapshot('restored', 'N1RWJ', 'outgoing', 15, false, initial + 30_000).reports,
+  ).toHaveLength(1)
+  restored.stop()
 })
 
 it('shares a topic expiry across placements and stops after the last renewal', () => {
