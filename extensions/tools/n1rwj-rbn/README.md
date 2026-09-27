@@ -80,6 +80,13 @@ source controls in the native Spots panel further narrow these results.
 
 No build tools, map accounts, or custom Ham2K build are required.
 
+The info button beside refresh opens **Status** for the watched callsign,
+window, latest report on the selected band, and last successful service check.
+Warnings include refresh/retry guidance; **About** explains the observations,
+sources, map origin, and refresh behavior. Closing info returns to the report
+page you were viewing. See the
+[design review and rendered mockups](../../../docs/RECEPTION-INFO-DESIGN.md).
+
 ## In Ham2K
 
 Installing the extension makes **My Signal** available in the operation's

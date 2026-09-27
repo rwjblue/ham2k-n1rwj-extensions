@@ -124,7 +124,11 @@ function textValue(text: NonNullable<SvgSceneLayer['text']>, values: SvgScene['v
 }
 
 /** Approximate the scene's initial frame for inspection; Flutter remains the renderer of record. */
-export function scenePreviewSvg(scene: SvgScene, environment: PanelEnvironment): string {
+export function scenePreviewSvg(
+  scene: SvgScene,
+  environment: PanelEnvironment,
+  source = 'RBN',
+): string {
   const layers = scene.layers.map((layer, index) => {
     const prefix = `preview-layer-${index}-`
     const clip = `${prefix}bounds`
@@ -153,7 +157,7 @@ export function scenePreviewSvg(scene: SvgScene, environment: PanelEnvironment):
         }
         body = body.split(`url(#${id})`).join(`url(#${prefix}${id})`)
       }
-      artwork = `<svg width="${layer.width}" height="${layer.height}" viewBox="${xml(viewBox ?? `0 0 ${layer.width} ${layer.height}`)}" preserveAspectRatio="none">${body}</svg>`
+      artwork = `<svg aria-hidden="true" width="${layer.width}" height="${layer.height}" viewBox="${xml(viewBox ?? `0 0 ${layer.width} ${layer.height}`)}" preserveAspectRatio="none">${body}</svg>`
     } else if (layer.text) {
       const text = layer.text
       const role = Object.values(environment.typography).find(
@@ -171,7 +175,7 @@ export function scenePreviewSvg(scene: SvgScene, environment: PanelEnvironment):
     'STATIC SVG PREVIEW · Native UI not tested here',
     'Text is approximate; controls and animation are inactive.',
   ]
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${scene.width}" height="${scene.height + 42}" viewBox="0 0 ${scene.width} ${scene.height + 42}" role="img" aria-label="RBN static scene preview, not native app acceptance"><title>RBN static scene preview</title><desc>The actual scene JSON is provided separately. This approximates the initial scene frame with browser SVG text, without Flutter text measurement, interaction, menus, or animation.</desc><rect width="100%" height="100%" fill="${environment.colors.surface}"/><svg width="${scene.width}" height="${scene.height}" viewBox="0 0 ${scene.width} ${scene.height}">${layers.join('')}</svg><path d="M0 ${scene.height}H${scene.width}" stroke="${environment.colors.outlineVariant}"/>${caption.map((line, index) => `<text x="8" y="${scene.height + 16 + index * 16}" font-family="sans-serif" font-size="10" fill="${environment.colors.onSurfaceVariant}">${xml(line)}</text>`).join('')}</svg>\n`
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${scene.width}" height="${scene.height + 42}" viewBox="0 0 ${scene.width} ${scene.height + 42}" role="img" aria-label="${xml(source)} static scene preview, not native app acceptance"><title>${xml(source)} static scene preview</title><desc>This approximates the initial scene frame with browser SVG text, without Flutter text measurement, interaction, menus, or animation.</desc><rect width="100%" height="100%" fill="${environment.colors.surface}"/><svg aria-hidden="true" width="${scene.width}" height="${scene.height}" viewBox="0 0 ${scene.width} ${scene.height}">${layers.join('')}</svg><path d="M0 ${scene.height}H${scene.width}" stroke="${environment.colors.outlineVariant}"/>${caption.map((line, index) => `<text x="8" y="${scene.height + 16 + index * 16}" font-family="sans-serif" font-size="10" fill="${environment.colors.onSurfaceVariant}">${xml(line)}</text>`).join('')}</svg>\n`
 }
 
 function previewEnvironment(options: PreviewOptions): PanelEnvironment {

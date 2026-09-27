@@ -60,6 +60,13 @@ pending; the installed app was still build 170 at promotion time.
 
 ## Reception behavior
 
+The info button beside reload opens **Status** for the watched callsign,
+direction, window, live-feed/history state, and latest report on the selected
+band. **About** explains the source, measurements, map origin, and reload
+behavior. Warnings and next steps appear before general reference material.
+Closing info returns to the report page you were viewing. See the
+[design review and rendered mockups](../../../docs/RECEPTION-INFO-DESIGN.md).
+
 - The shared [reception workspace](../../../packages/reception/README.md)
   supplies RBN's map, SVG renderer, settings, and panel state. Settings offer
   **Who hears me** and **Who I hear**, map/list layouts, band/window selection,
