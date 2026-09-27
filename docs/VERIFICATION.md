@@ -1446,3 +1446,30 @@ no contest behavior changes and require no CWT/CQ WW upstream changes.
 Published artifact verification does not extend the native Polo UI/lifecycle
 verification above. Publication records and versioning are personal repository
 packaging, exempt from upstream runtime synchronization.
+
+## Release 0.6.1 publication — 2026-09-27
+
+Published [v0.6.1](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.6.1)
+from signed commit `7d51767f60692339bc19160c5d76260dda87cc14` at 06:04 UTC.
+The release dry run passed **708 tests across 58 files**, lint, strict
+typechecks, official ES2020 builds, packaging, and checksum validation.
+The [release workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/36299023676)
+succeeded. GitHub contains seven bundles and seven checksum files; the tag
+resolves to the tested signed commit and the body matches
+`docs/releases/v0.6.1.md` exactly.
+
+`mise run release:catalog v0.6.1 --dry-run` downloaded and validated every
+published asset. Only CQ WW was selected; its catalog upload returned
+**approved** on `stable` at 06:05 UTC. All six unchanged extensions were skipped.
+
+The CQ WW fix and matching regression coverage are pushed to
+[Ham2K/extensions PR #2](https://github.com/ham2k/extensions/pull/2). That workspace
+passes 40 tests, typechecking, build, and official packaging. Tests cover bare
+spot candidates, known QTH and zone hints, operator corrections and clearing,
+band/mode eligibility, independent previews, and checkpoint replay. The
+installed build 175 JavaScript kernel under Node VM reports new country,
+zone, and known-state multipliers without changing the accumulated score.
+Native UI and on-air verification remain pending.
+
+Personal versioning and publication records are exempt from upstream runtime
+synchronization. No CWT behavior changed and its PR branch was not edited.

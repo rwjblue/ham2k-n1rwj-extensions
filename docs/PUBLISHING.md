@@ -8,6 +8,23 @@ each submission before operators can install it from the catalog.
 
 ## Current release status
 
+[v0.6.1](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.6.1)
+was published from signed commit `7d51767f60692339bc19160c5d76260dda87cc14`
+on September 27, 2026 at 06:04 UTC. All seven bundles and seven checksum files
+are available. The [release workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/36299023676)
+passed both upload and catalog jobs. Downloaded assets passed
+`mise run release:catalog v0.6.1 --dry-run`.
+
+CQ WW returned **approved** on `stable` at 06:05 UTC. All six other extensions
+were skipped because their behavior is unchanged. This release fixes RTTY
+spot multiplier notices and preserves scored points, exchange corrections,
+and duplicate handling. The synchronized fix is pushed to
+[Ham2K/extensions PR #2](https://github.com/ham2k/extensions/pull/2).
+See the [release notes](releases/v0.6.1.md) and
+[verification record](VERIFICATION.md#release-061-publication--2026-09-27).
+
+### Previous releases
+
 [v0.6.0](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.6.0)
 was published from signed commit `1edadb2f32aa5220df9173d1d1c1230e6d0b1b69`
 on September 27, 2026 at 01:38 UTC (September 26 in US Eastern time).
@@ -22,8 +39,6 @@ The release includes the new WRT extension, the MST/SST contest-engine update,
 and RBN's default to all supported spot modes. See the
 [release notes](releases/v0.6.0.md) and
 [verification record](VERIFICATION.md#release-060-publication--2026-09-27).
-
-### Previous releases
 
 [v0.5.1](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.5.1)
 was published from signed commit `88363a3cff77113963f3fb35ca8b57047ece5f1f`
