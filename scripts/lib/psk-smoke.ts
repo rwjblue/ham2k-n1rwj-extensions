@@ -216,7 +216,15 @@ export async function verifyPskBundle(path: string, manifest: Manifest) {
   const socketCalls = calls.filter((call) => call.method.startsWith('webSocket'))
   assert.equal(socketCalls[socketCalls.length - 1]?.method, 'webSocketClose')
   for (let i = 0; i < 60; i++) await Promise.resolve()
-  assert.ok(typeof saved['psk-history-next-request-v1'] === 'number')
+  const historyBudget = saved['psk-history-next-request-v1']
+  assert.ok(
+    typeof historyBudget === 'number' ||
+      (historyBudget &&
+        typeof historyBudget === 'object' &&
+        !Array.isArray(historyBudget) &&
+        historyBudget.version === 2 &&
+        historyBudget.remainingMs === 300_000),
+  )
   assert.ok(String(saved['psk-reports-v1']).includes('CU3AT'))
   assert.equal(saved.unrelated, 'preserved')
   assert.ok(!calls.some((call) => call.method === 'kvGet' || call.method === 'kvSet'))
@@ -225,7 +233,7 @@ export async function verifyPskBundle(path: string, manifest: Manifest) {
   assert.equal(opens, 2)
   assert.ok(definitions[0].onHide)
   await definitions[0].onHide()
-  timers.advance(120_000)
+  timers.advance(300_000)
   await settleHostCalls()
   assert.equal(calls.filter((call) => call.method === 'webSocketOpen').length, opens)
   assert.equal(timers.pendingCount, 0)

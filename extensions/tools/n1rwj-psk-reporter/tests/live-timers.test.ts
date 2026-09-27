@@ -108,6 +108,32 @@ it('shares a topic expiry across placements and stops after the last renewal', (
   expect(s.timers.pending.size).toBe(0)
 })
 
+it.each([false, true])(
+  'wakes queued history independently of rendering (paused: %s)',
+  async (paused) => {
+    let requests = 0
+    const storage: HistoryHost = {
+      read: async (key) => (key === 'psk-history-next-request-v1' ? initial + 5000 : null),
+      write: async () => {},
+      fetch: async () => {
+        requests++
+        return { status: 200, body: '<pskreporter/>' }
+      },
+    }
+    const s = setup(storage)
+    await s.live.restore(initial)
+    s.connect()
+    await settle()
+    expect(requests).toBe(0)
+    if (paused) s.live.pause()
+    s.timers.advance(5000)
+    await settle()
+    expect(requests).toBe(paused ? 0 : 1)
+    s.live.stop()
+    expect(s.timers.pending.size).toBe(0)
+  },
+)
+
 it('removes stale placements sharing a visible topic without exhausting placement capacity', () => {
   const s = setup()
   s.connect()

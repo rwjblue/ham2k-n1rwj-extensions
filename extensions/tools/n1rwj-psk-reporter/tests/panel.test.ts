@@ -1,7 +1,8 @@
-import type { FetchResponse, PanelContent, PanelRenderArgs } from '@ham2k/extension-sdk'
+import type { FetchResponse, JSONValue, PanelContent, PanelRenderArgs } from '@ham2k/extension-sdk'
 import { expect, it, vi } from 'vitest'
 import { renderReceptionScene } from '../../../../packages/reception/src/ui/scene.ts'
 import { environment } from '../../../../packages/reception/tests/environment.ts'
+import { fakeTimers } from '../../../../packages/reception/tests/timers.ts'
 import { parsePskPayload } from '../src/data/parser.ts'
 import type { HistoryHost } from '../src/history/client.ts'
 import { createLiveReception } from '../src/live.ts'
@@ -263,6 +264,54 @@ it('does not open a socket or fabricate reports while offline', async () => {
   expect(text).toContain('Offline · reception paused')
   expect(open).not.toHaveBeenCalled()
   expect(text).not.toContain('CU3AT')
+})
+
+it('discards a render hidden during cache restoration and allows a later render to resume', async () => {
+  const stored = deferred<JSONValue>()
+  const timers = fakeTimers(now)
+  const open = vi.fn(() => fakeSocket().socket)
+  const fetch = vi.fn<HistoryHost['fetch']>(async () => historyResponse())
+  const live = createLiveReception(
+    open,
+    () => now,
+    () => 0,
+    {
+      read: async (key) => (key === 'psk-reports-v1' ? stored.promise : null),
+      write: async () => {},
+      fetch,
+    },
+    timers.driver,
+  )
+  const panel = createPskPanel(live)
+  const obsolete = panel.render(args, { online: true })
+  live.pause()
+  stored.resolve(null)
+  expect(await obsolete).toEqual({ kind: 'markdown', content: '' })
+  await settle()
+  expect(open).not.toHaveBeenCalled()
+  expect(fetch).not.toHaveBeenCalled()
+  expect(timers.pending.size).toBe(0)
+  expect((await panel.render(args, { online: true })).kind).toBe('svgScene')
+  await settle()
+  expect(open).toHaveBeenCalledTimes(1)
+  expect(fetch).toHaveBeenCalledTimes(1)
+  live.stop()
+})
+
+it('checks restoration validity after its promise settles, before the render resumes', async () => {
+  const open = vi.fn(() => fakeSocket().socket)
+  const live = createLiveReception(open)
+  const restore = live.restore
+  live.restore = async (realTime) => {
+    const restored = await restore(realTime)
+    live.pause()
+    return restored
+  }
+  expect(await createPskPanel(live).render(args, { online: true })).toEqual({
+    kind: 'markdown',
+    content: '',
+  })
+  expect(open).not.toHaveBeenCalled()
 })
 
 it('renders cached reports immediately, shares pending history across placements, and retains live MQTT updates', async () => {

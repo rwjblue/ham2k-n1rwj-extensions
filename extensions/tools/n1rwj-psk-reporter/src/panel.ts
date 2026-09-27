@@ -200,13 +200,15 @@ export function createPskPanel(live: LiveReception): PanelHook {
       if (!args.environment || !args.instanceId)
         return {
           kind: 'markdown',
-          content: 'PSK Reporter requires Ham2K build 171 or newer with native SVG panels.',
+          content:
+            'PSK Reporter requires a Ham2K version with extension API 3 and native SVG panels.',
         }
       const state = stateFor(args, String(args.config.receptionDirection ?? 'outgoing'))
       const config = readConfig(args.config)
       const realTime = realNowMillis(args)
       const now = realTime ?? Date.now()
-      await live.restore(realTime)
+      const restored = await live.restore(realTime)
+      if (!restored.isCurrent()) return { kind: 'markdown', content: '' }
       const snapshot = live.snapshot(
         args.instanceId,
         watchedCall(args.operation, config.watchCall),

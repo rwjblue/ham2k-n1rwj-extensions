@@ -33,6 +33,7 @@ export function createLiveReception(
   // Host samples are epoch timestamps. Relative timer delays, not the sandbox's
   // virtual Date, own protocol deadlines and the lifetime of a visible view.
   let realSample: number | undefined
+  let visibilityGeneration = 0
   const reportNow = () => (timers ? (realSample ?? now()) : now())
   function observeTime(value?: number) {
     if (typeof value === 'number' && Number.isFinite(value))
@@ -60,6 +61,7 @@ export function createLiveReception(
               lease.direction === direction &&
               (timers || now() - lease.seen <= 30_000),
           ),
+        timers,
       )
     : undefined
   const prune = () => {
@@ -120,18 +122,25 @@ export function createLiveReception(
       })
     }
     client.tick([...topics])
+    history?.reconcile()
   }
   function pause() {
+    visibilityGeneration++
     for (const timer of expiry.values()) timer.cancel()
     expiry.clear()
     leases.clear()
     client.stop()
+    history?.pause()
     void cache?.flush()
   }
   return {
-    restore(realNowMillis?: number) {
+    async restore(realNowMillis?: number) {
+      const generation = visibilityGeneration
       observeTime(realNowMillis)
-      return cache?.ready() ?? Promise.resolve()
+      await cache?.ready()
+      // Check at the caller's continuation, including a pause after storage
+      // settled but before the render's awaiting continuation gets to run.
+      return { isCurrent: () => generation === visibilityGeneration }
     },
     snapshot(
       instance: string,
@@ -194,6 +203,7 @@ export function createLiveReception(
       online: boolean,
       realNowMillis?: number,
     ): void {
+      observeTime(realNowMillis)
       // HTTP completion updates the shared store/status independently of the event.
       void history?.force(call, direction, window, online, realNowMillis)
     },

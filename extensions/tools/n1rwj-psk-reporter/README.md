@@ -1,8 +1,8 @@
 # N1RWJ PSK Reporter
 
-Live PSK Reporter reception maps for Ham2K **build 171 or newer**. The regular
-package uses the published `@ham2k/extension-sdk` **0.6.0** and
-`@ham2k/extension-tools` **0.5.0**, with API 2, a WebSocket permission
+Live PSK Reporter reception maps for Ham2K with **extension API 3** and native
+SVG panels. The regular package uses the published `@ham2k/extension-sdk`
+**0.8.1** and `@ham2k/extension-tools` **0.7.0**, with a WebSocket permission
 for `mqtt.pskreporter.info`, and HTTPS access to `retrieve.pskreporter.info`
 for recent history.
 
@@ -12,7 +12,7 @@ for recent history.
 mise run pack n1rwj-psk-reporter
 ```
 
-Install `dist/n1rwj-psk-reporter-0.4.1.h2kext` through Ham2K's extension installer,
+Install `dist/n1rwj-psk-reporter-0.6.1.h2kext` through Ham2K's extension installer,
 allow its declared network hosts, and add **PSK Reporter** to an operation's layout.
 It follows the operation's station callsign and location unless overridden.
 Choose **Who hears me** for outgoing reception or **Who I hear** for reports
@@ -24,14 +24,16 @@ The extension key is unchanged, so this replaces the earlier offline preview.
 `mise run check` includes the normal bundle's binary MQTT smoke test, strict
 TypeScript checks, deterministic transport/panel tests and official packaging.
 The smoke test exercises the actual published SDK's socket, HTTP, storage and
-force-reload bridges with fixture responses in a timerless Node VM. It does not
+force-reload and timer bridges with fixture responses in a Node VM without
+ambient browser or Node timers. It does not
 validate native Ham2K UI, real HTTP access or operating-system lifecycle.
 
 The implementation first passed against upstream source commit
 [17b15fdcafdd](https://github.com/ham2k/halo/commit/17b15fdcafdd), then passed the
 same contract, build, packer and binary bridge checks against the published
-SDK 0.6.0/tools 0.5.0. The code now uses the SDK's own socket types and regular
-entry point; no SDK implementation is copied into this repository.
+SDK 0.6.0/tools 0.5.0. Timer support is checked against SDK 0.8.1/tools 0.7.0.
+The code uses the SDK's socket and timer types and regular entry point; no SDK
+implementation is copied into this repository.
 
 For future SDK/tools compatibility checks, an optional isolated candidate build
 uses the same entry point and manifest:
@@ -55,8 +57,8 @@ It subscribes only to that callsign, runs for at most 75 seconds, reports whethe
 MQTT connected and whether reports arrived, and closes its connection. The local
 probe established connection, subscription and heartbeat with the live broker;
 CU3AT had no reports during that observation. Fixtures validate binary report
-ingestion and scene generation separately. Native build-171-or-newer tests remain
-pending; the installed app was still build 170 at promotion time.
+ingestion and scene generation separately. Native UI and lifecycle tests with
+an API-3-capable app remain pending.
 
 ## Reception behavior
 
@@ -82,9 +84,9 @@ Closing info returns to the report page you were viewing. See the
   malformed or excessive input. Retained publications are ignored.
 - `src/transport/client.ts` negotiates `mqtt` over
   `wss://mqtt.pskreporter.info:1886`. Handshakes and subscription ACKs time out
-  after 10 seconds. Visible ticks send a ping every 15 seconds and allow 15
-  seconds for its reply. Failures retry only from a render tick, with exponential
-  5–60 second backoff plus jitter. A minute of stable connection resets backoff.
+  after 10 seconds. Host timers send a ping every 15 seconds and allow 15
+  seconds for its reply. Failures retry with exponential 5–60 second backoff
+  plus jitter while a subscription remains visible. A minute of stable connection resets backoff.
   Closed-session callbacks cannot affect the replacement session.
 - `src/live.ts` shares **one socket per extension**, up to eight distinct narrow
   callsign/direction subscriptions and 32 placement leases. It validates topics
@@ -92,15 +94,18 @@ Closing info returns to the report page you were viewing. See the
   cache retains at most 1,000 newest links and expires them after one hour.
   Capacity loss is visible. A new callsign cannot display the prior call's data.
   Reports and capacity-loss state are saved in the extension's persistent settings,
-  with changed snapshots checkpointed at most every 30 seconds on render ticks.
+  with changed snapshots checkpointed by a host timer after 30 seconds. Reports
+  arriving during a write schedule another checkpoint; writes never overlap.
+  Hiding attempts a final flush when the write cooldown permits. Three consecutive
+  storage failures stop automatic retries until new activity occurs.
   Restart restores the full hour with original timestamps and exact callsigns;
   the newest reports win if live delivery overlaps restoration. An abrupt close
   can lose reports since the last checkpoint. Storage failures are shown in the panel.
 - Panels normally render on the host's five-second tick cadence plus operation
   or UI events. Pending history requests add one-second render ticks so their
   results appear promptly. The first render observing completion removes that
-  fast tick and returns to five seconds, which also services MQTT heartbeats and
-  subscription leases. Connection status is separate from report age; connecting
+  fast tick and returns to five seconds. Renders renew subscription visibility;
+  MQTT deadlines and cache checkpoints run independently. Connection status is separate from report age; connecting
   is not presented as live reception. No per-report render or whole-log query occurs.
 - Recent history uses PSK Reporter's documented XML query API on startup,
   after a collection gap, and when a larger report window needs older data.
@@ -109,7 +114,10 @@ Closing info returns to the report page you were viewing. See the
   newer observations win. Exact callsign and direction filtering also applies
   to history. Unlocated stations remain in the list.
 - Automatic HTTP requests share one queue and are spaced at least five minutes
-  apart across all placements. The cooldown persists across extension reloads.
+  apart across all placements. A host timer wakes queued eligible work at its
+  deadline; successful history requests do not start periodic polling. The
+  cooldown persists across extension reloads. A pending relative delay is
+  conservatively reapplied on restart, so developer clock changes cannot bypass it.
   Failures increase the delay up to an hour. Hidden or replaced subscriptions
   do not start queued work or ingest late responses. Requests use the host's
   timeout without an extension override; the inspected host allows 15 seconds
@@ -133,13 +141,18 @@ Closing info returns to the report page you were viewing. See the
 
 ## Visibility and remaining native tests
 
-There are no JavaScript timers in the extension. A placement's subscription lease
-expires after 30 seconds without rendering. A remaining visible panel removes
-expired subscriptions on its next tick. With all panels hidden or removed,
-subsequent socket events close the session after the lease expires; with no events,
-the broker's 30-second MQTT keepalive limit provides cleanup (normally by 45
-seconds without client traffic). Reveal/sleep recovery discards an old session
-and reconnects from a render. Host unload owns final socket cleanup.
+Host timers expire each callsign/direction subscription after 30 seconds without
+rendering, even when no socket event arrives. Placements watching the same topic
+share its timer. Removing the last lease closes the socket and cancels queued
+history work. The extension's `onHide` callback pauses reception immediately;
+a fresh render renews visibility and reconnects. SDK timer callbacks are guarded
+against cancellation, replaced sessions, and unloading. Relative delays remain
+independent of the sandbox's developer clock. At most 14 timer slots are used,
+within the host's limit of 16.
+
+Native tab hiding, app backgrounding, sleep/resume and extension unload still
+need verification in Ham2K. These callbacks do not promise continuous capture
+while the app or its timers are suspended.
 
 This is a **live window with best-effort backfill**, without a promise of background
 capture or complete history. Cache contents can remain visible while offline or reconnecting. Incoming
@@ -157,13 +170,14 @@ implementation handles that failure without interrupting the MQTT feed. The
 deterministic tests and SDK bundle smoke verify fixtures, not provider availability.
 History responses, live reports and the automatic-request cooldown use the host's
 persistent extension settings. The host's `kvGet`/`kvSet` are memory-only and are
-not used for persistence. No background HTTP polling or cache writing occurs.
+not used for persistence. Timers service visible subscriptions, eligible history
+work and pending cache writes; they do not renew visibility themselves.
 
-Before publishing, install on build 171 or newer and test both directions,
+Before publishing, install on a host supporting extension API 3 and native SVG
+panels, and test both directions,
 multiple placements, callsign/operation changes, hidden tabs, app backgrounding,
 panel removal, sleep/resume, disconnects, denied grants and extension reload.
-Check native binary delivery and UI on each intended platform. Publication
-monitoring is paused because both required packages have been verified.
+Check native binary delivery and UI on each intended platform.
 Also check first-open history, force reload, returning after a gap, multiple
 panels sharing the HTTP cooldown, a callsign change during a request, and an
 HTTP denial or browser challenge while MQTT continues receiving. Verify cached
