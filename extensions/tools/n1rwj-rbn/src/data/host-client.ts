@@ -21,5 +21,11 @@ export const rbnFetch = createRbnTransport(
   (url, options) => host.fetch(url, options),
   Date.now,
   storage,
+  host,
 )
-export const rbnClient = createRbnClient({ fetch: rbnFetch, storage })
+export const rbnClient = createRbnClient({
+  fetch: rbnFetch,
+  storage,
+  timers: host,
+  observeTimeLowerBound: rbnFetch.observeTimeLowerBound,
+})

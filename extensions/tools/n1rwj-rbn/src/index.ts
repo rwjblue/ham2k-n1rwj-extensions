@@ -1,12 +1,15 @@
 import { defineExtension } from '@ham2k/extension-sdk'
 import manifest from '../manifest.json'
-import { rbnFetch, setRbnSettings } from './data/host-client.ts'
+import { rbnClient, rbnFetch, setRbnSettings } from './data/host-client.ts'
 import { createReceiverData } from './data/receivers.ts'
 import { createRbnPanel } from './panel.ts'
 import { createRbnSpots } from './spots/index.ts'
 
 defineExtension({
   ...manifest,
+  onHide() {
+    rbnClient.pause?.()
+  },
   onActivation({ registerHook }) {
     const receivers = createReceiverData()
     // Share receiver metadata, never receiver selection. Spots preferences are

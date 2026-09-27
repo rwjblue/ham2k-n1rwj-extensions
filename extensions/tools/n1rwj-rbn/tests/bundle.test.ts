@@ -10,6 +10,7 @@ import type {
 } from '@ham2k/extension-sdk'
 import { expect, it } from 'vitest'
 import { environment } from '../../../../packages/reception/tests/environment.ts'
+import { createHostTimerHarness } from '../../../../scripts/lib/psk-smoke.ts'
 import manifest from '../manifest.json'
 import { NOW, payload } from './data/fixtures.ts'
 
@@ -42,6 +43,7 @@ it('registers and loads the weekly receiver data file in the packaged sandbox', 
   )
   expect(definitions).toHaveLength(1)
   definitions[0].onActivation({
+    timers: createHostTimerHarness().api,
     registerHook: (category, hook) => registered.set(category, hook),
     hostCall: async (method) => {
       throw new Error(`Unexpected host call ${method}`)
@@ -82,6 +84,7 @@ it('restores reports and shared server backoff through the actual SDK settings b
   let requests = 0
   let limited = false
   function restart() {
+    const timers = createHostTimerHarness()
     let definition: ExtensionDefinition | undefined
     let panel: PanelHook | undefined
     runInContext(
@@ -102,6 +105,7 @@ it('restores reports and shared server backoff through the actual SDK settings b
       { timeout: 5000 },
     )
     required(definition).onActivation({
+      timers: timers.api,
       registerHook: (category, hook) => {
         if (category === 'panel') panel = hook.hook as PanelHook
       },
@@ -121,7 +125,7 @@ it('restores reports and shared server backoff through the actual SDK settings b
         throw new Error(`Unexpected host call ${method}`)
       },
     })
-    return required(panel)
+    return { panel: required(panel), timers }
   }
   const args = () => ({
     panelKey: 'my-signal',
@@ -133,13 +137,13 @@ it('restores reports and shared server backoff through the actual SDK settings b
     reason: 'initial',
     clock: { nowMillis: clock, realNowMillis: clock },
   })
-  const first = restart()
+  const { panel: first } = restart()
   await first.render(args(), { online: true })
   await settleHostCalls()
   expect(JSON.stringify(await first.render(args(), { online: true }))).toContain('W3LPL')
   expect(requests).toBe(1)
   clock += 1000
-  const second = restart()
+  const { panel: second } = restart()
   expect(JSON.stringify(await second.render(args(), { online: false }))).toContain('W3LPL')
   await second.render(args(), { online: true })
   expect(requests).toBe(1)
@@ -156,19 +160,23 @@ it('restores reports and shared server backoff through the actual SDK settings b
   await second.onEvent?.(event(), { online: true })
   await settleHostCalls()
   expect(requests).toBe(2)
-  const third = restart()
+  expect(saved['rbn-rate-limit-v1']).toMatchObject({ version: 1, pendingDelayMs: 120_000 })
+  const { panel: third, timers: thirdTimers } = restart()
   await third.onEvent?.(event(), { online: true })
   expect(requests).toBe(2)
   expect(JSON.stringify(await third.render(args(), { online: true }))).toContain('rate limited')
   clock += 120_000
   limited = false
+  thirdTimers.advance(120_000)
+  await settleHostCalls()
   await third.render(args(), { online: true })
   await settleHostCalls()
   expect(requests).toBe(3)
   expect(saved.spotMode).toBe('CW')
 })
 
-it('renders before a slow fetch settles in a sandbox without timers and collects it on the next tick', async () => {
+it('renders before a slow fetch settles and uses host timers without ambient timer globals', async () => {
+  const timers = createHostTimerHarness()
   const source = await readFile(new URL('../build/index.js', import.meta.url), 'utf8')
   const sharedModules = Object.fromEntries(
     await Promise.all(
@@ -204,6 +212,7 @@ it('renders before a slow fetch settles in a sandbox without timers and collects
   expect(runInContext('typeof setInterval', sandbox)).toBe('undefined')
   runInContext(source, sandbox, { timeout: 5000 })
   required(definition).onActivation({
+    timers: timers.api,
     registerHook: (category, hook) => {
       if (category === 'panel') panel = hook.hook as PanelHook
     },
@@ -248,4 +257,16 @@ it('renders before a slow fetch settles in a sandbox without timers and collects
   expect(completed?.triggers ?? []).not.toContain('tick:1')
   expect(JSON.stringify(completed)).toContain('W3LPL')
   expect(requests).toBe(1)
+  // The built bundle refreshes at the remaining cooldown without a render or
+  // advancing the sandbox's Date. Hiding cancels the next scheduled refresh.
+  timers.advance(54_000)
+  await settleHostCalls()
+  expect(requests).toBe(2)
+  await required(required(definition).onHide)()
+  expect(timers.pendingCount).toBe(0)
+  timers.advance(5 * 60_000)
+  await settleHostCalls()
+  expect(requests).toBe(2)
+  expect(runInContext('typeof setTimeout', sandbox)).toBe('undefined')
+  expect(runInContext('typeof setInterval', sandbox)).toBe('undefined')
 })

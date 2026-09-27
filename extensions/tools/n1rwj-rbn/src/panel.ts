@@ -192,7 +192,7 @@ export function createRbnPanel(
           description:
             'Where your CW, RTTY, FT8, and FT4 signals are heard, with a map and RBN receiver reports provided by Vail ReRBN.',
           // The host withholds renders behind a tab or while the app is hidden.
-          // Match the network cooldown to avoid rebuilding an unchanged map halfway through it.
+          // This cadence also renews the client's bounded visibility lease.
           on: ['operation', 'tick:60'],
           multiple: true,
           form: configFields,
@@ -217,6 +217,7 @@ export function createRbnPanel(
         client.getSnapshot(
           { call, windowMinutes: config.windowMinutes },
           {
+            instanceId: args.instanceId,
             online: ctx.online,
             waitForRequest: false,
             ...(realTime === undefined ? {} : { realNowMillis: realTime }),
@@ -270,6 +271,7 @@ export function createRbnPanel(
             windowMinutes: config.windowMinutes,
           },
           {
+            instanceId: args.instanceId,
             force: true,
             online: ctx.online,
             waitForRequest: false,

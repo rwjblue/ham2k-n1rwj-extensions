@@ -1,5 +1,6 @@
 import type { FetchOptions, FetchResponse } from '@ham2k/extension-sdk'
 import type { PersistentStorage } from '../../../../../packages/reception/src/storage.ts'
+import { createTimerSlot, type TimerDriver } from '../../../../../packages/reception/src/timers.ts'
 import type { RbnSnapshot } from '../model.ts'
 import { isValidCall, normalizeCall } from '../model.ts'
 import { decodeSnapshots, encodeSnapshots, snapshotKey } from './cache.ts'
@@ -11,6 +12,9 @@ const maxReports = 500
 const maxEntries = 8
 const maxResponseLength = 1_000_000
 const rateLimitMessage = 'Vail ReRBN rate limit reached (HTTP 429). Waiting before retrying.'
+// The host renders visible panels every minute. A little slack avoids changing
+// that display cadence; hidden placements expire without any further render.
+const visibilityLeaseMs = 75_000
 
 export interface RbnQuery {
   call: string
@@ -18,17 +22,24 @@ export interface RbnQuery {
 }
 
 export interface RbnClientOptions {
-  fetch: (url: string, options?: FetchOptions) => Promise<FetchResponse>
+  fetch: (url: string, options?: FetchOptions, isAllowed?: () => boolean) => Promise<FetchResponse>
   now?: () => number
   refreshIntervalMs?: number
   storage?: PersistentStorage
+  timers?: TimerDriver
+  observeTimeLowerBound?: (time: number) => void
 }
 
 export interface RbnClient {
   getSnapshot(query: RbnQuery, options?: RbnRequestOptions): Promise<RbnSnapshot>
+  pause?(): void
 }
 
 interface RbnRequestOptions {
+  /** Internal wake-up: eligibility must survive any awaited storage work. */
+  scheduled?: boolean
+  /** Only host renders/events renew a placement's visibility lease. */
+  instanceId?: string
   force?: boolean
   online?: boolean
   realNowMillis?: number
@@ -56,9 +67,96 @@ export function createRbnClient(options: RbnClientOptions): RbnClient {
   let writing = Promise.resolve()
   let realClockSample: number | undefined
   let sampleRevision = 0
+  let timerTime = 0
+  let online = true
+  const refreshTimer = options.timers && createTimerSlot(options.timers)
+  const placements = new Map<
+    string,
+    { query: RbnQuery; timer: ReturnType<typeof createTimerSlot> }
+  >()
   // Date follows the developer's virtual clock and cannot measure real elapsed
   // time between host samples. Completion timing is finalized by the next sample.
-  const requestNow = () => realClockSample ?? now()
+  // A fired timeout establishes an epoch lower bound, never a new host clock
+  // sample. Completion durations remain pending until a genuine sample arrives.
+  const requestNow = () => Math.max(timerTime, realClockSample ?? now())
+
+  function scheduleRefresh() {
+    refreshTimer?.cancel()
+    if (!refreshTimer || !online || placements.size === 0) return
+    let next = Number.POSITIVE_INFINITY
+    for (const { query } of placements.values()) {
+      const entry = cache.get(`${query.call}|${query.windowMinutes}`)
+      if (entry?.inFlight) continue
+      if (
+        !entry &&
+        cache.size >= maxEntries &&
+        [...cache.values()].every((candidate) => candidate.inFlight)
+      )
+        continue
+      next = Math.min(
+        next,
+        Math.max(rateLimitedUntil, (entry?.snapshot.lastAttemptMs ?? 0) + refreshIntervalMs),
+      )
+    }
+    if (!Number.isFinite(next)) return
+    const at = Math.max(requestNow(), next)
+    refreshTimer.schedule(Math.max(1, at - requestNow()), () => {
+      timerTime = Math.max(timerTime, at)
+      if (timerTime >= rateLimitedUntil) {
+        pendingRetryDelayMs = 0
+        pendingRetrySampleRevision = undefined
+      }
+      // The leases have their own real timers; this callback never renews them.
+      // Deduplicate placements before starting independent station requests.
+      const visible = new Map(
+        [...placements.values()].map(({ query }) => [
+          `${query.call}|${query.windowMinutes}`,
+          query,
+        ]),
+      )
+      void Promise.all(
+        [...visible.values()].map((query) => getSnapshot(query, { online, scheduled: true })),
+      ).finally(scheduleRefresh)
+    })
+  }
+
+  function observePlacement(query: RbnQuery, requestOptions: RbnRequestOptions) {
+    const id = requestOptions.instanceId
+    if (!options.timers || !id) return
+    online = requestOptions.online !== false
+    placements.get(id)?.timer.cancel()
+    placements.delete(id)
+    if (isValidCall(query.call)) {
+      const timer = createTimerSlot(options.timers)
+      placements.set(id, { query, timer })
+      const expiresAt = requestNow() + visibilityLeaseMs
+      timer.schedule(visibilityLeaseMs, () => {
+        timerTime = Math.max(timerTime, expiresAt)
+        placements.delete(id)
+        scheduleRefresh()
+      })
+    }
+    // Eight placement timers, one refresh timer and one shared transport timer
+    // fit comfortably below the host's per-extension budget of sixteen.
+    while (placements.size > maxEntries) {
+      const oldest = placements.keys().next().value
+      if (oldest === undefined) break
+      placements.get(oldest)?.timer.cancel()
+      placements.delete(oldest)
+    }
+    scheduleRefresh()
+  }
+
+  function isVisible(query: RbnQuery) {
+    return (
+      online &&
+      [...placements.values()].some(
+        (placement) =>
+          placement.query.call === query.call &&
+          placement.query.windowMinutes === query.windowMinutes,
+      )
+    )
+  }
 
   function finalizeTiming(time: number, newSample: boolean): boolean {
     if (realClockSample !== undefined && !newSample) return false
@@ -139,10 +237,11 @@ export function createRbnClient(options: RbnClientOptions): RbnClient {
     await writing
   }
 
-  async function getJson(url: string) {
+  async function getJson(url: string, isAllowed?: () => boolean) {
     let response: FetchResponse
     try {
-      response = await options.fetch(url)
+      options.observeTimeLowerBound?.(requestNow())
+      response = await (isAllowed ? options.fetch(url, undefined, isAllowed) : options.fetch(url))
     } catch (error) {
       throw requestFailure(error)
     }
@@ -185,12 +284,13 @@ export function createRbnClient(options: RbnClientOptions): RbnClient {
     }
   }
 
-  function getReports(query: RbnQuery) {
+  function getReports(query: RbnQuery, isAllowed?: () => boolean) {
     const since = Math.floor(requestNow() / 1000) - query.windowMinutes * 60
     // Vail's call search is partial; the parser enforces an exact callsign match.
     // Fetch a fresh, bounded window across modes instead of accumulating a stream.
     return getJson(
       `${endpoint}?call=${encodeURIComponent(query.call)}&since=${since}&limit=${maxReports}`,
+      isAllowed,
     )
   }
 
@@ -254,12 +354,14 @@ export function createRbnClient(options: RbnClientOptions): RbnClient {
     if (newSample) {
       realClockSample = Math.max(realClockSample ?? suppliedTime, suppliedTime)
       sampleRevision++
+      options.observeTimeLowerBound?.(realClockSample)
     }
     const call = normalizeCall(query.call)
     const windowMinutes = Number.isFinite(query.windowMinutes)
       ? Math.min(120, Math.max(5, Math.round(query.windowMinutes)))
       : 30
     const normalized = { call, windowMinutes }
+    observePlacement(normalized, requestOptions)
     const time = requestNow()
     const initial: RbnSnapshot = {
       ...normalized,
@@ -276,6 +378,7 @@ export function createRbnClient(options: RbnClientOptions): RbnClient {
     const key = `${call}|${windowMinutes}`
     const wasAwaitingTiming = cache.get(key)?.snapshot.pendingRequestTiming !== undefined
     if (finalizeTiming(requestNow(), newSample) && options.storage) await save(requestNow())
+    scheduleRefresh()
     let entry = cache.get(key)
     // Offline/backoff prevent new requests; neither cancels a request already
     // running. Keep its pending status so the panel continues its short tick.
@@ -312,7 +415,12 @@ export function createRbnClient(options: RbnClientOptions): RbnClient {
     if (entry) {
       cache.delete(key)
       cache.set(key, entry)
-      if (wasAwaitingTiming && !entry.snapshot.pendingRequestTiming && !requestOptions.force)
+      if (
+        !options.timers &&
+        wasAwaitingTiming &&
+        !entry.snapshot.pendingRequestTiming &&
+        !requestOptions.force
+      )
         return clip(entry.snapshot, requestNow(), 'attempted')
       if (
         !requestOptions.force &&
@@ -336,6 +444,9 @@ export function createRbnClient(options: RbnClientOptions): RbnClient {
       pruneCache()
     }
     const current = entry
+    if (requestOptions.scheduled && !isVisible(normalized))
+      return clip(current.snapshot, requestNow(), online ? 'cooldown' : 'offline')
+    const previousSnapshot = current.snapshot
     const previousAttempt = current.snapshot.lastAttemptMs
     current.inFlight = (async () => {
       let fetchStartedAt: number | undefined
@@ -346,8 +457,18 @@ export function createRbnClient(options: RbnClientOptions): RbnClient {
         // Keep the old attempt if the shared transport reports no request was sent.
         current.snapshot = { ...current.snapshot, lastAttemptMs: time }
         if (options.storage) await save(time)
+        // A storage write can outlive the visibility lease or an offline/config
+        // observation. Recheck immediately before crossing the network bridge.
+        if (requestOptions.scheduled && !isVisible(normalized)) {
+          requestSent = false
+          current.snapshot = previousSnapshot
+          return clip(current.snapshot, requestNow(), online ? 'cooldown' : 'offline')
+        }
         fetchStartedAt = requestNow()
-        const response = await getReports(normalized)
+        const response = await getReports(
+          normalized,
+          requestOptions.scheduled ? () => isVisible(normalized) : undefined,
+        )
         let result: ReturnType<typeof parseRbnPayload>
         try {
           result = parseRbnPayload(response.payload, call, windowMinutes, requestNow(), maxReports)
@@ -369,8 +490,20 @@ export function createRbnClient(options: RbnClientOptions): RbnClient {
       } catch (error) {
         const failure = requestFailure(error)
         requestSent = failure.requestSent
+        if (!requestSent && requestOptions.scheduled && !isVisible(normalized)) {
+          current.snapshot = previousSnapshot
+          return clip(current.snapshot, requestNow(), online ? 'cooldown' : 'offline')
+        }
         if (failure.retryAtMs !== undefined)
-          rateLimitedUntil = Math.max(rateLimitedUntil, failure.retryAtMs)
+          rateLimitedUntil = Math.max(
+            rateLimitedUntil,
+            // A shared transport deadline can be a lower bound established
+            // from an older panel sample. Its real timer remains authoritative;
+            // never spin on an unsent request whose epoch deadline has passed.
+            options.timers && !failure.requestSent && failure.retryAtMs <= requestNow()
+              ? requestNow() + refreshIntervalMs
+              : failure.retryAtMs,
+          )
         current.snapshot = {
           ...current.snapshot,
           status: current.snapshot.lastSuccessMs === null ? 'error' : 'stale',
@@ -393,6 +526,7 @@ export function createRbnClient(options: RbnClientOptions): RbnClient {
         if (options.storage) await save(requestNow())
         current.inFlight = undefined
         pruneCache()
+        scheduleRefresh()
       }
       return clip(
         current.snapshot,
@@ -400,8 +534,16 @@ export function createRbnClient(options: RbnClientOptions): RbnClient {
         requestNow() < rateLimitedUntil ? 'rate-limit' : 'attempted',
       )
     })()
+    scheduleRefresh()
     return requestOptions.waitForRequest === false ? pendingSnapshot(current) : current.inFlight
   }
 
-  return { getSnapshot }
+  function pause() {
+    online = false
+    refreshTimer?.cancel()
+    for (const placement of placements.values()) placement.timer.cancel()
+    placements.clear()
+  }
+
+  return { getSnapshot, pause }
 }

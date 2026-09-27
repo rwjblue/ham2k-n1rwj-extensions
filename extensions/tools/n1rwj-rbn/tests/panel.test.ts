@@ -419,7 +419,7 @@ describe('RBN native panel integration', () => {
     await renderAt(60_001, 'tick')
     expect(fetch).toHaveBeenCalledTimes(2)
   })
-  it('does no autonomous polling between host renders and fetches once after a long absence', async () => {
+  it('refreshes within the visibility lease and stops after a long absence', async () => {
     vi.useFakeTimers()
     try {
       vi.setSystemTime(now)
@@ -428,7 +428,13 @@ describe('RBN native panel integration', () => {
         body: JSON.stringify(payload({ spots: [], total: 0 })),
       }))
       const panel = createRbnPanel({
-        client: createRbnClient({ fetch }),
+        client: createRbnClient({
+          fetch,
+          timers: {
+            setTimeout: (callback, delay) => Number(setTimeout(callback, delay)),
+            clearTimeout: (id) => clearTimeout(id),
+          },
+        }),
         settings: async () => ({}),
       })
       await panel.getPanels({}, { online: true })
@@ -436,14 +442,14 @@ describe('RBN native panel integration', () => {
       expect(fetch).not.toHaveBeenCalled()
       await panel.render({ ...args, reason: 'initial' }, { online: true })
       expect(fetch).toHaveBeenCalledTimes(1)
-      // Hidden-tab/app suppression belongs to the host. When it stops calling
-      // render, neither the client nor the panel may poll on its own timer.
+      // One refresh may run during the 75-second lease. Without another host
+      // render, that lease expires and every subsequent refresh is cancelled.
       await vi.advanceTimersByTimeAsync(5 * 60_000)
-      expect(fetch).toHaveBeenCalledTimes(1)
+      expect(fetch).toHaveBeenCalledTimes(2)
       await panel.render({ ...args, reason: 'visible' }, { online: true })
-      expect(fetch).toHaveBeenCalledTimes(2)
+      expect(fetch).toHaveBeenCalledTimes(3)
       await panel.render({ ...args, reason: 'tick' }, { online: true })
-      expect(fetch).toHaveBeenCalledTimes(2)
+      expect(fetch).toHaveBeenCalledTimes(3)
     } finally {
       vi.useRealTimers()
     }
@@ -515,7 +521,7 @@ describe('RBN native panel integration', () => {
     await panel.onEvent?.(event('refresh', 'refresh:reports', configured), { online: true })
     expect(getSnapshot).toHaveBeenLastCalledWith(
       { call: 'K8BTU', windowMinutes: 15 },
-      { force: true, online: true, waitForRequest: false },
+      { instanceId: 'test-panel', force: true, online: true, waitForRequest: false },
     )
     const pending = await panel.render(configured, { online: true })
     expect(pending.triggers).toEqual(['tick:1'])
@@ -578,7 +584,12 @@ describe('RBN native panel integration', () => {
     )
     expect(getSnapshot).toHaveBeenCalledWith(
       { call: 'K8BTU', windowMinutes: 15 },
-      { online: false, realNowMillis: now + 60000, waitForRequest: false },
+      {
+        instanceId: 'test-panel',
+        online: false,
+        realNowMillis: now + 60000,
+        waitForRequest: false,
+      },
     )
     expect(sceneText(result)).toContain('2 min')
     expect(sceneText(result)).toContain('Cached')
@@ -643,12 +654,12 @@ describe('RBN native panel integration', () => {
     expect((await panel.render(home, { online: true })).kind).toBe('svgScene')
     expect(getSnapshot).toHaveBeenCalledWith(
       { call: 'K8BTU', windowMinutes: 15 },
-      { online: true, waitForRequest: false },
+      { instanceId: 'test-panel', online: true, waitForRequest: false },
     )
     await panel.render({ ...home, config: {} }, { online: true })
     expect(getSnapshot).toHaveBeenLastCalledWith(
       { call: '', windowMinutes: 15 },
-      { online: true, waitForRequest: false },
+      { instanceId: 'test-panel', online: true, waitForRequest: false },
     )
   })
   it('applies saved view and band together and keeps them across refreshes per placement', async () => {

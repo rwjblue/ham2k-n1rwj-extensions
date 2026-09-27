@@ -3,6 +3,7 @@
 See where the [Reverse Beacon Network](https://www.reversebeacon.net/) has
 heard your CW, RTTY, FT8, and FT4 signals, with a reception map and sortable
 receiver reports provided by [Vail ReRBN](https://vailrerbn.com/).
+Requires Ham2K extension API 3 and native SVG panels.
 The panel automatically follows your operation's station callsign and location.
 It is read-only: it does not transmit, spot a station, post to POTA, or create
 contacts.
@@ -66,7 +67,7 @@ source controls in the native Spots panel further narrow these results.
 
 ## Install and open the panel
 
-1. Use a Ham2K version with native SVG panels. If the panel shows
+1. Use a Ham2K version supporting extension API 3 and native SVG panels. If the panel shows
    **App update needed**, update Ham2K before using it.
 2. Download `n1rwj-rbn-<version>.h2kext` from the
    [latest GitHub release](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/latest).
@@ -196,8 +197,10 @@ attribution and warnings. Long details are paginated too.
 
 While visible, the panel normally requests a scheduled render every 60 seconds
 and automatically checks Vail ReRBN at most once per minute for each
-callsign/report-window combination. Rendering starts a due request and returns
-cached reports immediately, or a checking status when there is no saved result.
+callsign/report-window combination. The first render starts a due request and
+returns cached reports immediately, or a checking status when there is no saved
+result. Host timers start subsequent due requests while a placement remains
+visible; they do not wait for the next display tick.
 While that request is pending, the panel adds one-second render ticks. These
 read the shared cache without starting another request. The first render after
 completion shows the result and removes the fast tick, restoring the normal
@@ -224,8 +227,8 @@ characters); the extension does not assume that every failure is a connection
 problem. Details show the last request attempt separately from the last
 successful check, include the last completed request's duration, explain when
 a local cooldown sends no new request, and give
-whether manual refresh is available and the earliest automatic retry time. Automatic checks still depend
-on the host rendering the visible panel. Rate-limit backoff is shared with
+whether manual refresh is available and the earliest automatic retry time.
+Automatic checks require a visibility lease renewed by panel renders. Rate-limit backoff is shared with
 other My Signal panels and RBN Spots; it is separate from the normal local
 refresh cooldown. A timeout or missing host error detail cannot establish
 whether the server throttled the request.
@@ -238,17 +241,24 @@ one-second tick supplies that sample, but hiding the panel can extend the bound.
 My Signal supplies no request timeout override. The host owns the network
 deadline; the inspected host allows 15 seconds for headers and then 30 seconds
 for the body. HTTP runs independently of the five-second render/event deadline.
-The SDK has no delay primitive for a timed race, so rendering does not wait for
-HTTP. Per-render `triggers: ['tick:1']` uses the host's wall-clock-aligned ticks;
+Rendering does not wait for HTTP. Per-render `triggers: ['tick:1']` uses the
+host's wall-clock-aligned ticks;
 it is not a one-shot timer or a request to fetch once a second. The SDK still
 has no panel-refresh push API.
 
-Ham2K suppresses repeat renders behind another dock tab and while the app is
-hidden or paused; the extension has no independent polling timer. A panel that
-starts behind another tab makes no request until selected. An already-started
-render/request can finish after hiding, and the inspected host allows an initial
-render of a selected panel even when the app is hidden. A desktop window merely
-losing focus is still considered visible. See the
+Each panel render renews a 75-second visibility lease, leaving room for the
+normal 60-second display tick. Scheduled refreshes stop when the lease expires;
+depending on the existing cooldown, up to two can follow the last render. The extension's `onHide` callback cancels
+placement leases and polling; a fresh render resumes them. Timers never renew
+their own visibility. Up to eight placements share one refresh timer, with
+same-query requests coalesced. Eligibility is checked again after asynchronous
+storage reads, so hidden, replaced or offline views cannot start delayed requests.
+Already-started requests can finish and update their cache.
+
+Relative timer delays do not use the sandbox's developer clock. Host real-time
+samples still supply report ages and display timestamps. Native background,
+foreground and sleep/resume behavior needs an API-3 host check; earlier render
+visibility findings are recorded in the
 [host verification and limits](../../../docs/RBN-SVG-MIGRATION.md#why-the-refresh-model-works).
 
 The SDK does not expose device battery level, charging state, or Low Power Mode,
@@ -263,10 +273,13 @@ a callsign or window never displays another query's reports.
 The last request attempt is saved before fetching; the result is saved after
 completion, including failed-attempt timing and the last successful snapshot.
 The shared server rate-limit delay also persists across extension restarts.
+A pending relative delay is conservatively reapplied after restart, so virtual
+clock changes cannot bypass it; timer expiry clears the pending reservation.
 Manual refresh bypasses only the local cooldown. Storage errors appear in
 Report details and do not stop in-memory reception. These are persistent
 `getSettings`/`setSettings` values, not the host's memory-only `kvGet`/`kvSet`.
-No storage writes are triggered by cached renders or background timers.
+Cached renders do not write storage. Scheduled requests save their attempt and
+result, and rate-limit expiry clears the persisted delay.
 
 After a long absence, the next visible render makes one request for the selected
 time window, subject to server backoff. It does not replay missed polling

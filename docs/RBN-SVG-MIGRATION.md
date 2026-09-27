@@ -1,5 +1,11 @@
 # RBN native SVG migration and maintainer notes
 
+> Timer update (2026-09-27): RBN now requires extension API 3. My Signal uses
+> host timers with 75-second placement leases and pauses on `onHide`. The
+> render-driven polling and SDK 0.5.0 limitations below describe the earlier
+> migration investigation. See the current [refresh behavior](../extensions/tools/n1rwj-rbn/README.md#refreshes-and-interpreting-reports).
+
+
 For installation and everyday use, start with the
 [RBN operator guide](../extensions/tools/n1rwj-rbn/README.md).
 

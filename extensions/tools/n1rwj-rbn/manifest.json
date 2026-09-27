@@ -7,7 +7,7 @@
   "category": "dashboard",
   "icon": "radar",
   "accentColor": "#245FC2",
-  "api": 1,
+  "api": 3,
   "keywords": ["rbn", "reverse-beacon", "cw", "rtty", "ft8", "ft4", "map", "propagation", "signal"],
   "hooks": ["panel", "dataFile", "spots", "settingsPanel"],
   "domains": ["vailrerbn.com", "www.reversebeacon.net"],
