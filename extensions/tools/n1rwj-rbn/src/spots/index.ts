@@ -16,6 +16,7 @@ import {
   ownSettings,
   radiusIssue,
   readPreferences,
+  speedIssue,
   spotModes,
   tokens,
   validateEdit,
@@ -172,6 +173,27 @@ export function createRbnSpots(options: Options) {
             value: selected.raw.spotMode ?? 'all',
             options: spotModes.map((value) => ({ label: value === 'all' ? 'All' : value, value })),
           },
+          { type: 'header', title: 'CW speed range' },
+          {
+            type: 'markdown',
+            text: 'Default: no speed limit. Leave either end blank for an open-ended range. Limits include the entered speeds and apply only to CW, including in All mode. CW reports without a known positive speed are excluded while a limit is set.',
+          },
+          {
+            type: 'field',
+            fieldType: 'number',
+            key: 'spotMinWpm',
+            label: 'Minimum CW speed (WPM)',
+            placeholder: 'No minimum',
+            value: selected.raw.spotMinWpm ?? '',
+          },
+          {
+            type: 'field',
+            fieldType: 'number',
+            key: 'spotMaxWpm',
+            label: 'Maximum CW speed (WPM)',
+            placeholder: 'No maximum',
+            value: selected.raw.spotMaxWpm ?? '',
+          },
           {
             type: 'field',
             fieldType: 'text',
@@ -230,6 +252,7 @@ export function createRbnSpots(options: Options) {
             text:
               selected.unavailable ||
               radiusIssue(selected.raw) ||
+              speedIssue(selected.raw) ||
               status ||
               'Reports cover the last ten minutes on 160–10m, including WARC bands. Busy bands may exceed the bounded snapshot. Changes apply on the next Spots refresh.',
           },
@@ -253,7 +276,9 @@ export function createRbnSpots(options: Options) {
               ? String(value).trim().toUpperCase()
               : fieldKey === 'spotContinents'
                 ? [...new Set(value as string[])]
-                : fieldKey === 'spotRadiusMiles'
+                : fieldKey === 'spotRadiusMiles' ||
+                    fieldKey === 'spotMinWpm' ||
+                    fieldKey === 'spotMaxWpm'
                   ? value === null || String(value).trim() === ''
                     ? ''
                     : Number(value)

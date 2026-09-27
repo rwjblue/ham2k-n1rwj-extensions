@@ -73,6 +73,7 @@ export interface ReceiverSelection {
   grids: string[]
   continents?: Continent[]
   radius?: { origin: Coordinates; miles: number }
+  cwSpeed?: { min?: number; max?: number }
 }
 export type ReceiverLookup = (
   call: string,
@@ -92,6 +93,17 @@ export function selectSpots(
     // Temporary history gate; retire with the bridge in spots/index.ts.
     if (allowedCalls && !allowedCalls.has(report.their.call)) continue
     const info = report.spot.sourceInfo ?? {}
+    if (report.mode === 'CW' && receivers.cwSpeed) {
+      const speed = info.wpm
+      if (
+        typeof speed !== 'number' ||
+        !Number.isFinite(speed) ||
+        speed <= 0 ||
+        (receivers.cwSpeed.min !== undefined && speed < receivers.cwSpeed.min) ||
+        (receivers.cwSpeed.max !== undefined && speed > receivers.cwSpeed.max)
+      )
+        continue
+    }
     const receiver = String(info.spotter ?? '')
     if (receivers.skimmers.length && !receivers.skimmers.includes(receiver)) continue
     const directory = lookup(receiver)

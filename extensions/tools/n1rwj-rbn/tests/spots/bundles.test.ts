@@ -35,6 +35,7 @@ async function harness(saved: Record<string, JSONValue> = {}, contests = ['cwt',
               spotter_grid: 'FN42',
               mode: 'CW',
               frequency: 14032,
+              wpm: 25,
               timestamp: new Date(Date.now() - 60_000).toISOString(),
             }))
           : [],
@@ -230,4 +231,23 @@ it('persists geography settings, needs directory continents, and rejects stale o
     edit('spotRadiusGrid', ''),
   ])
   expect(results.map((r) => r.status)).toEqual(['fulfilled', 'rejected'])
+})
+
+it('persists CW speed bounds across bundle restarts and rejects stale crossing edits', async () => {
+  const runtime = await harness({}, [])
+  const edit = (fieldKey: string, value: JSONValue) =>
+    runtime.settings.onChangeField(
+      { panelKey: 'n1rwj-rbn', fieldKey, value, state: {} },
+      { online: true },
+    )
+  await edit('spotMinWpm', '20')
+  await edit('spotMaxWpm', '24')
+  expect(runtime.preferences['extension_n1rwj-rbn']).toEqual({ spotMinWpm: 20, spotMaxWpm: 24 })
+  expect(await runtime.fetch()).toEqual([])
+  expect(await (await harness(runtime.preferences, [])).fetch()).toEqual([])
+  await expect(edit('spotMinWpm', 30)).rejects.toThrow('Minimum')
+  await edit('spotMaxWpm', '')
+  expect(await runtime.fetch()).toHaveLength(3)
+  const results = await Promise.allSettled([edit('spotMaxWpm', 25), edit('spotMinWpm', 26)])
+  expect(results.map((result) => result.status)).toEqual(['fulfilled', 'rejected'])
 })

@@ -20,6 +20,14 @@ export function tokens(value: string): string[] {
   ]
 }
 export function validation(key: string, value: unknown): string | null {
+  if (key === 'spotMinWpm' || key === 'spotMaxWpm') {
+    if (value === null || (typeof value === 'string' && !value.trim())) return null
+    return (typeof value === 'number' || typeof value === 'string') &&
+      Number.isSafeInteger(Number(value)) &&
+      Number(value) > 0
+      ? null
+      : 'Enter a positive whole-number CW speed in WPM, or leave blank for no limit.'
+  }
   if (key === 'spotContinents')
     return Array.isArray(value) &&
       value.length <= 7 &&
@@ -59,6 +67,19 @@ export function validation(key: string, value: unknown): string | null {
       ? 'Use exact receiver callsigns, including suffixes such as KM3T-5.'
       : 'Use Maidenhead regions such as FN, EM, JO, or FN42.'
 }
+function speedBound(value: unknown): number | undefined {
+  return value === undefined || value === null || String(value).trim() === ''
+    ? undefined
+    : Number(value)
+}
+
+export function speedIssue(raw: Record<string, unknown>): string | null {
+  const min = speedBound(raw.spotMinWpm)
+  const max = speedBound(raw.spotMaxWpm)
+  return min !== undefined && max !== undefined && min > max
+    ? 'Minimum CW speed must not exceed maximum CW speed.'
+    : null
+}
 function hasRadius(raw: Record<string, unknown>): boolean {
   return (
     raw.spotRadiusMiles !== undefined &&
@@ -83,7 +104,8 @@ export function validateEdit(
     validation(key, value) ||
     (key === 'spotRadiusMiles' || key === 'spotRadiusGrid'
       ? radiusIssue({ ...raw, [key]: value })
-      : null)
+      : null) ||
+    (key === 'spotMinWpm' || key === 'spotMaxWpm' ? speedIssue({ ...raw, [key]: value }) : null)
   )
 }
 
@@ -96,18 +118,23 @@ export function readPreferences(raw: Record<string, unknown>): SpotPreferences {
     'spotContinents',
     'spotRadiusGrid',
     'spotRadiusMiles',
+    'spotMinWpm',
+    'spotMaxWpm',
   ]) {
     if (raw[key] !== undefined && validation(key, raw[key]))
       throw new Error(`Invalid saved RBN setting: ${key}. Correct it in RBN settings.`)
   }
-  const issue = radiusIssue(raw)
+  const issue = radiusIssue(raw) || speedIssue(raw)
   if (issue) throw new Error(issue)
   const [latitude, longitude] = receiverLocation(raw.spotRadiusGrid)
+  const min = speedBound(raw.spotMinWpm)
+  const max = speedBound(raw.spotMaxWpm)
   return {
     callFilter: typeof raw.spotCallFilter === 'string' ? raw.spotCallFilter : undefined,
     mode: String(raw.spotMode ?? 'all'),
     skimmers: tokens(String(raw.spotSkimmers ?? '')),
     grids: tokens(String(raw.spotGrids ?? '')),
+    ...(min !== undefined || max !== undefined ? { cwSpeed: { min, max } } : {}),
     continents: [
       ...new Set((raw.spotContinents as NonNullable<ReceiverSelection['continents']>) ?? []),
     ],

@@ -23,6 +23,12 @@ Open **Settings → RBN → Spots — Who I might hear** to choose:
   receive all four supported modes and use the native Spots page's mode filter.
   The host currently groups RTTY, FT8, and FT4 under **Digital**; choose RTTY
   here when you want only RTTY reports. Previously saved mode choices are preserved.
+- **CW speed range:** optional minimum and maximum WPM, including the entered
+  speeds. Both default to blank (no limit); either end can be left open.
+  Limits apply only to CW, even in **All** mode. CW reports without a known
+  positive speed are excluded while a limit is set; digital reports are unaffected.
+  Speed filtering reuses cached reports and runs before duplicate reports are
+  collapsed. Vail ReRBN supplies `wpm` but documents no speed-range query parameter.
 - **Only these skimmers:** exact IDs, including suffixes such as `KM3T-5`.
 - **Receiver grid regions:** Maidenhead prefixes, for example `FN, EM`, `JO`,
   or `FN42`. These select the receiving skimmers, not the spotted stations.
