@@ -8,8 +8,8 @@ import { exchangeText, received, sent, validSerial } from './exchange.ts'
 import {
   type ContestConfig,
   type ContestManifest,
+  contestMode,
   object,
-  POWER_CLASSES,
   type Qson,
   refOf,
   text,
@@ -31,6 +31,8 @@ export function createExports(config: ContestConfig, manifest: ContestManifest) 
         if (validSerial(theirs.value))
           fields.push({ name: 'SRX', value: String(Number(theirs.value)) })
       }
+      if (config.mode === 'RTTY' && contestMode(text(qso.mode)) === 'RTTY')
+        fields.push({ name: 'MODE', value: 'RTTY' })
       return fields
     },
   } satisfies AdifFieldsHook
@@ -75,13 +77,19 @@ export function createExports(config: ContestConfig, manifest: ContestManifest) 
       const op = refOf(args.operation, config.type)
       if (args.exportType === 'cabrillo') {
         const call = text(args.operation.stationCall)
-        const power = POWER_CLASSES.find((entry) => entry.value === text(op?.power))
-        const content = qsonToCabrillo(args.qsos, {
+        const power = config.powerClasses.find((entry) => entry.value === text(op?.power))
+        // The shared writer emits digital contacts as DG. Only RTTY rows
+        // belong in an RTTY Cabrillo file; adapt their mode column below.
+        const qsos =
+          config.mode === 'RTTY'
+            ? args.qsos.filter((qso) => contestMode(text(qso.mode)) === 'RTTY')
+            : args.qsos
+        let content = qsonToCabrillo(qsos, {
           headers: [
             ['CONTEST', config.cabrilloId],
             ['CALLSIGN', call],
             ['CATEGORY-OPERATOR', 'SINGLE-OP'],
-            ['CATEGORY-MODE', 'CW'],
+            ['CATEGORY-MODE', config.mode],
             ['CATEGORY-POWER', power?.cabrillo ?? ''],
             ['NAME', text(op?.ourName)],
             ['OPERATORS', text(object(args.operation.local).operatorCall)],
@@ -89,7 +97,7 @@ export function createExports(config: ContestConfig, manifest: ContestManifest) 
           qsoParts(qso) {
             const ours = sent(config, args.operation, qso)
             const theirs = received(config, qso)
-            // Sponsor-linked N1MM definitions omit RST for both contests.
+            // Sponsor-linked N1MM definitions omit RST for these contests.
             // Their Cabrillo columns use name then serial/location, even
             // when the on-air MST exchange sends the serial first.
             return [
@@ -102,6 +110,7 @@ export function createExports(config: ContestConfig, manifest: ContestManifest) 
             ]
           },
         })
+        if (config.mode === 'RTTY') content = content.replace(/^(QSO:\s+\S+\s+)DG(?=\s)/gm, '$1RY')
         return {
           filename: filename(args.operation, args.qsos, 'log', args.compactFilenames),
           mimeType: 'text/plain',

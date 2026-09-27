@@ -5,12 +5,16 @@ import { createHistoryCallFilter } from '../../spot-filters/src/index.ts'
 import { createActivity } from './activity.ts'
 import { createHistoryData } from './data.ts'
 import { createExports } from './exports.ts'
-import type { ContestConfig, ContestManifest } from './model.ts'
+import type { HistoryFile } from './history.ts'
+import type { ContestConfig, ContestManifest, DownloadedContestConfig } from './model.ts'
 import { createScorer } from './scorer.ts'
 
-export function createMiniContest(config: ContestConfig, manifest: ContestManifest) {
-  const data = createHistoryData(config, manifest)
-  const { activity, refHandler, history } = createActivity(config, manifest, data.current)
+export function createContestHooks(
+  config: ContestConfig,
+  manifest: ContestManifest,
+  file?: () => HistoryFile | undefined,
+) {
+  const { activity, refHandler, history } = createActivity(config, manifest, file)
   const { adifFields, exports } = createExports(config, manifest)
   const base = contestScorer(createScorer(config), { scope: { refTypes: [config.type] } })
   const scoring: ScoringHook = {
@@ -20,7 +24,13 @@ export function createMiniContest(config: ContestConfig, manifest: ContestManife
       return base.scoreQsos(args, ctx)
     },
   }
+  return { activity, refHandler, adifFields, exports, scoring }
+}
+
+export function createMiniContest(config: DownloadedContestConfig, manifest: ContestManifest) {
+  const data = createHistoryData(config, manifest)
   return {
+    ...createContestHooks(config, manifest, data.current),
     // Temporary MST/SST transport; remove with native relevance support.
     // Keep cached history/matching separate from QSO scoring eligibility.
     // Migration: packages/spot-filters/README.md.
@@ -31,11 +41,6 @@ export function createMiniContest(config: ContestConfig, manifest: ContestManife
       records: async () => data.current()?.records,
       lookupKeys: callLookupKeys,
     }),
-    activity,
-    refHandler,
-    adifFields,
-    exports,
-    scoring,
     dataFile: data.dataFile,
     settings: data.settings,
   }

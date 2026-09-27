@@ -43,6 +43,9 @@ export function guessedLocation(their: Qson): string {
   // Alaska and Hawaii are DX for SST, regardless of a lookup's AK/HI state.
   return entity ? 'DX' : ''
 }
+export function validLocation(config: ContestConfig, value: string): boolean {
+  return config.locationInput ? config.locationInput.valid(value) : LOCATIONS.includes(value)
+}
 export function received(config: ContestConfig, qso: Qson): { name: string; value: string } {
   const ref = refOf(qso, config.type)
   return {

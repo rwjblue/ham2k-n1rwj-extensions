@@ -2,8 +2,15 @@ import type { HookContext } from '@ham2k/extension-sdk'
 import { createHistoryAdapter } from '../../contest-history/src/index.ts'
 import { callLookupKeys, normalizeCall } from '../../n1mm/src/callsign.ts'
 import { parseN1mm } from '../../n1mm/src/parse.ts'
-import { firstName, LOCATIONS, location } from './exchange.ts'
-import { type ContestConfig, object, type Qson, refOf, text } from './model.ts'
+import { firstName, LOCATIONS, location, validLocation } from './exchange.ts'
+import {
+  type ContestConfig,
+  type DownloadedContestConfig,
+  object,
+  type Qson,
+  refOf,
+  text,
+} from './model.ts'
 
 export interface HistoryEntry {
   call: string
@@ -17,7 +24,7 @@ export interface HistoryFile {
   warnings: number
   updatedAt?: string
 }
-export function parseHistory(config: ContestConfig, body: string): HistoryFile {
+export function parseHistory(config: DownloadedContestConfig, body: string): HistoryFile {
   if (body.length > 5_000_000 || /<(?:!doctype|html|body|script|form)\b/i.test(body))
     throw new Error('Invalid call-history text. Previous data retained.')
   const parsed = parseN1mm(body)
@@ -100,7 +107,7 @@ export function createHistory(config: ContestConfig) {
               key === keys[0] &&
               !result.location &&
               entry.location &&
-              LOCATIONS.includes(entry.location)
+              validLocation(config, entry.location)
             )
               result.location = entry.location
           }

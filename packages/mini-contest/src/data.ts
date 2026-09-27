@@ -2,7 +2,7 @@ import type { DataFileDefinition, DynamicSettingsPanel } from '@ham2k/extension-
 import { host } from '@ham2k/extension-sdk'
 import { createN1mmSource, DEFAULT_SOURCE, sourceValidationError } from '../../n1mm/src/source.ts'
 import { type HistoryFile, parseHistory } from './history.ts'
-import { type ContestConfig, type ContestManifest, object, text } from './model.ts'
+import { type ContestManifest, type DownloadedContestConfig, object, text } from './model.ts'
 
 interface Snapshot {
   schema: 1
@@ -10,7 +10,7 @@ interface Snapshot {
   url: string
   fetchedAt: string
 }
-export function createHistoryData(config: ContestConfig, manifest: ContestManifest) {
+export function createHistoryData(config: DownloadedContestConfig, manifest: ContestManifest) {
   let current: { snapshot: Snapshot; parsed: HistoryFile } | undefined
   let error: string | undefined
   const source = createN1mmSource({ filePrefix: config.historyPrefix, label: config.shortName })

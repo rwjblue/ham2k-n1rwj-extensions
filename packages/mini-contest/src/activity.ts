@@ -21,14 +21,7 @@ import {
 } from './exchange.ts'
 import type { HistoryFile } from './history.ts'
 import { createHistory } from './history.ts'
-import {
-  type ContestConfig,
-  type ContestManifest,
-  object,
-  POWER_CLASSES,
-  refOf,
-  text,
-} from './model.ts'
+import { type ContestConfig, type ContestManifest, object, refOf, text } from './model.ts'
 import {
   type Session,
   sessionAtHand,
@@ -103,9 +96,11 @@ export function createActivity(
           type: 'field',
           fieldType: 'text',
           key: 'ourLocation',
-          label: 'Your state / province / DX',
+          label: config.locationInput
+            ? `Your ${config.locationInput.label.toLowerCase()}`
+            : 'Your state / province / DX',
           uppercase: true,
-          placeholder: 'MA, ON or DX',
+          placeholder: config.locationInput?.placeholder ?? 'MA, ON or DX',
         })
       elements.push(
         {
@@ -113,7 +108,7 @@ export function createActivity(
           fieldType: 'radio',
           key: 'power',
           label: 'Power class',
-          options: POWER_CLASSES.map(({ value, label }) => ({ value, label })),
+          options: config.powerClasses.map(({ value, label }) => ({ value, label })),
         },
         { type: 'markdown', text: `${config.guidance}\n\n[Official rules](${config.rulesUrl})` },
       )
@@ -140,7 +135,8 @@ export function createActivity(
       const their = object(draft.their)
       const validCall = isCallsign(text(their.call))
       const name = hints.name || (validCall ? guessedName(their) : '')
-      const qth = hints.location || (validCall ? guessedLocation(their) : '')
+      const qth =
+        hints.location || (validCall ? (config.locationInput?.guess ?? guessedLocation)(their) : '')
       // Native touched-field tracking protects edits and intentional clearing.
       // A single space clears an untouched old guess; an empty string is
       // ignored by the host and would leave the previous station's exchange.
@@ -193,13 +189,13 @@ export function createActivity(
           suggestedValue: name || ' ',
           placeholder: name || undefined,
         }),
-        control('location', 'State / province / DX', 20, {
+        control('location', config.locationInput?.label ?? 'State / province / DX', 20, {
           kind: 'text',
           refType: config.type,
           field: 'location',
           uppercase: true,
-          pattern: '[A-Z]{2}',
-          maxLength: 4,
+          pattern: config.locationInput?.pattern ?? '[A-Z]{2}',
+          maxLength: config.locationInput?.maxLength ?? 4,
           suggestedValue: qth || ' ',
           placeholder: qth || undefined,
         }),

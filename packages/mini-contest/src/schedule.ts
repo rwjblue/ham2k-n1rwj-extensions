@@ -12,22 +12,25 @@ export interface Session {
   startMillis: number
   endMillis: number
 }
-function sessionAt(startMillis: number): Session {
+function sessionAt(config: ContestConfig, startMillis: number): Session {
   const at = new Date(startMillis).toISOString()
   return {
-    key: `${at.slice(0, 10)}-${at.slice(11, 13)}00`,
+    key: `${at.slice(0, 10)}-${at.slice(11, 13)}${at.slice(14, 16)}`,
     startMillis,
-    endMillis: startMillis + HOUR,
+    endMillis: startMillis + config.durationMinutes * 60_000,
   }
 }
 export function sessionFor(config: ContestConfig, key: string | undefined): Session | undefined {
-  if (!key || !/^\d{4}-\d{2}-\d{2}-\d{2}00$/.test(key)) return undefined
-  const at = Date.parse(`${key.slice(0, 10)}T${key.slice(11, 13)}:00:00Z`)
+  if (!key || !/^\d{4}-\d{2}-\d{2}-\d{4}$/.test(key)) return undefined
+  const at = Date.parse(`${key.slice(0, 10)}T${key.slice(11, 13)}:${key.slice(13, 15)}:00Z`)
   if (!Number.isFinite(at)) return undefined
-  const session = sessionAt(at)
+  const session = sessionAt(config, at)
   const date = new Date(at)
   return session.key === key &&
-    config.slots.some(({ day, hour }) => day === date.getUTCDay() && hour === date.getUTCHours())
+    config.slots.some(
+      ({ day, hour, minute = 0 }) =>
+        day === date.getUTCDay() && hour === date.getUTCHours() && minute === date.getUTCMinutes(),
+    )
     ? session
     : undefined
 }
@@ -36,11 +39,13 @@ export function sessionsFrom(config: ContestConfig, now: number, count = 4): Ses
   if (!Number.isFinite(now) || count <= 0) return []
   const midnight = Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate())
   const found: Session[] = []
-  for (let offset = -1; offset <= 21 && found.length < count; offset++) {
+  for (let offset = -1; offset <= Math.max(28, count * 7) && found.length < count; offset++) {
     const day = midnight + offset * DAY
-    for (const slot of [...config.slots].sort((a, b) => a.hour - b.hour)) {
+    for (const slot of [...config.slots].sort(
+      (a, b) => a.hour * 60 + (a.minute ?? 0) - (b.hour * 60 + (b.minute ?? 0)),
+    )) {
       if (slot.day !== new Date(day).getUTCDay()) continue
-      const session = sessionAt(day + slot.hour * HOUR)
+      const session = sessionAt(config, day + slot.hour * HOUR + (slot.minute ?? 0) * 60_000)
       if (session.endMillis + OFFER_GRACE > now && found.length < count) found.push(session)
     }
   }

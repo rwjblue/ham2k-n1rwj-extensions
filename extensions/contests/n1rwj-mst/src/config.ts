@@ -1,7 +1,16 @@
-import type { ContestConfig } from '../../../../packages/mini-contest/src/model.ts'
+import {
+  BANDS,
+  type DownloadedContestConfig,
+  POWER_CLASSES,
+} from '../../../../packages/mini-contest/src/model.ts'
 
-export const config: ContestConfig = {
+export const config: DownloadedContestConfig = {
   type: 'mst',
+  durationMinutes: 60,
+  mode: 'CW',
+  bands: BANDS,
+  powerClasses: POWER_CLASSES,
+  multiplier: 'callsign',
   name: 'ICWC Medium Speed Test',
   shortName: 'MST',
   adifId: 'ICWC-MST',

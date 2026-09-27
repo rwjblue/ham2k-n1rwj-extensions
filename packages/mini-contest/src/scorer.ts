@@ -4,8 +4,8 @@
 import type { ContestScorer, QsoScoreVerdict } from '@ham2k/extension-sdk'
 import { annotateCallAgainstCountryFile } from '@ham2k/extension-sdk'
 import { isCallsign, normalizeCall } from '../../n1mm/src/callsign.ts'
-import { canonicalLocation, LOCATIONS, received, validSerial } from './exchange.ts'
-import { BANDS, type ContestConfig, object, type Qson, refOf, text } from './model.ts'
+import { canonicalLocation, LOCATIONS, received, validLocation, validSerial } from './exchange.ts'
+import { type ContestConfig, contestMode, object, type Qson, refOf, text } from './model.ts'
 import { sessionFor } from './schedule.ts'
 
 // Ham2K localizes its built-in scoring keys and displays unknown strings
@@ -43,10 +43,10 @@ export function createScorer(config: ContestConfig): ContestScorer<Scoresheet> {
       const result = (score: QsoScoreVerdict) => ({ scoresheet, score })
       const call = normalizeCall(text(object(qso.their).call))
       if (!isCallsign(call) || qso.deleted || qso.band === 'event') return result({ value: 0 })
-      if (text(qso.mode).toUpperCase() !== 'CW')
+      if (contestMode(text(qso.mode)) !== config.mode)
         return result({ value: 0, alerts: ['invalidMode'] })
       const band = text(qso.band)
-      if (!BANDS.includes(band)) return result({ value: 0, alerts: ['invalidBand'] })
+      if (!config.bands.includes(band)) return result({ value: 0, alerts: ['invalidBand'] })
       const session = sessionFor(config, text(refOf(operation, config.type)?.ref))
       if (
         session &&
@@ -59,9 +59,9 @@ export function createScorer(config: ContestConfig): ContestScorer<Scoresheet> {
       if (worked?.includes(band)) return result({ value: 0, dupe: true, alerts: ['duplicate'] })
       const exchange = received(config, qso)
       const locationMult =
-        config.exchange === 'name-location' ? sstMultiplier(qso, exchange.value) : undefined
+        config.multiplier === 'sst-location' ? sstMultiplier(qso, exchange.value) : undefined
       const mult =
-        config.exchange === 'serial-name'
+        config.multiplier === 'callsign'
           ? call
           : locationMult
             ? `${band}|${locationMult}`
@@ -80,10 +80,10 @@ export function createScorer(config: ContestConfig): ContestScorer<Scoresheet> {
       else if (
         config.exchange === 'serial-name'
           ? !validSerial(exchange.value)
-          : !LOCATIONS.includes(exchange.value)
+          : !validLocation(config, exchange.value)
       )
         score.alerts = ['invalidExchange']
-      else if (config.exchange === 'name-location' && exchange.value === 'DX' && !mult)
+      else if (config.multiplier === 'sst-location' && exchange.value === 'DX' && !mult)
         score.alerts = [UNKNOWN_MULTIPLIER]
       return result(score)
     },
@@ -101,9 +101,9 @@ export function createScorer(config: ContestConfig): ContestScorer<Scoresheet> {
           total: points * mults,
           label: `${points} × ${mults}`,
           summary: String(points * mults),
-          longSummary: BANDS.map((band) => `**${band}**: ${scoresheet.bands[band] ?? 0} QSOs`).join(
-            '\n',
-          ),
+          longSummary: config.bands
+            .map((band) => `**${band}**: ${scoresheet.bands[band] ?? 0} QSOs`)
+            .join('\n'),
         },
       }
     },
