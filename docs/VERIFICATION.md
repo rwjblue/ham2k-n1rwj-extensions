@@ -1560,3 +1560,22 @@ The preparation checks above remain the runtime verification scope; publication
 does not establish native timer, UI, or sleep/resume behavior. These publication
 records are personal repository documentation, exempt from upstream behavior
 synchronization. Existing investigation drafts remain uncommitted.
+
+## Release 0.7.1 preparation — 2026-09-27
+
+Prepared synchronized version 0.7.1 for RBN's CW speed filters, remembered and
+locally suggested receiver continents, and explicit defaults/reset controls.
+Reviewed the diff from v0.7.0: runtime changes affect only RBN; the root lockfile
+and all other package/manifest changes are synchronized version updates.
+`docs/releases/v0.7.1.md` selects RBN alone for catalog publication.
+
+- `mise run release:notes v0.7.1` validated all seven extension sections.
+- `mise run format` completed, followed by `mise run release v0.7.1 --dry-run`.
+- The release dry run passed lint, strict typechecks, all 806 tests across
+  66 files, ES2020 builds, official packaging, and validation of all seven
+  bundle/checksum pairs.
+
+Unit and bundle checks do not establish native settings UI or device-location
+permission behavior. RBN-only behavior and personal release packaging are
+exempt from upstream CWT/CQ WW synchronization. The two existing investigation
+drafts remain outside the release commit.
