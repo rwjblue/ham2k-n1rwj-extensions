@@ -11,7 +11,7 @@ install only the ones you want.
 | [CWops CWT](extensions/contests/n1rwj-cwt/README.md) (`n1rwj-cwt`) | CWT sessions, exchange suggestions, scoring, and exports |
 | [ICWC MST](extensions/contests/n1rwj-mst/README.md) (`n1rwj-mst`) | MST sessions, name suggestions, outgoing serials, scoring, and exports |
 | [K1USN SST](extensions/contests/n1rwj-sst/README.md) (`n1rwj-sst`) | SST sessions, name/location suggestions, scoring, and exports |
-| [Weekly RTTY Test](extensions/contests/n1rwj-wrt/README.md) (`n1rwj-wrt`) | Half-hour RTTY sessions, name/QTH suggestions, callsign multipliers, and exports (prepared for v0.6.0) |
+| [Weekly RTTY Test](extensions/contests/n1rwj-wrt/README.md) (`n1rwj-wrt`) | Half-hour RTTY sessions, name/QTH suggestions, callsign multipliers, and exports |
 
 The [PSK Reporter extension](extensions/tools/n1rwj-psk-reporter/README.md)
 now builds with live MQTT reception using the published SDK and tools. It shares
@@ -144,8 +144,8 @@ or country prefix for DX. Score eligible QSOs × unique callsigns across the
 session, with one contact per station per band. Select QRP (5 W) or low power
 (100 W), configure your sent exchange, and report your summary on 3830 Scores.
 
-Build the new extension with `mise run pack n1rwj-wrt` and install its local
-bundle; it is prepared for v0.6.0 and is not in the published v0.5.1 release.
+Install the WRT bundle from [v0.6.0](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.6.0),
+or build it locally with `mise run pack n1rwj-wrt`.
 WRT suggests exchanges from previous WRT contacts and ordinary host lookups.
 It has no downloadable history file or history-file spot filter. Its guide
 covers RTTY mode selection, prefix handling, exports, and verification limits.

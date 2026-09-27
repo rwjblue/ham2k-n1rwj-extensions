@@ -11,10 +11,10 @@ The [sponsor rules](https://radiosport.world/wrt.html) specify Friday
 in UTC through daylight-saving changes. Calendar suggestions follow the
 regular weekly schedule; sponsor cancellations or exceptions are not tracked.
 
-1. Build with `mise run pack n1rwj-wrt`, then install the resulting
-   `dist/n1rwj-wrt-<version>.h2kext` using **Settings → Features & Extensions
-   → Install from file**. WRT is new in the prepared v0.6.0 release and is not
-   included in the published v0.5.1 bundles.
+1. Download `n1rwj-wrt-0.6.0.h2kext` from
+   [v0.6.0](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.6.0)
+   and install it using **Settings → Features & Extensions → Install from file**.
+   To build locally, run `mise run pack n1rwj-wrt` and use the bundle in `dist/`.
 2. Create a separate operation for each session, add **WRT**, and choose the
    session's UTC date. Enter your exchange name, state/province or country
    prefix, and power class: QRP (up to 5 W) or low power (up to 100 W).

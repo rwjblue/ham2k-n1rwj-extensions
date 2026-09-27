@@ -1,5 +1,37 @@
 # Verification and compatibility
 
+## Release 0.6.0 publication — 2026-09-27
+
+Rebased the WRT stack onto main's RBN mode-default update (`4437fcf2`) and
+pushed signed release commit `1edadb2f32aa5220df9173d1d1c1230e6d0b1b69` to main.
+GitHub verified its signature, and the
+[main CI run](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/36286103313)
+succeeded before publication.
+
+[v0.6.0](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.6.0)
+was published at 01:38:27 UTC on September 27 (September 26 in US Eastern time).
+The [upload job](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/36286148410/job/108527191360)
+passed checks and uploaded all seven bundles and seven matching checksum files.
+Local `mise run release v0.6.0 --dry-run` passed **698 tests across 57 files**,
+strict typechecks, lint, builds, official packaging, version checks, and checksums.
+`mise run verify-host` loaded all seven extensions against Ham2K build 175
+without compatibility problems; this runs the installed kernel under Node VM.
+
+The [catalog job](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/36286148410/job/108527265840)
+returned **approved** for MST, RBN, SST, and WRT on `stable` between 01:39:13
+and 01:39:18 UTC. CQ WW, CWT, and PSK Reporter were skipped according to the
+authored release notes. The same notes file supplies the GitHub release body
+and each catalog entry's relevant section.
+
+A separate `mise run release:catalog v0.6.0 --dry-run` downloaded and validated
+all published GitHub bundles and checksums without resubmitting them. The
+published WRT bundle's SHA-256 is
+`ac9ba8a8721673f5e89bf609e37f2a31563cf9f0321305b7dc29dcd19bf9e05e`.
+Native WRT UI and on-air testing remain pending. Release bookkeeping and the
+WRT/MST/SST/RBN changes do not alter CWT or CQ WW behavior, so no upstream-PR
+synchronization was required.
+
+
 ## WRT implementation — 2026-09-26
 
 Prepared v0.6.0 with `n1rwj-wrt`, extending only the MST/SST mini-contest
@@ -22,8 +54,8 @@ clearing take precedence over `suggestedValue`.
 
 This is deterministic unit/bundle verification and installed JavaScript kernel
 execution under Node VM, **not native UI or on-air testing**. Test those before
-claiming an end-to-end operating verification. The prepared version and local
-bundles have not been published to GitHub Releases or the catalog.
+claiming an end-to-end operating verification. At the implementation check, the prepared version and local bundles had
+not yet been published; the publication record above covers the subsequent release.
 
 The WRT rules and sponsor-linked N1MM definition were checked directly;
 [provenance](PROVENANCE.md#weekly-rtty-test) records those sources and the

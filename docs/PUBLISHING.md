@@ -8,6 +8,23 @@ each submission before operators can install it from the catalog.
 
 ## Current release status
 
+[v0.6.0](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.6.0)
+was published from signed commit `1edadb2f32aa5220df9173d1d1c1230e6d0b1b69`
+on September 27, 2026 at 01:38 UTC (September 26 in US Eastern time).
+All seven extension bundles and their seven checksum files are available.
+The [release workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/36286148410)
+passed both upload and catalog jobs. Downloaded GitHub assets passed
+`mise run release:catalog v0.6.0 --dry-run`.
+
+WRT, MST, SST, and RBN returned **approved** on `stable` at 01:39 UTC.
+CQ WW, CWT, and PSK Reporter were skipped because their behavior is unchanged.
+The release includes the new WRT extension, the MST/SST contest-engine update,
+and RBN's default to all supported spot modes. See the
+[release notes](releases/v0.6.0.md) and
+[verification record](VERIFICATION.md#release-060-publication--2026-09-27).
+
+### Previous releases
+
 [v0.5.1](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.5.1)
 was published from signed commit `88363a3cff77113963f3fb35ca8b57047ece5f1f`
 on September 26, 2026 at 23:32 UTC. All six extension bundles and their
@@ -30,16 +47,6 @@ in v0.5.1 at the synchronized version.
 Earlier v0.2.1, v0.3.0, and v0.3.1 runs failed with HTTP 403 from a Cloudflare
 challenge. The v0.3.2 retry and v0.3.3/v0.3.4 publications succeeded; inspect each earlier
 version's submission history before retrying it.
-
-## Prepared v0.6.0
-
-The working source prepares WRT and synchronized 0.6.0 versions for all seven
-extensions; v0.5.1 remains the published release. Use
-[the authored v0.6.0 notes](releases/v0.6.0.md) when publishing. WRT is new;
-MST/SST consume the updated contest engine, and RBN now defaults to all
-supported spot modes, so all four have catalog notes. CWT, CQ WW, and PSK
-Reporter have no runtime changes in this release and are skipped by catalog
-publication. No external dependency versions changed.
 
 ## Configure the token
 
