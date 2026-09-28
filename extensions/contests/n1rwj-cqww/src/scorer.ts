@@ -18,9 +18,14 @@
 //   * Only 160/80/40/20/15/10m count, and the QSO's mode must match the
 //     contest's mode.
 
-import type { ContestScorer, JSONValue, QsoScoreVerdict, ScoreTally } from '@ham2k/extension-sdk'
-import { annotateCallAgainstCountryFile } from '@ham2k/extension-sdk'
+import type { ContestScorer, JSONValue, QsoScoreVerdict } from '@ham2k/extension-sdk'
+import {
+  annotateCallAgainstCountryFile,
+  contestArithmetic,
+  contestSummary,
+} from '@ham2k/extension-sdk'
 import { fmtInteger } from '@ham2k/lib-format-tools'
+import { tFor } from './i18n.ts'
 import { isRtty, qthForCall, qthIsValid, qthMultiplier, RTTY_BANDS, suggestedQth } from './rtty.ts'
 
 /// CQ WW is an HF contest: the WARC bands are excluded by the rules, not an
@@ -45,8 +50,6 @@ export type CQWWScoresheet = {
   bandPoints: Record<string, number>
   qsos: number
   points: number
-  dayQsos: number
-  dayPoints: number
   /// Our own continent and DXCC entity, resolved once from the station call —
   /// every point calculation is relative to them.
   ourContinent?: string
@@ -102,8 +105,6 @@ export const CQWWScorer: ContestScorer<CQWWScoresheet> = {
       bandPoints: {},
       qsos: 0,
       points: 0,
-      dayQsos: 0,
-      dayPoints: 0,
       ourContinent: ours.continent,
       ourEntity: ours.entityPrefix,
       rtty,
@@ -111,12 +112,8 @@ export const CQWWScorer: ContestScorer<CQWWScoresheet> = {
   },
 
   // Mutates and returns the given scoresheet — see ContestScorer.scoreQso.
-  scoreQso({ scoresheet, qso, ref, isNewDay }) {
+  scoreQso({ scoresheet, qso, ref }) {
     const base = scoresheet
-    if (isNewDay) {
-      base.dayQsos = 0
-      base.dayPoints = 0
-    }
 
     const their = (qso.their as Record<string, JSONValue>) ?? {}
     const call = str(their.call).trim().toUpperCase()
@@ -234,8 +231,6 @@ export const CQWWScorer: ContestScorer<CQWWScoresheet> = {
     base.bandPoints[band] = (base.bandPoints[band] ?? 0) + points
     base.qsos += 1
     base.points += points
-    base.dayQsos += 1
-    base.dayPoints += points
 
     const score: QsoScoreVerdict = { value: points, band, dupe: false }
     const notices: string[] = []
@@ -247,29 +242,56 @@ export const CQWWScorer: ContestScorer<CQWWScoresheet> = {
     return { scoresheet: base, score }
   },
 
-  summarizeScore({ scoresheet, scope }): Record<string, ScoreTally> {
-    const isDay = scope === 'day'
-    const multCount = Object.keys(scoresheet.mults).length
-    const points = isDay ? scoresheet.dayPoints : scoresheet.points
-    // Multipliers accumulate across the whole contest, so a day's "score" is
-    // still its points against the running multiplier count.
-    const total = points * (multCount || 0)
-
-    return {
-      cqww: {
+  summarizeScore({ scoresheet, ref, scope }, ctx) {
+    const t = tFor(ctx)
+    const keys = Object.keys(scoresheet.mults)
+    const zones = keys.filter((key) => key.includes('|Z')).length
+    const countries = keys.filter((key) => key.includes('|C')).length
+    const qths = keys.filter((key) => key.includes('|Q')).length
+    return contestSummary(
+      {
         key: 'cqww',
-        for: scope,
+        scope,
         icon: 'earth',
-        total,
-        points,
-        mults: multCount,
-        qsos: isDay ? scoresheet.dayQsos : scoresheet.qsos,
-        label: `${fmtInteger(points)} × ${fmtInteger(multCount)}`,
-        summary: `${fmtInteger(total)}`,
-        longSummary: bandBreakdown(scoresheet),
+        title: contestTitle(ref),
+        total: scoresheet.points * keys.length,
+        arithmetic: contestArithmetic(
+          {
+            qsos: scoresheet.qsos,
+            points: scoresheet.points,
+            mults: keys.length,
+            multParts: [
+              zones === 1
+                ? t('zoneOne')
+                : zones > 1
+                  ? t('zoneMany', { formatted: fmtInteger(zones) })
+                  : '',
+              countries === 1
+                ? t('countryOne')
+                : countries > 1
+                  ? t('countryMany', { formatted: fmtInteger(countries) })
+                  : '',
+              qths === 1
+                ? t('qthOne')
+                : qths > 1
+                  ? t('qthMany', { formatted: fmtInteger(qths) })
+                  : '',
+            ].filter((part) => part),
+          },
+          ctx,
+        ),
+        detail: bandBreakdown(scoresheet),
+        extra: { points: scoresheet.points, mults: keys.length, qsos: scoresheet.qsos },
       },
-    }
+      ctx,
+    )
   },
+}
+
+/// "CQWW SSB" — the name the operation's title gives the contest, which its
+/// summary repeats.
+export function contestTitle(ref: Record<string, JSONValue> | undefined): string {
+  return ['CQWW', str(ref?.mode)].filter((x) => x).join(' ')
 }
 
 /// The per-band table a contester actually reads while operating — QSOs,

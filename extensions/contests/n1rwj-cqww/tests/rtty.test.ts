@@ -308,3 +308,44 @@ test('CW/SSB Cabrillo exchange columns and rules links stay compatible', async (
   })) as { url: string }
   assert.equal(link.url, 'https://www.cqww.com/rules.htm')
 })
+
+test('RTTY summary separates zones, countries and QTHs in the standard contest arithmetic', () => {
+  const { sheet } = run([
+    qso('W1AW', '5', 'CT'),
+    qso('VE3XYZ', '4', 'ON'),
+    qso('DL1ABC', '14', 'DX'),
+  ])
+  const summary = CQWWScorer.summarizeScore(
+    { scoresheet: sheet, operation, ref, scope: 'operation' },
+    ctx,
+  ).cqww
+  assert.equal(summary.label, 'CQWW RTTY: 48 points')
+  assert.equal(summary.total, 48)
+  assert.equal(summary.mults, 8)
+  assert.equal(
+    String(summary.longSummary).split('\n')[0],
+    '3 QSOs, 6 pts × 8 mults (3 zones, 3 countries, 2 states/provinces)',
+  )
+  assert.ok(!String(summary.longSummary).includes('160m'))
+})
+
+test('RTTY summary localizes each multiplier group with singular counts', () => {
+  const { sheet } = run([qso('W1AW', '5', 'CT')])
+  const args = { scoresheet: sheet, operation, ref, scope: 'operation' as const }
+  const english = CQWWScorer.summarizeScore(args, ctx).cqww
+  assert.ok(String(english.longSummary).includes('(1 zone, 1 country, 1 state/province)'))
+  const spanish = CQWWScorer.summarizeScore(args, { online: false, locale: 'es' } as never).cqww
+  assert.ok(String(spanish.longSummary).includes('(1 zona, 1 país, 1 estado/provincia)'))
+})
+
+test('RTTY summaries ignore legacy per-day counters and retain whole-contest totals', () => {
+  const { sheet } = run([qso('W1AW', '5', 'CT'), qso('W1AW', '5', 'CT', '40m')])
+  const restored = JSON.parse(JSON.stringify({ ...sheet, dayQsos: 1, dayPoints: 1 }))
+  const args = { scoresheet: restored, operation, ref }
+  assert.deepEqual(CQWWScorer.summarizeScore({ ...args, scope: 'day' }, ctx), {})
+  const summary = CQWWScorer.summarizeScore({ ...args, scope: 'operation' }, ctx).cqww
+  assert.equal(summary.label, 'CQWW RTTY: 12 points')
+  assert.equal(summary.qsos, 2)
+  assert.equal(summary.points, 2)
+  assert.equal(summary.mults, 6)
+})

@@ -1600,3 +1600,24 @@ The preparation checks above remain the runtime verification scope. These
 publication records are personal repository documentation, exempt from
 upstream CWT/CQ WW synchronization. Existing investigation drafts remain
 uncommitted.
+
+## CQ WW summary synchronization — 2026-09-28
+
+Rebased [CQ WW PR #2](https://github.com/ham2k/extensions/pull/2) onto the
+upstream contest-summary changes, resolving conflicts in the scoring hook,
+operation title, and English/Spanish translations. The personal extension
+uses identical runtime source and translations, with the standard contest
+title/total and an arithmetic line that distinguishes zones, countries, and
+RTTY state/province multipliers. No separate daily score is shown. Regression
+coverage includes localized multiplier counts and restored checkpoints with
+legacy day counters; RTTY scoring and export semantics remain compatible.
+
+The personal `mise run format` and `mise run check` passed: **818 tests across
+66 files**, strict typechecks, lint, builds, and packaging. Upstream CQ WW's
+**45 tests** and official build/packaging passed. These are automated checks;
+no native UI or on-air test was performed. Version 0.7.1 remains the current
+personal development version; this maintenance run did not publish a release
+or submit anything to the catalog.
+
+Only CQ WW behavior is affected, so these changes are synchronized to PR #2
+and are exempt from the CWT PR synchronization requirement.

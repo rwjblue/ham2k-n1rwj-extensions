@@ -10,6 +10,10 @@
   "activityLabel": "Concursos CQ WW",
   "ourZoneSubtitle": "Zona {{zone}}",
   "notConfigured": "¡Sin configurar!",
+  "zoneOne": "1 zona",
+  "zoneMany": "{{formatted}} zonas",
+  "countryOne": "1 país",
+  "countryMany": "{{formatted}} países",
   "rttyGuidance": "Solo RTTY: envía tu zona CQ y estado continental de EE. UU. o área canadiense; otras ubicaciones usan DX. NF y LB son distintos; usa NWT y PEI. Los ajustes siguientes solo se aplican a RTTY. Esta versión admite monooperador y listas de control. Selecciona RTTY como modo del registro; la radio o el módem siguen realizando la decodificación y transmisión.",
   "ourQthLabel": "Nuestro estado / área canadiense / DX (RTTY)",
   "qthLabel": "Estado / Provincia",
@@ -20,5 +24,7 @@
   "allBands": "Todas las bandas",
   "powerLabel": "Categoría de potencia (RTTY)",
   "assistedLabel": "Categoría de asistencia (RTTY)",
-  "setupRequired": "Configura una zona CQ y un estado / área canadiense / DX válidos en los ajustes de CQ WW antes de exportar Cabrillo RTTY."
+  "setupRequired": "Configura una zona CQ y un estado / área canadiense / DX válidos en los ajustes de CQ WW antes de exportar Cabrillo RTTY.",
+  "qthOne": "1 estado/provincia",
+  "qthMany": "{{formatted}} estados/provincias"
 }

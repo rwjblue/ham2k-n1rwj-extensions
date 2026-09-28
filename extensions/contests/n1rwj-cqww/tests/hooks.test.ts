@@ -39,7 +39,7 @@ test("points follow the worked station's distance, and every one is a zone and a
     qsoScores: Record<string, { value: number }>
     operationSummary: Record<
       string,
-      { total: number; points: number; mults: number; label?: string }
+      { total: number; points: number; mults: number; label?: string; longSummary?: string }
     >
   }
 
@@ -51,7 +51,13 @@ test("points follow the worked station's distance, and every one is a zone and a
   assert.equal(summary.points, 6)
   assert.equal(summary.mults, 6, 'three zones and three countries, all new on 20m')
   assert.equal(summary.total, 36, 'points × mults is the score the operator reads')
-  assert.equal(summary.label, '6 × 6')
+  assert.equal(summary.label, 'CQWW SSB: 36 points')
+  // Zones and countries are different things to chase; the split says which
+  // the log is short of.
+  assert.equal(
+    summary.longSummary?.split('\n')[0],
+    '3 QSOs, 6 pts × 6 mults (3 zones, 3 countries)',
+  )
 })
 
 test('the same country on a second band is a fresh multiplier', async () => {

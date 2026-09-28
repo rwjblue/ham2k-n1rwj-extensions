@@ -45,7 +45,7 @@ import {
   RTTY_BANDS,
   suggestedQth,
 } from './rtty.ts'
-import { CQWWScorer, normalizeZone, ZONE_PATTERN } from './scorer.ts'
+import { CQWWScorer, contestTitle, normalizeZone, ZONE_PATTERN } from './scorer.ts'
 
 /// The ref type an operation stores. It is data in the operator's log, so it
 /// stays what the app's own built-in wrote there whatever this package is
@@ -339,14 +339,13 @@ const RefHandler = {
     { ref, operation }: { ref: Ref; operation: Record<string, JSONValue> },
     ctx: HookContext,
   ) {
-    const mode = str((ref as Record<string, JSONValue>).mode)
     const zone = ourZone(operation)
     return {
-      for: ['CQWW', mode].filter((x) => x).join(' '),
+      for: contestTitle(ref as Record<string, JSONValue>),
       subtitle: zone
         ? exchangeText(
             tFor(ctx)('ourZoneSubtitle', { zone }),
-            mode === 'RTTY' ? ourQth(operation) : '',
+            ref.mode === 'RTTY' ? ourQth(operation) : '',
           )
         : undefined,
     }

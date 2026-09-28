@@ -58,6 +58,10 @@ clearing override these hints. Unknown QTHs remain unknown. These notices do
 not award points or consume multipliers: incomplete logged exchanges still
 score zero until completed.
 
+The operation summary uses the standard contest title and score, followed by
+QSO/point arithmetic with separate zone, country, and state/province counts.
+Multipliers run across the whole contest, so no separate daily score is shown.
+
 Cabrillo uses `CQ-WW-RTTY`, `CATEGORY-MODE: RTTY`, `RY` QSO mode, and both
 zone/QTH columns. Sent exchange setup must be valid before export. A received
 field deliberately cleared stays missing (`-`) in the export. Inspect missing

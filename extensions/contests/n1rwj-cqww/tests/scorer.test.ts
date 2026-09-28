@@ -173,3 +173,32 @@ test('the score is points times multipliers, not points alone', () => {
   assert.equal(summary.cqww.mults, 4)
   assert.equal(summary.cqww.total, 24)
 })
+
+test('the summary is titled as the operation is, over arithmetic that multiplies out to it', () => {
+  // The title's score and the arithmetic's factors are computed apart; this
+  // catches them drifting, and a zone/country split that stops adding up to
+  // the multiplier count.
+  const { sheet } = run([qso('DL1ABC', '20m', 'SSB', '14'), qso('DL2ABC', '40m', 'SSB', '14')])
+  const summary = CQWWScorer.summarizeScore(
+    { scoresheet: sheet, operation: usOperation, ref: ssbRef, scope: 'operation' },
+    ctx,
+  )
+  assert.equal(summary.cqww.label, 'CQWW SSB: 24 points')
+  assert.equal(
+    (summary.cqww.longSummary as string).split('\n')[0],
+    '2 QSOs, 6 pts × 4 mults (2 zones, 2 countries)',
+  )
+})
+
+test('offers no per-day summary', () => {
+  // Multipliers are counted across the whole contest, so a day's share of the
+  // score is not a number CQ WW defines.
+  const { sheet } = run([qso('DL1ABC')])
+  assert.deepEqual(
+    CQWWScorer.summarizeScore(
+      { scoresheet: sheet, operation: usOperation, ref: ssbRef, scope: 'day' },
+      ctx,
+    ),
+    {},
+  )
+})
