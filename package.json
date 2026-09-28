@@ -9,7 +9,7 @@
     "node": "24.x"
   },
   "dependencies": {
-    "@ham2k/extension-sdk": "0.8.1"
+    "@ham2k/extension-sdk": "0.9.0"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.14",
