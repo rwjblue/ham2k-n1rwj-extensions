@@ -99,53 +99,58 @@ test('CW only, and only on the six contest bands', () => {
   assert.equal(scores[2].value, 1)
 })
 
-test("a day's summary scores its own points against the running multipliers", () => {
+test('the summary names the session and its score, over the arithmetic', () => {
+  // The title must name the session as the operation's title does, and the
+  // arithmetic must multiply out to its score — the two are computed apart.
   const { sheet } = run([qso('W1AW', '20m'), qso('K5XYZ', '40m')])
-  const day = CWTScorer.summarizeScore(
-    { scoresheet: sheet, operation, ref: sessionRef, scope: 'day' },
+  const summary = CWTScorer.summarizeScore(
+    { scoresheet: sheet, operation, ref: sessionRef, scope: 'operation' },
     ctx,
   ).cwt
-  assert.equal(day.for, 'day')
-  assert.equal(day.total, 4)
+  assert.equal(summary.label, 'CWT 1300z: 4 points')
+  assert.equal((summary.longSummary as string).split('\n')[0], '2 QSOs, 2 pts × 2 mults')
 })
 
-// The host renders label + longSummary and suppresses the numeric summary.
-// Exercise that visible contract with a repeated station on another band and
-// a same-band dupe, so neither contact count nor multiplier can be confused.
-test('the information page shows the total and explains the unique-call multiplier', () => {
+test('offers no per-day summary', () => {
+  // Multipliers are counted over the whole session, so a day's share of the
+  // score is not a number the contest defines.
+  const { sheet } = run([qso('W1AW', '20m')])
+  assert.deepEqual(
+    CWTScorer.summarizeScore({ scoresheet: sheet, operation, ref: sessionRef, scope: 'day' }, ctx),
+    {},
+  )
+})
+
+test('the shared summary preserves cross-band multipliers, band details and translations', () => {
   const { sheet } = run([
     qso('W1AW', '20m'),
     qso('W1AW', '40m'),
     qso('K5XYZ', '20m'),
     qso('W1AW', '20m'),
   ])
-  for (const scope of ['operation', 'day'] as const) {
-    const tally = CWTScorer.summarizeScore(
-      { scoresheet: sheet, operation, ref: sessionRef, scope },
-      ctx,
-    ).cwt
-    assert.equal(tally.total, 6)
-    assert.equal(tally.label, 'CWT: 6 points')
-    assert.equal(tally.summary, '6')
-    assert.ok(tally.longSummary)
-    assert.match(tally.longSummary, /^3 QSOs × 2 unique callsigns\n\n/)
-    assert.ok(tally.longSummary?.includes('**20m**: 2 QSOs'))
-    assert.ok(tally.longSummary?.includes('**40m**: 1 QSOs'))
-  }
-})
-
-test('the screenshot example displays 169 points with localized scoring details', () => {
-  const { sheet } = run(Array.from({ length: 13 }, (_, i) => qso(`W1A${i}`)))
-  for (const [locale, label, calculation] of [
-    ['en', 'CWT: 169 points', '13 QSOs × 13 unique callsigns'],
-    ['es', 'CWT: 169 puntos', '13 QSO × 13 indicativos únicos'],
+  for (const [locale, unit] of [
+    ['en', 'points'],
+    ['es', 'puntos'],
   ]) {
-    const tally = CWTScorer.summarizeScore(
+    const summary = CWTScorer.summarizeScore(
       { scoresheet: sheet, operation, ref: sessionRef, scope: 'operation' },
       { online: false, locale },
     ).cwt
-    assert.equal(tally.label, label)
-    assert.equal(tally.total, 169)
-    assert.ok(tally.longSummary?.startsWith(`${calculation}\n\n`))
+    assert.equal(summary.total, 6)
+    assert.equal(summary.summary, '6')
+    assert.equal(summary.label, `CWT 1300z: 6 ${unit}`)
+    assert.ok(summary.longSummary?.startsWith('3 QSOs, 3 pts × 2 mults\n\n'))
+    assert.ok(summary.longSummary?.includes('**20m**: 2 QSOs'))
+    assert.ok(summary.longSummary?.includes('**40m**: 1 QSOs'))
   }
+})
+
+test('a saved checkpoint with legacy day counters keeps the operation total only', () => {
+  const { sheet } = run([qso('W1AW'), qso('K5XYZ')])
+  const scoresheet = { ...sheet, dayPoints: 1, dayQsos: 1 }
+  assert.equal(total(scoresheet), 4)
+  assert.deepEqual(
+    CWTScorer.summarizeScore({ scoresheet, operation, ref: sessionRef, scope: 'day' }, ctx),
+    {},
+  )
 })

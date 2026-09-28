@@ -10,10 +10,10 @@ import type {
   RefLink,
   TitleSuggestion,
 } from '@ham2k/extension-sdk'
-import manifest from '../../manifest.json'
 import { ourExchange } from './exchange.ts'
 import { tFor } from './i18n.ts'
 import { sessionDateLabel, sessionFor, sessionShortLabel } from './schedule.ts'
+import { contestTitle } from './scorer.ts'
 
 export const RefHandler = {
   async validateRef({ ref }: { ref: Ref }, _ctx: HookContext) {
@@ -50,10 +50,9 @@ export const RefHandler = {
     { ref }: { ref: Ref; operation: Record<string, JSONValue> },
     ctx: HookContext,
   ): Promise<TitleSuggestion | null> {
-    const session = sessionFor(ref.ref)
     const { name, number } = ourExchange(ref as Record<string, JSONValue>)
     return {
-      for: session ? sessionShortLabel(session) : manifest.shortName,
+      for: contestTitle(ref as Record<string, JSONValue>),
       subtitle: name || number ? tFor(ctx)('ourExchangeSubtitle', { name, number }) : undefined,
     }
   },
