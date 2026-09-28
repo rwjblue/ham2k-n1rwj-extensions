@@ -8,6 +8,22 @@ each submission before operators can install it from the catalog.
 
 ## Current release status
 
+[v0.7.1](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.7.1)
+was published from signed commit `3bb7900cdca95543c49075e61bb8ae68d84ec7f2`
+on September 28, 2026 at 01:04 UTC (September 27 in US Eastern time).
+All seven bundles and seven checksum files are available. The
+[release workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/36364551631)
+passed both upload and catalog jobs. Downloaded assets passed
+`mise run release:catalog v0.7.1 --dry-run`.
+
+RBN returned **approved** on `stable` at 01:05 UTC. All six other extensions
+were skipped because their behavior is unchanged. This release adds CW speed
+filters, remembered and locally suggested receiver continents, and explicit
+spot-setting defaults/reset controls. See the [release notes](releases/v0.7.1.md)
+and [verification record](VERIFICATION.md#release-071-publication--2026-09-28).
+
+### Previous releases
+
 [v0.7.0](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.7.0)
 was published from signed commit `919f9c02b02cbd6e5afb5bd2358dc04b9522445f`
 on September 27, 2026 at 13:36 UTC. All seven bundles and seven checksum files
@@ -21,8 +37,6 @@ PSK Reporter and RBN require extension API 3; contests retain API 1. The shared
 SDK/tooling update selects all extensions for catalog publication. See the
 [release notes](releases/v0.7.0.md) and
 [verification record](VERIFICATION.md#release-070-publication--2026-09-27).
-
-### Previous releases
 
 [v0.6.1](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.6.1)
 was published from signed commit `7d51767f60692339bc19160c5d76260dda87cc14`

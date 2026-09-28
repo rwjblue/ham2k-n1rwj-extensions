@@ -1579,3 +1579,24 @@ Unit and bundle checks do not establish native settings UI or device-location
 permission behavior. RBN-only behavior and personal release packaging are
 exempt from upstream CWT/CQ WW synchronization. The two existing investigation
 drafts remain outside the release commit.
+
+## Release 0.7.1 publication — 2026-09-28
+
+Published [v0.7.1](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.7.1)
+from signed commit `3bb7900cdca95543c49075e61bb8ae68d84ec7f2` at 01:04 UTC
+(September 27 in US Eastern time). GitHub verifies the signature, and the
+release tag resolves to this tested commit. The
+[check workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/36364537715)
+and [release workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/36364551631)
+succeeded. GitHub contains all seven bundles and seven checksum files, and
+the published body matches `docs/releases/v0.7.1.md` exactly.
+
+`mise run release:catalog v0.7.1 --dry-run` downloaded and validated every
+published asset and selected RBN alone. The catalog job returned **approved**
+for RBN 0.7.1 on `stable` at 01:05 UTC; the six unchanged extensions were
+skipped as intended.
+
+The preparation checks above remain the runtime verification scope. These
+publication records are personal repository documentation, exempt from
+upstream CWT/CQ WW synchronization. Existing investigation drafts remain
+uncommitted.
