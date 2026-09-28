@@ -2,11 +2,15 @@
 // SPDX-License-Identifier: MPL-2.0
 // The accumulation structure follows the Ham2K CWT/NAQP scorers.
 import type { ContestScorer, QsoScoreVerdict } from '@ham2k/extension-sdk'
-import { annotateCallAgainstCountryFile } from '@ham2k/extension-sdk'
+import {
+  annotateCallAgainstCountryFile,
+  contestArithmetic,
+  contestSummary,
+} from '@ham2k/extension-sdk'
 import { isCallsign, normalizeCall } from '../../n1mm/src/callsign.ts'
 import { canonicalLocation, LOCATIONS, received, validLocation, validSerial } from './exchange.ts'
 import { type ContestConfig, contestMode, object, type Qson, refOf, text } from './model.ts'
-import { sessionFor } from './schedule.ts'
+import { sessionFor, sessionLabel } from './schedule.ts'
 
 // Ham2K localizes its built-in scoring keys and displays unknown strings
 // verbatim (app/lib/tools/scoring_labels.dart). The SDK has no custom label
@@ -19,7 +23,6 @@ export type Scoresheet = {
   multipliers: Record<string, true>
   bands: Record<string, number>
   points: number
-  dayPoints: number
 }
 export function sstMultiplier(qso: Qson, value: string): string | undefined {
   if (value !== 'DX')
@@ -36,10 +39,9 @@ export function sstMultiplier(qso: Qson, value: string): string | undefined {
 export function createScorer(config: ContestConfig): ContestScorer<Scoresheet> {
   return {
     startScoresheet() {
-      return { worked: {}, multipliers: {}, bands: {}, points: 0, dayPoints: 0 }
+      return { worked: {}, multipliers: {}, bands: {}, points: 0 }
     },
-    scoreQso({ scoresheet, qso, operation, isNewDay }) {
-      if (isNewDay) scoresheet.dayPoints = 0
+    scoreQso({ scoresheet, qso, operation }) {
       const result = (score: QsoScoreVerdict) => ({ scoresheet, score })
       const call = normalizeCall(text(object(qso.their).call))
       if (!isCallsign(call) || qso.deleted || qso.band === 'event') return result({ value: 0 })
@@ -73,7 +75,6 @@ export function createScorer(config: ContestConfig): ContestScorer<Scoresheet> {
       else scoresheet.worked[call] = [band]
       if (worked) notices.push('newBand')
       scoresheet.points++
-      scoresheet.dayPoints++
       scoresheet.bands[band] = (scoresheet.bands[band] ?? 0) + 1
       const score: QsoScoreVerdict = { value: 1, dupe: false, band, notices }
       if (!exchange.name || !exchange.value) score.alerts = ['missingExchange']
@@ -87,25 +88,25 @@ export function createScorer(config: ContestConfig): ContestScorer<Scoresheet> {
         score.alerts = [UNKNOWN_MULTIPLIER]
       return result(score)
     },
-    summarizeScore({ scoresheet, scope }) {
-      const points = scope === 'day' ? scoresheet.dayPoints : scoresheet.points
+    summarizeScore({ scoresheet, scope, ref, operation }, ctx) {
+      const points = scoresheet.points
       const mults = Object.keys(scoresheet.multipliers).length
-      return {
-        [config.type]: {
+      const session = sessionFor(config, text((ref ?? refOf(operation, config.type))?.ref))
+      return contestSummary(
+        {
           key: config.type,
-          for: scope,
+          scope,
           icon: 'clock-fast',
-          points,
-          qsos: points,
-          mults,
+          title: session ? sessionLabel(config, session) : config.shortName,
           total: points * mults,
-          label: `${points} × ${mults}`,
-          summary: String(points * mults),
-          longSummary: config.bands
+          arithmetic: contestArithmetic({ qsos: points, points, mults }, ctx),
+          detail: config.bands
             .map((band) => `**${band}**: ${scoresheet.bands[band] ?? 0} QSOs`)
             .join('\n'),
+          extra: { points, qsos: points, mults },
         },
-      }
+        ctx,
+      )
     },
   }
 }

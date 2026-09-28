@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { config as mst } from '../../../extensions/contests/n1rwj-mst/src/config.ts'
 import { config as sst } from '../../../extensions/contests/n1rwj-sst/src/config.ts'
+import { config as wrt } from '../../../extensions/contests/n1rwj-wrt/src/config.ts'
 import type { ContestConfig, Qson } from '../src/model.ts'
 import { sessionAtHand, sessionFor, sessionsFrom } from '../src/schedule.ts'
 import { createScorer } from '../src/scorer.ts'
@@ -21,7 +22,7 @@ function score(config: ContestConfig, qsos: Qson[], session?: string) {
   return { tally, verdicts, scoresheet }
 }
 function qso(
-  type: 'mst' | 'sst',
+  type: 'mst' | 'sst' | 'wrt',
   call: string,
   band = '20m',
   location = 'MA',
@@ -30,7 +31,7 @@ function qso(
   return {
     their: { call, ...(dxccCode ? { dxccCode } : {}) },
     band,
-    mode: 'CW',
+    mode: type === 'wrt' ? 'RTTY' : 'CW',
     refs: [{ type, name: 'BOB', theirSerial: '10', location }],
   }
 }
@@ -169,5 +170,67 @@ describe('SST scoring', () => {
     ])
     expect(result.tally?.mults).toBe(2)
     expect(result.verdicts[2]?.alerts).toEqual(['invalidExchange'])
+  })
+})
+
+describe.each([
+  { config: mst, session: '2026-09-21-1300', title: 'MST 1300z' },
+  { config: sst, session: '2026-09-21-0000', title: 'SST 0000z' },
+  { config: wrt, session: '2026-09-25-0145', title: 'WRT 0145z' },
+])('$config.shortName score summaries', ({ config, session, title }) => {
+  it('shows the session total, standard arithmetic and band breakdown in each locale', () => {
+    const { scoresheet } = score(
+      config,
+      [
+        qso(config.type, 'K1ABC'),
+        qso(config.type, 'K1ABC', '40m'),
+        qso(config.type, 'K2ABC'),
+        qso(config.type, 'K1ABC'),
+      ],
+      session,
+    )
+    const scorer = createScorer(config)
+    for (const [locale, unit] of [
+      ['en', 'points'],
+      ['es', 'puntos'],
+    ]) {
+      const tally = scorer.summarizeScore(
+        {
+          scoresheet,
+          operation: {},
+          ref: { type: config.type, ref: session },
+          scope: 'operation',
+        },
+        { online: false, locale },
+      )[config.type]
+      expect(tally).toMatchObject({
+        key: config.type,
+        for: 'operation',
+        qsos: 3,
+        points: 3,
+        mults: 2,
+        total: 6,
+        label: `${title}: 6 ${unit}`,
+        summary: '6',
+      })
+      expect(tally?.longSummary).toContain('3 QSOs, 3 pts × 2 mults\n\n')
+      expect(tally?.longSummary).toContain('**20m**: 2 QSOs')
+      expect(tally?.longSummary).toContain('**40m**: 1 QSOs')
+    }
+  })
+
+  it('omits daily contest scores, including when resuming an older checkpoint', () => {
+    const { scoresheet: initial } = score(config, [qso(config.type, 'K1ABC')], session)
+    const scorer = createScorer(config)
+    const scoresheet = { ...initial, dayPoints: 99 }
+    const operation = { refs: [{ type: config.type, ref: session }] }
+    scorer.scoreQso({ scoresheet, operation, qso: qso(config.type, 'K2ABC'), isNewDay: true }, ctx)
+    expect(scorer.summarizeScore({ scoresheet, operation, scope: 'day' }, ctx)).toEqual({})
+    expect(
+      scorer.summarizeScore({ scoresheet, operation, scope: 'operation' }, ctx)[config.type],
+    ).toMatchObject({
+      label: `${title}: ${config.type === 'sst' ? 2 : 4} points`,
+      points: 2,
+    })
   })
 })
