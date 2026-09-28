@@ -22,6 +22,11 @@ in `dist/`. GitHub release assets and catalog approval are separate; see
 
 ## Operating guide
 
+Activity search offers RTTY, SSB, and CW, ranked by their next contest
+weekend. New setup defaults to the nearest upcoming mode; existing CQ WW
+operations are not offered another suggestion that could replace their
+configured exchange. Confirm RTTY when setting up an RTTY operation.
+
 Select **RTTY** in CQ WW setup. Configure the sent CQ zone, state / Canadian
 call area / DX, and the single-operator or checklog entry category. Set the
 logging mode to RTTY; rig-reported RTTY-LSB, RTTY-USB and RTTY-R are also

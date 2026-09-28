@@ -1621,3 +1621,22 @@ or submit anything to the catalog.
 
 Only CQ WW behavior is affected, so these changes are synchronized to PR #2
 and are exempt from the CWT PR synchronization requirement.
+
+## CQ WW activity suggestions — 2026-09-29
+
+Rebased [CQ WW PR #2](https://github.com/ham2k/extensions/pull/2) onto the
+upstream date-ranked activity suggestions. RTTY, SSB, and CW are offered in
+calendar order of relevance; new setup defaults to the nearest upcoming mode.
+Existing CQ WW operations are excluded from suggestions so a new selection
+cannot replace their configured exchange. The personal preview retains its
+temporary identity and uses the same runtime source, translations, and guide.
+Upstream scheduling and activity tests were adapted to Vitest locally.
+
+Validation ran in an isolated personal worktree to exclude unrelated ongoing
+settings-report work. `mise run format` and `mise run check` passed with
+**828 tests across 67 files**, strict typechecks, builds, and packaging. An
+inherited test-only lint warning was removed and lint plus the affected hook
+tests passed again. Upstream CQ WW passed **55 tests** and official packaging.
+No native UI or on-air test was performed; no release or catalog publication
+was requested by this maintenance run. Only CQ WW code changed, exempt from
+CWT PR synchronization.

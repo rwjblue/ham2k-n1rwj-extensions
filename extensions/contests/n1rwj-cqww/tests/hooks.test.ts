@@ -8,9 +8,11 @@
 // if the hook stops being registered at all (the SDK harness in sdkGapTesting.ts).
 
 import assert from 'node:assert/strict'
-import { test } from 'vitest'
+import { afterEach, test, vi } from 'vitest'
 
 import { fixtureOperation, loadExtension } from './support.ts'
+
+afterEach(() => vi.useRealTimers())
 
 const cqww = await loadExtension(() => import('../src/index.ts'))
 
@@ -70,4 +72,47 @@ test('the same country on a second band is a fresh multiplier', async () => {
   })) as { operationSummary: Record<string, { mults: number }> }
 
   assert.equal(result.operationSummary.cqww.mults, 4, 'zone and country, on each of two bands')
+})
+
+test('the activity search offers all three runnings, the nearest first, labelled as the operation will show them', async () => {
+  // Mid October: SSB is days away, CW a month, RTTY eleven months. Ranking by
+  // a fixed order instead of the calendar would lead with RTTY all year.
+  vi.useFakeTimers({ toFake: ['Date'] })
+  vi.setSystemTime(Date.UTC(2026, 9, 15))
+  const suggestions = (await cqww.runHook('activity', 'suggest', { searchTerm: 'cq' })) as {
+    mode: string
+    label: string
+    shortLabel: string
+    relevance: number
+  }[]
+
+  const ranked = [...suggestions].sort((a, b) => b.relevance - a.relevance).map((s) => s.mode)
+  assert.deepEqual(ranked, ['SSB', 'CW', 'RTTY'])
+
+  // A suggestion is saved verbatim; a label that differs from decorateRef's
+  // would change the moment the operation is edited.
+  const ssb = suggestions.find((s) => s.mode === 'SSB')
+  assert.ok(ssb)
+  const decorated = (await cqww.runHook('ref:cqww', 'decorateRef', {
+    ref: { type: 'cqww', mode: 'SSB' },
+  })) as { label: string; shortLabel: string }
+  assert.equal(ssb.label, decorated.label)
+  assert.equal(ssb.shortLabel, decorated.shortLabel)
+})
+
+test('an operation already running CQ WW is offered nothing', async () => {
+  // A suggestion has no `ref` for the picker's duplicate guard to match, so
+  // tapping one would replace the configured ref and lose its zone.
+  const configured = fixtureOperation({
+    stationCall: 'N0DEV',
+    refs: [{ type: 'cqww', mode: 'CW', zone: '5' }],
+  })
+  assert.deepEqual(
+    await cqww.runHook('activity', 'suggest', { operation: configured, searchTerm: 'cq' }),
+    [],
+  )
+})
+
+test('the activity search stays out of unrelated searches', async () => {
+  assert.deepEqual(await cqww.runHook('activity', 'suggest', { searchTerm: 'pota' }), [])
 })
