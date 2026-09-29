@@ -6,6 +6,14 @@
   <td><a title="China - show spots from this dxcc">DXCC</a></td>
   <td>AS</td><td>1</td><td>1</td><td>1 year ago</td><td>online</td>
 </tr>
+<!-- The live directory included this unidentified skimmer on 2026-09-29. Metadata verified against that response; unused activity fields are synthetic. -->
+<tr class="online7d total">
+  <td><a href="/dxsd1.php?f=0&amp;c=UNKNOWN&amp;t=de" title="show spots sent from this skimmer">UNKNOWN</a></td>
+  <td></td>
+  <td>JO21BX</td>
+  <td><a title="Kazakhstan - show spots from this dxcc">UN</a></td>
+  <td>AS</td><td>30</td><td>17</td><td>5 years ago</td><td>3 days ago</td>
+</tr>
 <tr class="online total">
   <td><a href="/dxsd1.php?f=0&amp;c=JJ2VLY&amp;t=de" title="show spots sent from this skimmer">JJ2VLY</a></td>
   <td>15m</td>

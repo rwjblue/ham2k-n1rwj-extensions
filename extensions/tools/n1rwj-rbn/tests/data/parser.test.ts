@@ -49,8 +49,40 @@ describe('Vail ReRBN data parsing', () => {
     ])
   })
 
+  it('accepts receiver IDs without callsign syntax and uses their supplied grids', () => {
+    for (const spotter of [' unknown ', 'SKIMMER', '123']) {
+      const reports = parse(
+        payload({ spots: [spotPayload({ spotter, spotter_grid: 'JO21BX' })] }),
+      ).reports
+      expect(reports).toMatchObject([
+        { receiver: spotter.trim().toUpperCase(), receiverLongitude: 4.125 },
+      ])
+      expect(reports[0].receiverLatitude).toBeCloseTo(51.9791667)
+    }
+    expect(
+      parseRbnPayload(
+        payload({ spots: [spotPayload({ callsign: 'UNKNOWN' })] }),
+        'UNKNOWN',
+        30,
+        NOW,
+      ).reports,
+    ).toEqual([])
+  })
+
   it('rejects malformed or unbounded receiver suffixes', () => {
-    for (const spotter of ['KM3T-', 'KM3T-1-2', 'KM3T-123456789', 'KM3T-<script>']) {
+    for (const spotter of [
+      '',
+      ' ',
+      'bad call',
+      'UNKNOWN<script>',
+      'A'.repeat(25),
+      '/UNKNOWN',
+      'UNKNOWN/',
+      'KM3T-',
+      'KM3T-1-2',
+      'KM3T-123456789',
+      'KM3T-<script>',
+    ]) {
       expect(parse(payload({ spots: [spotPayload({ spotter })] })).reports).toEqual([])
     }
   })

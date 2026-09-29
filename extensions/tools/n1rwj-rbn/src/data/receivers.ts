@@ -61,7 +61,9 @@ export function parseReceiverDirectory(body: string): Receiver[] {
     if (cells.length !== 9 || !/title=["']show spots sent from this skimmer["']/i.test(cells[0]))
       throw new Error(invalidDirectory)
     const call = normalizeCall(text(cells[0]))
-    if (!isValidReceiver(call)) throw new Error(invalidDirectory)
+    // Skip malformed IDs without dropping the directory. Receiver IDs are
+    // matched exactly to reports, including RBN's UNKNOWN entry.
+    if (!isValidReceiver(call)) continue
     const countryTitle = cells[3].match(/title=["']([^"']*?) - show spots from this dxcc["']/i)
     const country = countryTitle ? text(countryTitle[1]) : null
     if (country && country.length > 100) throw new Error(invalidDirectory)

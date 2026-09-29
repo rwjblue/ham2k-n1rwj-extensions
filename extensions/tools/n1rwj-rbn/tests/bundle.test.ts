@@ -57,7 +57,13 @@ it('registers and loads the weekly receiver data file in the packaged sandbox', 
     url: String(dataFile.url),
     options: {},
   })
-  expect(saved.nodes).toHaveLength(7)
+  expect(saved.nodes).toHaveLength(8)
+  expect(saved.nodes).toContainEqual({
+    call: 'UNKNOWN',
+    grid: 'JO21BX',
+    country: 'Kazakhstan',
+    continent: 'AS',
+  })
   required(dataFile.onLoadRawData)(JSON.parse(JSON.stringify(saved)))
   await expect(
     required(dataFile.rawToJSONData)({

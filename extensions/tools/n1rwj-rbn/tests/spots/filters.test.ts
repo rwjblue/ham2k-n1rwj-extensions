@@ -1,4 +1,5 @@
 import { expect, it, vi } from 'vitest'
+import { createReceiverData } from '../../src/data/receivers.ts'
 import { createRbnTransport } from '../../src/data/transport.ts'
 import { discoverFilters, matchFilter } from '../../src/spots/filters.ts'
 import { createRbnSpots } from '../../src/spots/index.ts'
@@ -107,6 +108,20 @@ it('validates saved and edited filters without silently treating bad settings as
   expect(validation('spotSkimmers', '***')).toBeTruthy()
   expect(() => readPreferences({ spotGrids: 'USA' })).toThrow()
   expect(readPreferences({ spotGrids: 'fn, FN' }).grids).toEqual(['FN'])
+})
+
+it('keeps UNKNOWN reports and matches their receiver ID and cached directory grid in Spots', () => {
+  const directory = createReceiverData()
+  directory.dataFile.onLoadRawData({
+    schema: 1,
+    nodes: [{ call: 'UNKNOWN', grid: 'JO21BX', country: 'Kazakhstan', continent: 'AS' }],
+  })
+  const reports = parseReports([row({ spotter: ' unknown ', spotter_grid: '' })], 'rbn', now)
+  expect(reports).toHaveLength(1)
+  const preferences = readPreferences({ spotSkimmers: 'unknown', spotGrids: 'JO' })
+  expect(selectSpots(reports, undefined, preferences, directory.lookup, now)).toMatchObject([
+    { spot: { sourceInfo: { spotter: 'UNKNOWN', spotterGrid: 'JO21BX' } } },
+  ])
 })
 
 it('persists All mode, returns distinct modes for the same station, and switches back to RTTY', async () => {

@@ -20,12 +20,15 @@ function isCount(value: unknown, minimum = 0): value is number {
   return typeof value === 'number' && Number.isSafeInteger(value) && value >= minimum
 }
 
-/** RBN receiver IDs can append a skimmer suffix, such as KM3T-5. */
+/** Receiver IDs need not be callsigns (UNKNOWN); suffixes such as KM3T-5 stay distinct. */
 export function isValidReceiver(value: string): boolean {
   const separator = value.indexOf('-')
-  if (separator < 0) return isValidCall(value)
+  const identifier = separator < 0 ? value : value.slice(0, separator)
   return (
-    isValidCall(value.slice(0, separator)) && /^[A-Z0-9]{1,8}$/.test(value.slice(separator + 1))
+    identifier.length > 0 &&
+    identifier.length <= 24 &&
+    /^[A-Z0-9]+(?:\/[A-Z0-9]+)*$/.test(identifier) &&
+    (separator < 0 || /^[A-Z0-9]{1,8}$/.test(value.slice(separator + 1)))
   )
 }
 

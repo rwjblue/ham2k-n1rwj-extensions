@@ -348,8 +348,10 @@ data-file sync (such as startup or reconnection); it is not a weekly timer.
 Use Data Files settings to refresh sooner when a receiver is new or moves.
 The saved directory loads offline, failed downloads or invalid data retain the
 last good cache, and nodes absent from a later response are retained within a
-10,000-node limit. Directory updates apply to already-cached reports on the
-next panel render. The panel's refresh button refreshes reports only.
+10,000-node limit. Receiver IDs need not be callsigns: entries such as `UNKNOWN`
+are retained and matched to reports by their exact ID, using the supplied grid.
+Malformed receiver IDs are skipped. Directory updates apply to already-cached
+reports on the next panel render. The panel's refresh button refreshes reports only.
 
 Without a usable directory grid, positions fall back to `spotter_grid` supplied
 by Vail ReRBN, which comes from the callsign's HamDB registered grid. It can

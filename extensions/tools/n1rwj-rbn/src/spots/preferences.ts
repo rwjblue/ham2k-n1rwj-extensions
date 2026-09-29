@@ -64,7 +64,7 @@ export function validation(key: string, value: unknown): string | null {
   return valid
     ? null
     : key === 'spotSkimmers'
-      ? 'Use exact receiver callsigns, including suffixes such as KM3T-5.'
+      ? 'Use exact receiver IDs, such as KM3T-5 or UNKNOWN.'
       : 'Use Maidenhead regions such as FN, EM, JO, or FN42.'
 }
 function speedBound(value: unknown): number | undefined {

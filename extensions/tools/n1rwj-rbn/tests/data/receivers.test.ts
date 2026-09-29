@@ -62,6 +62,7 @@ describe('RBN receiver directory', () => {
       { call: 'JJ2VLY', grid: 'PM95JG', country: 'Japan', continent: 'AS' },
       { call: 'KD7EFG', grid: 'DN31UO', country: 'United States', continent: 'NA' },
       { call: 'ND7K', grid: 'DM34OB', country: 'United States', continent: 'NA' },
+      { call: 'UNKNOWN', grid: 'JO21BX', country: 'Kazakhstan', continent: 'AS' },
       { call: 'VK6ANC', grid: 'OF78WE', country: 'Australia', continent: 'OC' },
       { call: 'ZL2KS', grid: 'RE68XQ', country: 'New Zealand', continent: 'OC' },
       { call: 'ZL3X', grid: 'RE66IR', country: 'New Zealand', continent: 'OC' },
@@ -77,6 +78,38 @@ describe('RBN receiver directory', () => {
     ).toBe("Côte d'Ivoire")
   })
 
+  it('retains receiver IDs that are not callsigns while skipping malformed IDs', () => {
+    expect(
+      parseReceiverDirectory(
+        row('UNKNOWN', 'JO21BX', 'Kazakhstan') +
+          row('VK6ANC', 'OF78WE') +
+          row('bad call', 'FN31') +
+          row('KM3T-5', 'FN42', 'United States'),
+      ),
+    ).toEqual([
+      { call: 'UNKNOWN', grid: 'JO21BX', country: 'Kazakhstan', continent: 'OC' },
+      { call: 'VK6ANC', grid: 'OF78WE', country: 'Australia', continent: 'OC' },
+      { call: 'KM3T-5', grid: 'FN42', country: 'United States', continent: 'OC' },
+    ])
+  })
+
+  it('uses UNKNOWN directory metadata for reports and restores it from the saved cache', async () => {
+    const data = createReceiverData()
+    const original = reports(' unknown ', null)
+    expect(original).toHaveLength(1)
+    expect(original[0].receiverLatitude).toBeNull()
+    const saved = await refresh(data)
+    const enriched = data.enrichReports(original)
+    expect(enriched[0]).toMatchObject({ receiver: 'UNKNOWN', country: 'Kazakhstan' })
+    expect(enriched[0].receiverLatitude).toBeCloseTo(51.9791667)
+    expect(enriched[0].receiverLongitude).toBe(4.125)
+    const restarted = createReceiverData()
+    restarted.dataFile.onLoadRawData(JSON.parse(JSON.stringify(saved)))
+    expect(restarted.enrichReports(original)).toEqual(enriched)
+    expect(original[0].receiverLatitude).toBeNull()
+    expect(parseReceiverDirectory(row('UNKNOWN', 'JO21BX', 'Kazakhstan'))).toHaveLength(1)
+  })
+
   it('rejects failures, changed columns, conflicting nodes and all-invalid grids', () => {
     for (const body of [
       '',
@@ -85,6 +118,8 @@ describe('RBN receiver directory', () => {
       row('VK6ANC', 'OF78WE').replace('<td>15m</td>', ''),
       row('VK6ANC', 'ZZ99'),
       row('bad call', 'OF78WE'),
+      row('UNKNOWN', 'ZZ99', 'Kazakhstan'),
+      row('VK6ANC', 'OF78WE') + row('UNKNOWN', 'JO21BX').replace('<td>15m</td>', ''),
       row('VK6ANC', 'OF78WE') + row('VK6ANC', 'FN31'),
     ])
       expect(() => parseReceiverDirectory(body)).toThrow('Previous data retained')
@@ -120,7 +155,7 @@ describe('RBN receiver directory', () => {
     restarted.dataFile.onLoadRawData(saved)
     expect(restarted.enrichReports(reports('ZL3X', null))[0].country).toBe('New Zealand')
     const updated = await refresh(restarted, row('VK6ANC', 'OF79WE'))
-    expect(updated.nodes).toHaveLength(7)
+    expect(updated.nodes).toHaveLength(8)
     expect(restarted.enrichReports(reports())[0].receiverLatitude).toBeCloseTo(-30.8125)
     expect(restarted.enrichReports(reports('ZL3X', null))[0].country).toBe('New Zealand')
     await restarted.dataFile.onRemoveRawData()

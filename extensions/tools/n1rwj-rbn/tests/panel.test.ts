@@ -639,6 +639,23 @@ describe('RBN native panel integration', () => {
       'HamDB registered grids',
     )
   })
+  it('plots UNKNOWN when the receiver directory supplies its location', () => {
+    const directory = createReceiverData()
+    directory.dataFile.onLoadRawData({
+      schema: 1,
+      nodes: [{ call: 'UNKNOWN', grid: 'JO21BX', country: 'Kazakhstan', continent: 'AS' }],
+    })
+    const model = panelModel(
+      args,
+      { ...snapshot, reports: directory.enrichReports(snapshot.reports) },
+      now,
+    )
+    const station = model.mapOptions?.stations.find((station) => station.key === 'UNKNOWN')
+    expect(station).toMatchObject({ label: 'UNKNOWN', longitude: 4.125 })
+    expect(station?.latitude).toBeCloseTo(51.9791667)
+    expect(model.rows[1]).toMatchObject({ call: 'UNKNOWN', country: 'Kazakhstan' })
+    expect(model.rows[1].distanceKm).toBeGreaterThan(0)
+  })
   it('handles Home with no operation, keeps explicit overrides, and exposes error provenance', async () => {
     const home = { ...args, operation: undefined } as unknown as PanelRenderArgs
     const model = panelModel(
