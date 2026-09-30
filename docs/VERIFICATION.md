@@ -1,5 +1,41 @@
 # Verification and compatibility
 
+## Release 0.7.2 publication — 2026-09-29
+
+Published [v0.7.2](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.7.2)
+from signed commit `e67b396ed0cb6b5bd4800bb218accf40510cd2a2` at 23:14:26 US
+Eastern time on September 29 (03:14:26 UTC on September 30). GitHub verified
+both the release commit and RBN fix commit `23ecb31a`.
+
+Local `mise run release v0.7.2 --dry-run` and the
+[release workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/36663504231)
+passed **833 tests across 67 files**, lint, strict typechecks, ES2020 builds,
+official packaging, synchronized-version checks, and bundle/checksum validation.
+The workflow uploaded all seven bundles and seven matching checksum files;
+the catalog approved every extension on `stable` between 03:15:10 and 03:15:17 UTC.
+The SDK 0.8.1 to 0.9.0 update appears under **Shared changes** in the authored
+notes and selects all seven catalog entries.
+
+`mise run release:catalog v0.7.2 --dry-run` downloaded and validated the actual
+GitHub assets without resubmitting them. Published RBN bundle SHA-256:
+`eac5f17c0dd6de53c164afa99d976b60c68add784234cdf6ee9acea8ab1606b3`.
+
+The live RBN directory reproduced the reported parse exception because it
+included `UNKNOWN`. The fixed parser loaded all 350 entries, including its
+supplied grid, country, and continent. Deterministic tests cover noncallsign
+receiver IDs in reports, directory/cache replay, map positions, and exact
+Spots receiver/grid filters, while preserving transmitter callsign checks and
+malformed-directory rejection. Native HaLo build-177 startup verification
+remains outstanding; the local host-source checkout was build 170.
+
+CWT behavior remains synchronized with
+[PR #1](https://github.com/ham2k/extensions/pull/1) at `9106257d`.
+Immutable GitHub blobs for all seven CQ WW runtime/translation files exactly
+match [PR #2](https://github.com/ham2k/extensions/pull/2) at `928c2482`;
+official CQ WW's 55 tests, repository typechecks, build, and packaging passed.
+No upstream edits were needed for this release. RBN changes and personal
+release packaging do not affect either temporary contest extension's behavior.
+
 ## Release 0.6.0 publication — 2026-09-27
 
 Rebased the WRT stack onto main's RBN mode-default update (`4437fcf2`) and

@@ -8,6 +8,23 @@ each submission before operators can install it from the catalog.
 
 ## Current release status
 
+[v0.7.2](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.7.2)
+was published from signed commit `e67b396ed0cb6b5bd4800bb218accf40510cd2a2`
+on September 29, 2026 at 23:14 US Eastern time (September 30 at 03:14 UTC).
+All seven bundles and seven checksum files are available. The
+[release workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/36663504231)
+passed both upload and catalog jobs. Downloaded assets passed
+`mise run release:catalog v0.7.2 --dry-run`.
+
+All seven extensions returned **approved** on `stable` at 03:15 UTC.
+The shared SDK update selects every extension for catalog publication. This
+release fixes RBN startup directory refreshes with receiver IDs such as `UNKNOWN`
+and includes standard contest summaries and CQ WW activity suggestions already
+on main. See the [release notes](releases/v0.7.2.md) and
+[verification record](VERIFICATION.md#release-072-publication--2026-09-29).
+
+### Previous releases
+
 [v0.7.1](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.7.1)
 was published from signed commit `3bb7900cdca95543c49075e61bb8ae68d84ec7f2`
 on September 28, 2026 at 01:04 UTC (September 27 in US Eastern time).
@@ -21,8 +38,6 @@ were skipped because their behavior is unchanged. This release adds CW speed
 filters, remembered and locally suggested receiver continents, and explicit
 spot-setting defaults/reset controls. See the [release notes](releases/v0.7.1.md)
 and [verification record](VERIFICATION.md#release-071-publication--2026-09-28).
-
-### Previous releases
 
 [v0.7.0](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.7.0)
 was published from signed commit `919f9c02b02cbd6e5afb5bd2358dc04b9522445f`
