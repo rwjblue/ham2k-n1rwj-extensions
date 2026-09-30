@@ -155,9 +155,9 @@ export function createRbnSpots(options: Options) {
         let reports: Spot[]
         try {
           reports = await feed.get(ctx.online)
-          status = ctx.online ? '' : 'Offline: showing unexpired cached reports only.'
+          status = ctx.online ? feed.getStatus() : 'Offline: showing unexpired cached reports only.'
         } catch (error) {
-          status = `${error instanceof Error ? error.message : 'RBN unavailable.'} Showing unexpired cached reports only.`
+          status = `${error instanceof Error ? error.message : 'RBN unavailable.'} Showing available unexpired reports.`
           reports = await feed.get(false)
         }
         // Compatibility bridge only: the feed cache above retains every report.

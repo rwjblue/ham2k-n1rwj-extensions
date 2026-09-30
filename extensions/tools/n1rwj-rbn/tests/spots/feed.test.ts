@@ -78,7 +78,7 @@ function fixture() {
       source: 'n1rwj-rbn',
       now: () => now,
       fetch: async (url: string, options?: FetchOptions) => {
-        assert.equal(options?.timeout, 2000)
+        assert.equal(options?.timeout, 4000)
         return response(
           new URL(url).searchParams.get('band') === '20m'
             ? [row(), row({ callsign: 'W9NEW' })]
@@ -160,10 +160,12 @@ test('rate limits pause retries across bands and recover after retryAfter', asyn
         : response([])
     },
   })
-  await assert.rejects(feed.get(true), /rate limit/)
+  assert.deepEqual(await feed.get(true), [])
+  assert.match(feed.getStatus(), /rate limit/)
   assert.equal(requests, 9)
   f.setTime(at + 61_000)
-  await assert.rejects(feed.get(true), /rate limit/)
+  assert.deepEqual(await feed.get(true), [])
+  assert.match(feed.getStatus(), /rate limit/)
   assert.equal(requests, 9)
   limited = false
   f.setTime(at + 121_000)
@@ -171,7 +173,7 @@ test('rate limits pause retries across bands and recover after retryAfter', asyn
   assert.equal(requests, 18)
 })
 
-test('bad responses fail the source without presenting partial data as a complete refresh', async () => {
+test('bad responses preserve unexpired reports with an incomplete-refresh warning', async () => {
   for (const bad of [
     { status: 503, body: '' },
     { status: 200, body: '<html>' },
@@ -184,13 +186,14 @@ test('bad responses fail the source without presenting partial data as a complet
       ...f.options,
       fetch: async (url) => {
         if (broken && new URL(url).searchParams.get('band') === '20m') return bad
-        return f.options.fetch(url, { timeout: 2000 })
+        return f.options.fetch(url, { timeout: 4000 })
       },
     })
     const previous = await feed.get(true)
     broken = true
     f.setTime(at + 61_000)
-    await assert.rejects(feed.get(true))
+    assert.deepEqual(await feed.get(true), previous)
+    assert.match(feed.getStatus(), /could not be refreshed/)
     assert.deepEqual(await feed.get(false), previous)
   }
 })

@@ -1,5 +1,45 @@
 # Verification and compatibility
 
+## RBN Spots timeout recovery — 2026-09-30 (unreleased)
+
+The reported `TimeoutException after 0:00:01.999978` matches the native
+Spots feed's explicit two-second HTTP request allowance. Local host source
+in `app/lib/services/extension_service.dart` gives Spots a ten-second fan-out
+budget; `packages/halo_extension_host/lib/halo_extension_host.dart` bounds
+each requested HTTP timeout across headers and body. The feed now allows
+four seconds per page, keeping its two sequential pages within eight seconds
+of network time and reserving approximately two seconds for other hook work.
+
+Each band query now keeps successful pages independently. Failed
+queries merge their fresh pages with unexpired prior reports, deduplicated
+and bounded to 2,000 reports per query. Successful queries replace their own
+cache, including empty results. An incomplete refresh returns available
+reports with a settings warning instead of discarding all successful queries.
+The warning survives throttled refreshes and clears after recovery. Current
+receiver/history filters, coalescing, and shared API backoff remain in effect.
+
+Two live CW requests (20m and KM3T-2) each exceeded a 15-second allowance
+without an HTTP response. The health endpoint also returned no HTTP response
+within ten seconds, both with default networking and forced IPv4. These
+observations establish a feed/connectivity failure from this machine during
+verification; they do not establish a worldwide service outage. Restarting
+cannot repair that failure and removes the in-memory Spots cache.
+
+The isolated timeout fix passes **882 tests across 68 files**, lint,
+strict typechecks, ES2020 builds, and official package validation. The full
+checkout also passes `mise run format` and `mise run check`, including
+**941 tests across 74 files** with the other pending changes.
+Seven new regressions cover cold-start partial failures, second-page failures,
+cache expiry and recovery, per-query replacement, concurrent refreshes,
+partial success with HTTP 429 backoff, and settings warnings. The installed
+JavaScript-kernel check passes against the running Next 26.9.0 build 177.
+These are deterministic and kernel/bundle checks; native live recovery is
+unverified while the feed is unavailable. The local RBN 0.7.2 candidate has
+not been published or installed by this verification.
+
+These changes affect only RBN source, tests, and documentation, so they are
+exempt from synchronization to the CWT and CQ WW upstream PRs.
+
 ## Release 0.7.2 publication — 2026-09-29
 
 Published [v0.7.2](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.7.2)

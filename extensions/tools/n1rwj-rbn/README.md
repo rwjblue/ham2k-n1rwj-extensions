@@ -94,6 +94,14 @@ and cached for at least a minute. Both Spots and My Signal honor shared API
 rate-limit backoff. Offline or failed refreshes use only unexpired cached
 reports, reapplying current filters. Settings apply on the next Spots refresh.
 
+A failed request keeps successful reports from other receivers or bands,
+including a first page when the second page fails. RBN settings explains when
+the refresh is incomplete. Unexpired cached reports fill gaps for failed
+queries; a successful query replaces its previous reports, including an empty
+result. Requests allow four seconds per page and retry on a later Spots refresh,
+after at least a minute or the service's longer rate-limit delay. Restarting the
+app clears the in-memory Spots cache and cannot resolve an unavailable service.
+
 CWT, MST, and SST provide membership from their cached call-history files via
 [the shared filter contract](../../../packages/spot-filters/README.md).
 They do not fetch reception reports or expose exchange data. File membership
