@@ -1,5 +1,5 @@
-import { defineExtension, host } from '@ham2k/extension-sdk'
 import type { ActivityHook } from '@ham2k/extension-sdk'
+import { defineExtension, host } from '@ham2k/extension-sdk'
 import manifest from '../manifest.json'
 import { rbnClient, rbnFetch, setRbnSettings } from './data/host-client.ts'
 import { createReceiverData } from './data/receivers.ts'
