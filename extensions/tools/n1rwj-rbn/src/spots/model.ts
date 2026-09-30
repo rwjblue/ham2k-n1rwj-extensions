@@ -62,6 +62,10 @@ export function parseReports(rows: readonly unknown[], source: string, now: numb
       freq: freq as number,
       band: band.name,
       mode: String(raw.mode),
+      // HALO-741: HaLo merges nearby spots with identical references, including
+      // empty lists. A stable full-call reference keeps different RBN stations
+      // separate without changing identity on every receiver report or refresh.
+      refs: [{ type: 'rbn', ref: call }],
       spot: { timeInMillis: time, source, sourceInfo },
     })
   }

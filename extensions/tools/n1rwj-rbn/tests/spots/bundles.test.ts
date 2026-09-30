@@ -167,7 +167,7 @@ it('RBN defaults to all calls and respects explicit CWT filtering, removal and s
   expect(first).toEqual(second)
   expect(first.map((spot) => spot.their.call)).toEqual(['K1ABC/P'])
   expect(first[0]).toMatchObject({ freq: 14032, spot: { source: 'n1rwj-rbn' } })
-  expect(first[0].refs).toBeUndefined()
+  expect(first[0].refs).toEqual([{ type: 'rbn', ref: 'K1ABC/P' }])
   expect(runtime.requests).toHaveBeenCalledTimes(9)
   const saved = await harness(runtime.preferences)
   expect(saved.preferences['extension_n1rwj-rbn']).toEqual({ spotCallFilter: 'n1rwj-cwt' })
@@ -209,6 +209,24 @@ it('adding CWT or a legacy default hint never selects a call-history filter auto
     expect(await legacy.fetch()).toHaveLength(3)
     expect(legacy.preferences['extension_n1rwj-rbn']).toBeUndefined()
   }
+})
+
+it('bundled RBN gives calls on one frequency distinct stable references through cached refreshes', async () => {
+  const runtime = await harness({}, [])
+  const first = await runtime.fetch()
+  expect(first.map((spot) => spot.freq)).toEqual([14032, 14032, 14032])
+  expect(first).toEqual(
+    expect.arrayContaining(
+      ['K1ABC/P', 'W9NEW', 'N2SST'].map((call) =>
+        expect.objectContaining({ their: { call }, refs: [{ type: 'rbn', ref: call }] }),
+      ),
+    ),
+  )
+  expect(first.every((spot) => spot.spot.label === undefined)).toBe(true)
+  const requests = runtime.requests.mock.calls.length
+  expect(await runtime.fetch()).toEqual(first)
+  expect(await runtime.spots.fetchSpots({}, { online: false, locale: 'en' })).toEqual(first)
+  expect(runtime.requests).toHaveBeenCalledTimes(requests)
 })
 
 it('persists geography settings, needs directory continents, and rejects stale origin edits', async () => {
