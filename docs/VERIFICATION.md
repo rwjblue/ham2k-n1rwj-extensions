@@ -1,5 +1,39 @@
 # Verification and compatibility
 
+## Release 0.7.4 publication — 2026-09-30
+
+Published [v0.7.4](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.7.4)
+from signed commit `772dbd2f07bd44331c1de8efbe07dfc88ba3c3d9` at
+15:31:37 US Eastern time (19:31:37 UTC). GitHub verifies the signature as
+valid, and the tag and workflow target that exact tested commit. The published
+body matches the authored [release notes](releases/v0.7.4.md) byte-for-byte.
+
+The [main Check workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/36766188253)
+and [Release workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/36766290761)
+passed. All seven bundles and seven matching checksum files were uploaded by
+19:32:05 UTC. Catalog submissions returned **approved** on `stable` for
+**CWT**, **MST**, **RBN**, and **SST** at 19:32:27, 19:32:30, 19:32:34, and
+19:32:39 UTC respectively. CQ WW, PSK Reporter, and WRT were explicitly
+skipped according to their reviewed no-change sections.
+
+`mise run release:catalog v0.7.4 --dry-run` downloaded and validated every
+published bundle and checksum without resubmitting anything. It selected
+the same four catalog entries and skipped the same three unchanged extensions.
+Published archive SHA-256 values for the changed entries:
+
+| Extension | SHA-256 |
+| --- | --- |
+| CWT | `f1cdd8d8e393123a4a1eb30b911c70171b1737d56fb04a964abefd8a2f878186` |
+| MST | `f16527451a9f96eed101d9d3c89474e11b2d59c69e18eda057a80459245d7321` |
+| RBN | `42911876756bb45ea97a5e88c6227f497eef2621197f91198544e90b3b7a80e3` |
+| SST | `e13e05afe43cc614f3c294b9772c54eb3973f767e2a7672d82f81b9f3231d6a6` |
+
+Publication validation does not extend native UI/device verification. The
+release notes retain the unverified RBN badge rendering and chip behavior.
+CWT remains synchronized to its upstream PR source branch as recorded below.
+These publication records are personal repository documentation, exempt from
+upstream runtime synchronization.
+
 ## Release 0.7.4 preparation — 2026-09-30
 
 Prepared synchronized version **0.7.4** after reviewing changes since v0.7.3.
@@ -24,7 +58,7 @@ the upstream checkout remains clean. MST/SST-specific code, RBN, and personal
 release versioning/packaging are exempt from that synchronization. CQ WW
 behavior is unchanged.
 
-## RBN reference badge — 2026-09-30 (unreleased)
+## RBN reference badge — 2026-09-30
 
 RBN registers one unconditional `activity.loggingControls` descriptor with
 `input: { kind: 'refList', refType: 'rbn' }` and the existing `radar` icon.
@@ -58,10 +92,10 @@ it does not exercise the native app UI. Native badge rendering and chip
 behavior have not been verified for this change.
 
 This is an RBN-only change, exempt from CWT and CQ WW upstream
-synchronization: no contest or shared runtime code changed. No release version
-was changed and no release was published.
+synchronization: no contest or shared runtime code changed. It is included
+in v0.7.4 above.
 
-## N1MM call-history refresh timeouts — 2026-09-30 (unreleased)
+## N1MM call-history refresh timeouts — 2026-09-30
 
 CWT, MST, and SST follow-up N1MM requests previously allowed only 3.5 seconds
 for both response headers and body. A controlled native-host test reproduced
@@ -107,7 +141,7 @@ to the verified `codex/cwt-call-history` source checkout for
 MST/SST-specific adapters, tests, and documentation are exempt from that
 upstream CWT synchronization. WRT uses the contest engine without downloaded
 history; CQ WW and the reception extensions do not use this downloader.
-This fix has not been published, and the user's updated client has not been
+This fix is included in v0.7.4, and the user's updated client has not been
 tested directly.
 
 ## Release 0.7.3 publication — 2026-09-30

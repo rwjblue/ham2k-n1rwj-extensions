@@ -8,6 +8,23 @@ each submission before operators can install it from the catalog.
 
 ## Current release status
 
+[v0.7.4](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.7.4)
+was published from signed commit `772dbd2f07bd44331c1de8efbe07dfc88ba3c3d9`
+on September 30, 2026 at 15:31 US Eastern time (19:31 UTC).
+All seven bundles and seven checksum files are available. The
+[release workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/36766290761)
+passed both upload and catalog jobs. Downloaded assets passed
+`mise run release:catalog v0.7.4 --dry-run`.
+
+CWT, MST, SST, and RBN returned **approved** on `stable` at 19:32 UTC.
+CQ WW, PSK Reporter, and WRT were skipped because their behavior is unchanged.
+This release fixes RBN reference icons and N1MM call-history refresh timeouts.
+Native RBN badge rendering and chip behavior remain unverified. See the
+[release notes](releases/v0.7.4.md) and
+[verification record](VERIFICATION.md#release-074-publication--2026-09-30).
+
+### Previous releases
+
 [v0.7.3](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.7.3)
 was published from signed commit `236b11a248221ec32d3a82e075f555aa079f52c4`
 on September 30, 2026 at 14:24 US Eastern time (18:24 UTC).
@@ -22,8 +39,6 @@ This release fixes RBN refresh recovery, receiver filtering, and station
 selection; adds PSK Reporter listener IDs; and makes CWT history filtering
 opt-in. See the [release notes](releases/v0.7.3.md) and
 [verification record](VERIFICATION.md#release-073-publication--2026-09-30).
-
-### Previous releases
 
 [v0.7.2](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.7.2)
 was published from signed commit `e67b396ed0cb6b5bd4800bb218accf40510cd2a2`
