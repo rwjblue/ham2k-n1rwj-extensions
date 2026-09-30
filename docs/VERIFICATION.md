@@ -1,5 +1,33 @@
 # Verification and compatibility
 
+## Release 0.7.3 preparation — 2026-09-30
+
+Prepared synchronized version **0.7.3** from main after reviewing the full
+diff since v0.7.2. The authored [release notes](releases/v0.7.3.md) contain
+all seven extension sections. Catalog extraction selects only **CWT, PSK
+Reporter, and RBN**; CQ WW, MST, SST, and WRT explicitly have no
+extension-specific changes. No root dependency or shared runtime update is
+included; the lockfile diff changes only synchronized workspace versions.
+
+`mise run format`, `mise run release:notes v0.7.3`, and
+`mise run release v0.7.3 --dry-run` pass. The release dry run includes lint,
+strict application/task typechecks, **947 tests across 73 files**, ES2020
+builds, official archive validation, synchronized-version checks, and SHA-256
+validation of all seven bundles and seven checksum files.
+
+CWT's opt-in history-filter behavior, supporting tests, and documentation
+are already synchronized to live [Ham2K/extensions PR #1](https://github.com/ham2k/extensions/pull/1):
+the source bookmark `codex/cwt-call-history`, its origin bookmark, and the
+upstream checkout resolve to `05b5495e5e44ea857e8c5297d0a28f7a558f3b9a`.
+RBN, PSK Reporter, and personal versioning/packaging changes do not affect
+upstream CWT or CQ WW behavior and are exempt from synchronization.
+
+The unfinished Settings Report extension and investigation drafts remain in
+the separate `unfinished` workspace; the QRZ experiment remains on its
+unmerged bookmark. Neither is included in the release candidate. The checks
+above do not establish new native installation/UI acceptance. Live receiver
+comparisons and remaining Vail identity/report-parity limits are recorded below.
+
 ## RBN fresh retry — 2026-09-30 16:57 UTC (unreleased)
 
 Repeated the comparison after the operator requested another attempt. Froze

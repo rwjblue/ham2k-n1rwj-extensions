@@ -16,7 +16,7 @@ install only the ones you want.
 The [PSK Reporter extension](extensions/tools/n1rwj-psk-reporter/README.md)
 now builds with live MQTT reception using the published SDK and tools. It shares
 the reception map/UI with RBN and requires Ham2K build 171 or newer. Native app
-testing remains pending before publication.
+testing remains pending; see the [verification record](docs/VERIFICATION.md).
 
 ## Install
 
