@@ -1,6 +1,7 @@
 import type { FormActionElement, FormDefinition } from '@ham2k/extension-sdk'
 import { type Continent, continents } from '../data/continents.ts'
 import { allCalls, type Provider } from './filters.ts'
+import type { HealthNotice } from './health.ts'
 import { radiusIssue, speedIssue, spotModes } from './preferences.ts'
 
 interface Selection {
@@ -19,6 +20,7 @@ export function settingsDefinition(
   selected: Selection,
   defaultContinents: Continent[],
   status: string,
+  health: HealthNotice | null = null,
 ): FormDefinition {
   const defaultHistory = selected.providers.find((provider) => provider.defaultSelected)
   const historyLabel = selected.discoveryFailed
@@ -37,6 +39,9 @@ export function settingsDefinition(
     choices.push({ label: `Unavailable: ${selected.key}`, value: selected.key })
   return {
     elements: [
+      ...(health
+        ? [{ type: 'markdown' as const, text: `> **${health.title}**\n>\n> ${health.message}` }]
+        : []),
       {
         type: 'header',
         style: 'section',

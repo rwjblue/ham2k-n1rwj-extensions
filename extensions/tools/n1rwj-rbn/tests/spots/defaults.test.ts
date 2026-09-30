@@ -47,7 +47,9 @@ it('does not block hooks on GPS and persists a local default across restarts', a
   const runtime = harness()
   await runtime.definition()
   expect(await runtime.spots.fetchSpots({}, ctx)).toEqual([])
-  expect(runtime.fetch).not.toHaveBeenCalled()
+  expect(runtime.fetch.mock.calls).toEqual([
+    ['https://vailrerbn.com/api/v1/health', { timeout: 2000 }],
+  ])
   expect(runtime.getLocation).toHaveBeenCalledTimes(1)
   runtime.finishLocation({ latitude: 42, longitude: -71 })
   await vi.waitFor(() => expect(runtime.preferences.spotContinents).toEqual(['NA']))

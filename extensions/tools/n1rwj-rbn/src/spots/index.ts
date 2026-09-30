@@ -9,10 +9,12 @@ import type {
   SpotsHook,
 } from '@ham2k/extension-sdk'
 import { host } from '@ham2k/extension-sdk'
+import type { TimerDriver } from '../../../../../packages/reception/src/timers.ts'
 import manifest from '../../manifest.json'
 import type { Continent } from '../data/continents.ts'
 import { createSpotFeed } from './feed.ts'
 import { allCalls, discoverFilters, type FilterBridge, matchFilter } from './filters.ts'
+import { createHealthCheck } from './health.ts'
 import { type ReceiverLookup, selectSpots } from './model.ts'
 import {
   ownSettings,
@@ -28,6 +30,7 @@ interface Options {
   fetch(url: string, options?: FetchOptions): Promise<FetchResponse>
   lookup: ReceiverLookup
   now?: () => number
+  healthTimers?: TimerDriver
   bridge?: FilterBridge
   getSettings?: typeof host.getSettings
   setSettings?: typeof host.setSettings
@@ -39,6 +42,7 @@ export function createRbnSpots(options: Options) {
   const getSettings = options.getSettings ?? host.getSettings
   const setSettings = options.setSettings ?? host.setSettings
   const now = options.now ?? Date.now
+  const checkHealth = createHealthCheck(options.fetch, now, options.healthTimers)
   const feeds = new Map(
     spotModes.map((mode) => [mode, createSpotFeed({ ...options, source: manifest.key, mode })]),
   )
@@ -253,8 +257,11 @@ export function createRbnSpots(options: Options) {
       return [{ key: manifest.key, title: 'RBN', icon: 'radar' }]
     },
     async getDefinition(_args, ctx) {
-      const selected = await selection(ctx.online, true)
-      return settingsDefinition(selected, defaultContinents(selected.raw), status)
+      const [selected, health] = await Promise.all([
+        selection(ctx.online, true),
+        checkHealth(ctx.online),
+      ])
+      return settingsDefinition(selected, defaultContinents(selected.raw), status, health)
     },
     async validateField({ fieldKey, value, state }) {
       return validateEdit(fieldKey, value, state)

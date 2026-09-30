@@ -106,7 +106,11 @@ async function harness(saved: Record<string, JSONValue> = {}, contests = ['cwt',
         }
         if (method === 'kvGet' || method === 'kvSet') return null
         if (method === 'getLocation') return null
-        if (method === 'fetch') return requests(String(params.url))
+        if (method === 'fetch') {
+          if (params.url === 'https://vailrerbn.com/api/v1/health')
+            return { status: 200, body: '{"status":"ok","database":"connected"}' }
+          return requests(String(params.url))
+        }
         throw new Error(`Unexpected host call: ${method}`)
       },
     })

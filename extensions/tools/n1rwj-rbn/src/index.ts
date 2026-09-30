@@ -1,4 +1,4 @@
-import { defineExtension } from '@ham2k/extension-sdk'
+import { defineExtension, host } from '@ham2k/extension-sdk'
 import manifest from '../manifest.json'
 import { rbnClient, rbnFetch, setRbnSettings } from './data/host-client.ts'
 import { createReceiverData } from './data/receivers.ts'
@@ -16,6 +16,7 @@ defineExtension({
     // owned by createRbnSpots; My Signal uses its own per-panel configuration.
     const { spots, settings } = createRbnSpots({
       fetch: rbnFetch,
+      healthTimers: host,
       lookup: receivers.lookup,
       continentNear: receivers.continentNear,
       setSettings: setRbnSettings,

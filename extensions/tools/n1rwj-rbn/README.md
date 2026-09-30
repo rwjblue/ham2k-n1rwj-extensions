@@ -12,6 +12,15 @@ Part of the [N1RWJ extension family](../../../README.md).
 
 ## Find stations in Spots
 
+Opening **Settings → RBN** checks the
+[Vail ReRBN health endpoint](https://vailrerbn.com/docs/endpoints#health).
+A warning at the top explains a failed check, service or database problem,
+or offline state. Settings remain editable while the check fails. The request
+allows two seconds, shares RBN rate-limit backoff, and reuses its result for
+one minute while you edit settings; reopen after that minute to retry.
+Spots refreshes do not run health checks. A healthy API and database do not
+guarantee live reports or a match for your filters.
+
 Enable **N1RWJ RBN** and select **RBN** in the native Spots source filter.
 Open **Settings → RBN → Spots — Who I might hear** to choose:
 
