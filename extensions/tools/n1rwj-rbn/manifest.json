@@ -9,7 +9,7 @@
   "accentColor": "#245FC2",
   "api": 3,
   "keywords": ["rbn", "reverse-beacon", "cw", "rtty", "ft8", "ft4", "map", "propagation", "signal"],
-  "hooks": ["panel", "dataFile", "spots", "settingsPanel"],
+  "hooks": ["panel", "dataFile", "spots", "settingsPanel", "activity"],
   "domains": ["vailrerbn.com", "www.reversebeacon.net"],
   "requiresLocation": true,
   "relevance": {

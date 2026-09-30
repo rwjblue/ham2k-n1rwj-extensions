@@ -148,8 +148,21 @@ The inspected HaLo source displays the spot's label, so this reference does
 not add text to the Spots row or map popup. Native UI verification remains
 pending. HaLo can copy the reference into a contact when selecting a spot or
 applying Spot History hints, where it remains in the saved QSON data. It has
-no activity control or ADIF program-field handler; a custom export template
-that explicitly displays all contact references can still show the callsign.
+an activity logging control with `input: { kind: 'refList', refType: 'rbn' }`
+and the RBN radar icon. HaLo uses that control to recognize both new and
+already-saved RBN references while the extension is enabled, replacing the
+red question-mark badge without rewriting or deleting contact data.
+
+The registration also adds one collapsed **RBN** chip to the logging panel's
+secondary controls. Opening it lets you edit the contact's RBN references;
+it does not add a primary exchange field, operation setup, or activity
+suggestions. This badge behavior and chip placement are verified against
+HaLo source and the bundled registration; native UI verification remains
+pending.
+
+There is no ADIF program-field or export handler for RBN. Export behavior
+is unchanged: a custom template that explicitly displays all contact
+references can still show the callsign, and QSON retains the references.
 
 CWT, MST, and SST provide membership from their cached call-history files via
 [the shared filter contract](../../../packages/spot-filters/README.md).

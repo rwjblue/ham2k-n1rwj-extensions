@@ -93,6 +93,10 @@ download time, record count, warnings, and selected source. Leave the source
 blank for automatic discovery, or choose an HTTPS N1MM file page or direct
 text URL, then refresh. Local file paths are not supported.
 
+N1MM requests allow slower responses within a bounded refresh. Slower or
+failed refreshes retain the last successful file.
+
+
 Typing a callsign uses the downloaded data and your local history; it does
 not download the N1MM file for every contact. The native app keeps the last
 successful file across restarts and failed refreshes, so cached suggestions

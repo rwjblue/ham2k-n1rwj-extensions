@@ -2,6 +2,10 @@ import type { FetchOptions, FetchResponse } from '@ham2k/extension-sdk'
 
 export const DEFAULT_SOURCE = 'https://n1mm.hamdocs.com/mmfiles/categories/callhistory/'
 export type Fetcher = (url: string, options?: FetchOptions) => Promise<FetchResponse>
+export interface DownloadTimers {
+  setTimeout(callback: () => void, delay: number): number
+  clearTimeout(handle: number): void
+}
 
 /** Native data-file downloads use HTTP; the SDK exposes no local file reader. */
 export function sourceValidationError(value: string): string | null {
@@ -60,8 +64,20 @@ export function downloadForm(html: string, base: string): { url: string; body: s
   )
 }
 
-async function request(fetch: Fetcher, url: string, options?: FetchOptions): Promise<string> {
-  const result = await fetch(url, { ...options, timeout: 3500 })
+// The host's raw-data converter has a 10-second hook deadline. Share one
+// network allowance across discovery and download, leaving time to parse/cache.
+const DOWNLOAD_BUDGET_MS = 8000
+// API-1 hosts without timers still bound each of the two discovery requests.
+// Nine seconds total leaves one second for parsing before the hook deadline.
+const LEGACY_REQUEST_BUDGET_MS = 4500
+
+async function request(
+  fetch: Fetcher,
+  url: string,
+  timeout: number,
+  options?: FetchOptions,
+): Promise<string> {
+  const result = await fetch(url, { ...options, timeout })
   if (result.status !== 200)
     throw new Error(`N1MM download failed (HTTP ${result.status}). Previous data retained.`)
   return result.body
@@ -86,24 +102,49 @@ export function createN1mmSource({ filePrefix, label }: { filePrefix: string; la
     body: string,
     url: string,
     fetch: Fetcher,
+    timers: DownloadTimers,
   ): Promise<{ body: string; url: string }> {
     const error = sourceValidationError(url)
     if (error) throw new Error(error)
     if (!/<(?:!doctype|html|form)\b/i.test(body)) return { body, url }
-    let entryUrl = url
-    let entry = body
-    if (/\/categories\/callhistory\/?(?:[?#].*)?$/.test(url)) {
-      entryUrl = latestEntry(body, url)
-      entry = await request(fetch, entryUrl)
-    }
-    const form = downloadForm(entry, entryUrl)
-    return {
-      body: await request(fetch, form.url, {
+    let expired = false
+    let timer: number | undefined
+    const timeoutError = () => new Error('N1MM download timed out. Previous data retained.')
+    // Host timers measure real elapsed time; Date follows developer time travel.
+    const deadline = new Promise<never>((_resolve, reject) => {
+      timer = timers.setTimeout(() => {
+        expired = true
+        reject(timeoutError())
+      }, DOWNLOAD_BUDGET_MS)
+    })
+    const isListing = /\/categories\/callhistory\/?(?:[?#].*)?$/.test(url)
+    // Older supported hosts return zero when the SDK cannot schedule a timer.
+    const requestBudget = timer
+      ? DOWNLOAD_BUDGET_MS
+      : isListing
+        ? LEGACY_REQUEST_BUDGET_MS
+        : DOWNLOAD_BUDGET_MS
+    async function download() {
+      let entryUrl = url
+      let entry = body
+      if (isListing) {
+        entryUrl = latestEntry(body, url)
+        entry = await request(fetch, entryUrl, requestBudget)
+      }
+      if (expired) throw timeoutError()
+      const form = downloadForm(entry, entryUrl)
+      const downloaded = await request(fetch, form.url, requestBudget, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: form.body,
-      }),
-      url: form.url,
+      })
+      if (expired) throw timeoutError()
+      return { body: downloaded, url: form.url }
+    }
+    try {
+      return await Promise.race([deadline, download()])
+    } finally {
+      if (timer) timers.clearTimeout(timer)
     }
   }
   return { latestEntry, sourceText }

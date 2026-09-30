@@ -1,5 +1,84 @@
 # Verification and compatibility
 
+## RBN reference badge — 2026-09-30 (unreleased)
+
+RBN registers one unconditional `activity.loggingControls` descriptor with
+`input: { kind: 'refList', refType: 'rbn' }` and the existing `radar` icon.
+HaLo's `packages/halo_widgets/lib/src/activity_controls.dart` matches
+references through `input.refType`; a reference handler alone cannot supply
+the icon. `qso_row_badges.dart` retains the badge for `refList`, while treating
+primary exchange inputs as contest metadata. The host's icon catalog contains
+`radar`. The descriptor is returned even for an empty operation or offline
+context, so existing saved `{ type: 'rbn', ref: <full callsign> }` references
+are recognized without migration, redecoration, or deleting data.
+
+The supported control adds one collapsed, user-hideable **RBN** chip in the
+logging panel's secondary controls. Opening it edits the QSO's RBN references;
+it does not join the primary callsign/RST/exchange focus loop. No operation
+controls, activity suggestions, scoring, or export hooks were added.
+The HALO-741 station references, Spots labels/grouping, newest-report
+deduplication, receiver filtering, and export behavior remain unchanged.
+
+Focused bundle regressions cover registration for new and saved references,
+including portable callsigns, offline use, and preservation of unrelated
+references. Station-reference tests cover all four supported modes and the
+existing filtering and deduplication behavior. Native app UI behavior has not
+been verified for this change. Validation results are recorded below after
+the local checks complete.
+
+This is an RBN-only change, exempt from CWT and CQ WW upstream
+synchronization: no contest or shared runtime code changed. No release version
+was changed and no release was published.
+
+## N1MM call-history refresh timeouts — 2026-09-30 (unreleased)
+
+CWT, MST, and SST follow-up N1MM requests previously allowed only 3.5 seconds
+for both response headers and body. A controlled native-host test reproduced
+the reported `TimeoutException after 0:00:00.895180` at `hostResponse`: headers
+arrived after 2.6 seconds, then the body exceeded the remaining allowance.
+The hook itself has a separate ten-second deadline.
+
+Discovery and download now share an eight-second real-time host timer, with
+late results discarded before replacing cached history. The deadline does
+not use the developer clock. Older API-1 hosts without timers allow 4.5
+seconds per discovery/download request (nine seconds total); a selected
+entry permits one eight-second request. API requirements remain unchanged.
+Direct text and disk-cache replay do not start a timer or download again.
+
+An in-process native-host probe using current host source `e66a39ba`, the
+published SDK 0.9, and the changed downloader confirmed API-1 timer support.
+With the sandbox clock frozen at January 1, 2000, a four-second discovery
+plus a 0.1-second POST succeeded in 4.137 seconds. A four-second discovery
+plus a 4.6-second POST rejected at 8.013 seconds with the readable N1MM
+timeout error. The probe's previous snapshot remained unchanged after the
+late response finished; the sandbox clock remained frozen throughout.
+These are controlled native-host tests, not a test in the user's UI.
+The older native host passed the same frozen-clock success case in 4.132
+seconds using the timer-unavailable fallback. Its slow POST timed out at
+8.511 seconds, and the probe retained its previous snapshot after the late
+response finished. All four final native mock-network cases passed.
+
+`mise run format` and `mise run check` passed **960 tests across 74 files**,
+lint, strict typechecks, all seven builds, and official packaging. New
+regressions cover slow successful requests, a frozen developer clock, total
+deadline exhaustion, suppression of a late discovery's POST, late download
+results retaining the previous history, timer cleanup, and the older-host
+fallback. Tests exercise both MST and SST data-file hooks.
+
+Live Node HTTP checks resolved the current listing and downloaded CWT
+(`216,050` characters), MST (`213,025`), and SST (`277,193`) through the
+changed downloader in approximately 1.27, 1.48, and 1.53 seconds. These are
+network adapter checks, separate from native-host tests and native UI use.
+
+The CWT runtime, hook adapter, tests, and relevant README are synchronized
+to the verified `codex/cwt-call-history` source checkout for
+[Ham2K/extensions PR #1](https://github.com/ham2k/extensions/pull/1).
+MST/SST-specific adapters, tests, and documentation are exempt from that
+upstream CWT synchronization. WRT uses the contest engine without downloaded
+history; CQ WW and the reception extensions do not use this downloader.
+This fix has not been published, and the user's updated client has not been
+tested directly.
+
 ## Release 0.7.3 publication — 2026-09-30
 
 Published [v0.7.3](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.7.3)

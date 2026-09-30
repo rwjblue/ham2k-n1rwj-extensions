@@ -40,7 +40,7 @@ export const DataFile: DataFileDefinition = {
   fetchType: 'raw',
   category: manifest.key,
   async rawToJSONData({ body, url }) {
-    const source = await sourceText(body, url, host.fetch)
+    const source = await sourceText(body, url, host.fetch, host)
     return fileCache.replace({ schema: 1, ...source, fetchedAt: new Date().toISOString() })
   },
   onLoadRawData(data: unknown) {

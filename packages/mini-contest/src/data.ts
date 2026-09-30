@@ -57,7 +57,7 @@ export function createHistoryData(config: DownloadedContestConfig, manifest: Con
     },
     async rawToJSONData({ body, url }) {
       try {
-        const downloaded = await source.sourceText(body, url, host.fetch)
+        const downloaded = await source.sourceText(body, url, host.fetch, host)
         const snapshot: Snapshot = { schema: 1, ...downloaded, fetchedAt: new Date().toISOString() }
         accept(snapshot)
         return { ...snapshot }

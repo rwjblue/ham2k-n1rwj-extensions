@@ -1,4 +1,5 @@
 import { defineExtension, host } from '@ham2k/extension-sdk'
+import type { ActivityHook } from '@ham2k/extension-sdk'
 import manifest from '../manifest.json'
 import { rbnClient, rbnFetch, setRbnSettings } from './data/host-client.ts'
 import { createReceiverData } from './data/receivers.ts'
@@ -23,6 +24,22 @@ defineExtension({
       setSettings: setRbnSettings,
     })
     registerHook('spots', { hook: spots })
+    // HaLo resolves reference icons through logging controls, including refs
+    // already saved on QSOs. Keep this unconditional and outside contest UI.
+    registerHook('activity', {
+      hook: {
+        async loggingControls() {
+          return [
+            {
+              key: `${manifest.key}/station`,
+              label: 'RBN',
+              icon: manifest.icon,
+              input: { kind: 'refList', refType: 'rbn' },
+            },
+          ]
+        },
+      } satisfies ActivityHook,
+    })
     registerHook('settingsPanel', { hook: settings })
     registerHook('dataFile', { key: receivers.dataFile.key, hook: receivers.dataFile })
     registerHook('panel', {

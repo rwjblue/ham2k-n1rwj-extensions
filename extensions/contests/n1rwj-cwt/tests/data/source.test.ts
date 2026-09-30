@@ -1,11 +1,11 @@
 import type { FetchResponse } from '@ham2k/extension-sdk'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Fetcher } from '../../src/data/source'
 import {
   DEFAULT_SOURCE,
   downloadForm,
+  sourceText as downloadSourceText,
   latestEntry,
-  sourceText,
   sourceValidationError,
 } from '../../src/data/source'
 
@@ -17,6 +17,21 @@ const listing = `<!DOCTYPE html><html><body>
   <a href="https://n1mmwp.hamdocs.com/mmfiles/cwops_3992-aaa-txt/">Older entry</a>
 </body></html>`
 const raw = '!!Order!!,Call,Name,Exch1,UserText,\n# CWOPS\nK1ABC,Pat,123,Somewhere'
+const timers = {
+  setTimeout: (callback: () => void, delay: number) => Number(setTimeout(callback, delay)),
+  clearTimeout: (handle: number) => clearTimeout(handle),
+}
+const sourceText = (body: string, url: string, fetch: Fetcher) =>
+  downloadSourceText(body, url, fetch, timers)
+
+beforeEach(() => {
+  vi.useFakeTimers()
+  vi.setSystemTime(0)
+})
+afterEach(() => {
+  vi.useRealTimers()
+  vi.restoreAllMocks()
+})
 
 function form(nonce = 'fresh-nonce') {
   return `<!DOCTYPE html><html><body>
@@ -64,7 +79,7 @@ describe('N1MM source discovery', () => {
     )
   })
 
-  it('gets the current entry then POSTs its current nonce with a bounded request timeout', async () => {
+  it('gets the current entry then POSTs its current nonce with a shared bounded request budget', async () => {
     const fetch = vi
       .fn<Fetcher>()
       .mockResolvedValueOnce({ status: 200, body: form('unique-token') })
@@ -73,13 +88,72 @@ describe('N1MM source discovery', () => {
       body: raw,
       url: downloadUrl,
     })
-    expect(fetch).toHaveBeenNthCalledWith(1, entryUrl, { timeout: 3500 })
+    expect(fetch).toHaveBeenNthCalledWith(1, entryUrl, { timeout: 8000 })
     expect(fetch).toHaveBeenNthCalledWith(2, downloadUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: downloadForm(form('unique-token'), entryUrl).body,
-      timeout: 3500,
+      timeout: 8000,
     })
+  })
+
+  it('allows slow discovery and download within one real-time budget with a frozen app clock', async () => {
+    vi.spyOn(Date, 'now').mockReturnValue(0)
+    const fetch = vi
+      .fn<Fetcher>()
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => setTimeout(() => resolve({ status: 200, body: form() }), 3600)),
+      )
+      .mockImplementationOnce(
+        () => new Promise((resolve) => setTimeout(() => resolve({ status: 200, body: raw }), 4000)),
+      )
+    const result = sourceText(listing, DEFAULT_SOURCE, fetch)
+    await vi.advanceTimersByTimeAsync(7600)
+    await expect(result).resolves.toEqual({
+      body: raw,
+      url: downloadUrl,
+    })
+    expect(fetch.mock.calls.map((call) => call[1]?.timeout)).toEqual([8000, 8000])
+    expect(vi.getTimerCount()).toBe(0)
+  })
+
+  it('stops before POST when late discovery outlives the real-time budget', async () => {
+    vi.spyOn(Date, 'now').mockReturnValue(0)
+    const fetch = vi
+      .fn<Fetcher>()
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => setTimeout(() => resolve({ status: 200, body: form() }), 9000)),
+      )
+    const result = expect(sourceText(listing, DEFAULT_SOURCE, fetch)).rejects.toThrow(
+      'N1MM download timed out. Previous data retained.',
+    )
+    await vi.advanceTimersByTimeAsync(8000)
+    await result
+    await vi.advanceTimersByTimeAsync(1000)
+    expect(fetch).toHaveBeenCalledTimes(1)
+    expect(vi.getTimerCount()).toBe(0)
+  })
+
+  it('caps both requests together and rejects a late POST result', async () => {
+    const fetch = vi
+      .fn<Fetcher>()
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => setTimeout(() => resolve({ status: 200, body: form() }), 4000)),
+      )
+      .mockImplementationOnce(
+        () => new Promise((resolve) => setTimeout(() => resolve({ status: 200, body: raw }), 4500)),
+      )
+    const result = expect(sourceText(listing, DEFAULT_SOURCE, fetch)).rejects.toThrow(
+      'N1MM download timed out. Previous data retained.',
+    )
+    await vi.advanceTimersByTimeAsync(8000)
+    await result
+    expect(fetch).toHaveBeenCalledTimes(2)
+    await vi.advanceTimersByTimeAsync(500)
+    expect(vi.getTimerCount()).toBe(0)
   })
 
   it('accepts a selected entry page directly, with only its POST request', async () => {
@@ -87,6 +161,33 @@ describe('N1MM source discovery', () => {
     await sourceText(form(), entryUrl, fetch)
     expect(fetch).toHaveBeenCalledTimes(1)
     expect(fetch.mock.calls[0]?.[0]).toBe(downloadUrl)
+    expect(fetch.mock.calls[0]?.[1]?.timeout).toBe(8000)
+  })
+
+  it('bounds both discovery requests on older hosts without timers', async () => {
+    const legacyTimers = { setTimeout: () => 0, clearTimeout: vi.fn() }
+    const fetch = vi
+      .fn<Fetcher>()
+      .mockResolvedValueOnce({ status: 200, body: form() })
+      .mockResolvedValueOnce({ status: 200, body: raw })
+    await expect(downloadSourceText(listing, DEFAULT_SOURCE, fetch, legacyTimers)).resolves.toEqual(
+      {
+        body: raw,
+        url: downloadUrl,
+      },
+    )
+    expect(fetch.mock.calls.map((call) => call[1]?.timeout)).toEqual([4500, 4500])
+    expect(legacyTimers.clearTimeout).not.toHaveBeenCalled()
+  })
+
+  it('gives a direct entry the full request allowance on older hosts without timers', async () => {
+    const legacyTimers = { setTimeout: () => 0, clearTimeout: vi.fn() }
+    const fetch = vi.fn<Fetcher>().mockResolvedValue({ status: 200, body: raw })
+    await expect(downloadSourceText(form(), entryUrl, fetch, legacyTimers)).resolves.toEqual({
+      body: raw,
+      url: downloadUrl,
+    })
+    expect(fetch.mock.calls[0]?.[1]?.timeout).toBe(8000)
   })
 
   it('passes directly downloaded HTTPS text through without additional network access', async () => {
