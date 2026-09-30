@@ -22,10 +22,7 @@ export function settingsDefinition(
   status: string,
   health: HealthNotice | null = null,
 ): FormDefinition {
-  const defaultHistory = selected.providers.find((provider) => provider.defaultSelected)
-  const historyLabel = selected.discoveryFailed
-    ? 'Call-history default unavailable; retry when extensions load'
-    : (defaultHistory?.label ?? 'All calls')
+  const historyLabel = 'All calls'
   const continentLabel =
     defaultContinents.map((code) => continents[code]).join(', ') || 'All continents'
   const choices = [

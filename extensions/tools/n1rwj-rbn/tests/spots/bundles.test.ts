@@ -150,15 +150,17 @@ async function harness(saved: Record<string, JSONValue> = {}, contests = ['cwt',
   }
 }
 
-it('RBN discovers all three contest bundles, defaults to CWT and respects removal and explicit all calls across restarts', async () => {
+it('RBN defaults to all calls and respects explicit CWT filtering, removal and saved choices across restarts', async () => {
   const runtime = await harness()
   expect(runtime.spots.sourceName).toBe('RBN')
-  expect(await runtime.fetch()).toEqual([])
-  expect(runtime.requests).not.toHaveBeenCalled()
-  expect(runtime.preferences['extension_n1rwj-rbn']).toEqual({ spotCallFilter: 'n1rwj-cwt' })
+  expect(await runtime.fetch()).toHaveLength(3)
+  expect(runtime.preferences['extension_n1rwj-rbn']).toBeUndefined()
   const form = await runtime.settings.getDefinition({ panelKey: 'n1rwj-rbn' }, { online: true })
   expect(JSON.stringify(form)).toContain('MST call-history file')
   expect(JSON.stringify(form)).toContain('SST call-history file')
+  await runtime.choose('n1rwj-cwt')
+  expect(await runtime.fetch()).toEqual([]) // Explicit filtering needs the data file.
+  expect(runtime.preferences['extension_n1rwj-rbn']).toEqual({ spotCallFilter: 'n1rwj-cwt' })
   runtime.load('cwt', '#CWOPS\n!!Order!!,Call,Name,Exch1\nK1ABC,Al,1234\n')
   const [first, second] = await Promise.all([runtime.fetch(), runtime.fetch()])
   expect(first).toEqual(second)
@@ -166,6 +168,9 @@ it('RBN discovers all three contest bundles, defaults to CWT and respects remova
   expect(first[0]).toMatchObject({ freq: 14032, spot: { source: 'n1rwj-rbn' } })
   expect(first[0].refs).toBeUndefined()
   expect(runtime.requests).toHaveBeenCalledTimes(9)
+  const saved = await harness(runtime.preferences)
+  expect(saved.preferences['extension_n1rwj-rbn']).toEqual({ spotCallFilter: 'n1rwj-cwt' })
+  expect(await saved.fetch()).toEqual([]) // Keep the choice when its cached file is absent.
   await runtime.hook<DataFileDefinition>('n1rwj-cwt', 'dataFile').onRemoveRawData?.()
   expect(await runtime.fetch()).toEqual([])
   const missing = await harness(runtime.preferences, [])
@@ -191,14 +196,18 @@ it('MST and SST select cached membership through the same bundled contract', asy
   expect(await runtime.fetch()).toEqual([])
 })
 
-it('RBN runs alone; adding CWT later supplies a default unless the operator selected all', async () => {
+it('adding CWT or a legacy default hint never selects a call-history filter automatically', async () => {
   const runtime = await harness({}, [])
   expect(await runtime.fetch()).toHaveLength(3)
   expect(runtime.preferences['extension_n1rwj-rbn']).toBeUndefined()
   const added = await harness(runtime.preferences)
-  expect(await added.fetch()).toEqual([])
-  const optedOut = await harness({ 'extension_n1rwj-cwt': { spotsHistoryOnly: false } })
-  expect(await optedOut.fetch()).toHaveLength(3)
+  expect(await added.fetch()).toHaveLength(3)
+  expect(added.preferences['extension_n1rwj-rbn']).toBeUndefined()
+  for (const spotsHistoryOnly of [false, true]) {
+    const legacy = await harness({ 'extension_n1rwj-cwt': { spotsHistoryOnly } })
+    expect(await legacy.fetch()).toHaveLength(3)
+    expect(legacy.preferences['extension_n1rwj-rbn']).toBeUndefined()
+  }
 })
 
 it('persists geography settings, needs directory continents, and rejects stale origin edits', async () => {
@@ -298,7 +307,7 @@ it('resets all spot settings in the bundle while preserving reception caches and
   )
   await runtime.action('resetAllSpotSettings')
   const expected = {
-    spotCallFilter: 'n1rwj-cwt',
+    spotCallFilter: 'none',
     spotMode: 'all',
     spotMinWpm: '',
     spotMaxWpm: '',

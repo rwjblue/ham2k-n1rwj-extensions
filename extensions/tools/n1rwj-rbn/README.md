@@ -24,8 +24,9 @@ guarantee live reports or a match for your filters.
 Enable **N1RWJ RBN** and select **RBN** in the native Spots source filter.
 Open **Settings → RBN → Spots — Who I might hear** to choose:
 
-- **Call-history filter:** CWT is selected by default when installed. Choose
-  MST, SST, or **All calls** explicitly. A selected missing extension or file
+- **Call-history filter:** **All calls** is the default, with no history filter.
+  Choose CWT, MST, or SST explicitly when you want that call-history filter.
+  A selected missing extension or file
   produces no spots, with an explanation in RBN settings. An explicit choice
   survives restarts; filters do not switch automatically with the operation.
 - **Spot mode:** All (default), CW, RTTY, FT8, or FT4. Choose **All** to
@@ -56,13 +57,12 @@ Open **Settings → RBN → Spots — Who I might hear** to choose:
   Leave blank for no limit. Set the origin first; clear the limit before
   clearing its origin. Distances use the great-circle path between grid centers.
 
-**Reset all spot settings**, at the top of that section, restores the default
-call-history provider (CWT when it requests the default, otherwise All calls),
+**Reset all spot settings**, at the top of that section, restores **All calls**,
 All modes, no CW speed limits, all skimmers and grid regions, the local/last
 receiver-continent selection, and no distance limit or origin. The defaults are
-listed beside the reset control. If call-history discovery fails, retry the
-full reset once extensions have loaded; individual receiver/mode/speed resets
-remain available.
+listed beside the reset control. Resets remain available even when call-history
+extensions have not loaded. Previously saved call-history choices are preserved
+until you change or reset them.
 
 Each filter also has a reset button naming its default. **Reset CW speed range**
 clears both bounds; **Reset distance** clears both origin and limit, including
@@ -110,6 +110,20 @@ queries; a successful query replaces its previous reports, including an empty
 result. Requests allow four seconds per page and retry on a later Spots refresh,
 after at least a minute or the service's longer rate-limit delay. Restarting the
 app clears the in-memory Spots cache and cannot resolve an unavailable service.
+
+As a workaround for [HALO-741](https://cabo.ham2k.com/halo/c/741), RBN spots
+carry an `rbn` reference containing the full callsign, including portable
+suffixes. Different stations on the same frequency stay separately selectable.
+The reference stays stable across receivers and refreshes; repeated reports
+for the same station still collapse normally. It does not claim a park,
+summit, or contest activity.
+
+The inspected HaLo source displays the spot's label, so this reference does
+not add text to the Spots row or map popup. Native UI verification remains
+pending. HaLo can copy the reference into a contact when selecting a spot or
+applying Spot History hints, where it remains in the saved QSON data. It has
+no activity control or ADIF program-field handler; a custom export template
+that explicitly displays all contact references can still show the callsign.
 
 CWT, MST, and SST provide membership from their cached call-history files via
 [the shared filter contract](../../../packages/spot-filters/README.md).

@@ -51,8 +51,8 @@ export function createRbnSpots(options: Options) {
   let location: DeviceLocation | null = null
   let locationStarted = false
   let locating = false
-  // Serialize default selection and explicit edits so a slow discovery cannot
-  // overwrite an operator's choice. Persist the provider even if its file is absent.
+  // Serialize geographic defaults and explicit edits so a slow discovery cannot
+  // overwrite an operator's choice. Keep saved history selections even if absent.
   let queue: Promise<unknown> = Promise.resolve()
   function serialized<T>(fn: () => Promise<T>): Promise<T> {
     const result = queue.then(fn)
@@ -107,21 +107,12 @@ export function createRbnSpots(options: Options) {
         locateOnce()
         await initializeContinents(raw)
       }
+      const key = typeof raw.spotCallFilter === 'string' ? raw.spotCallFilter : allCalls
       const discovered = await discoverFilters(online, options.bridge).catch((error: unknown) => {
-        if (!forSettings && raw.spotCallFilter !== allCalls) throw error
+        if (!forSettings && key !== allCalls) throw error
         status = 'Call-history filters could not be loaded. Retry after enabling the extension.'
         return { providers: [], failed: true }
       })
-      if (raw.spotCallFilter === undefined) {
-        const chosen = discovered.providers.find((provider) => provider.defaultSelected)
-        if (chosen) {
-          await setSettings({ spotCallFilter: chosen.key })
-          raw.spotCallFilter = chosen.key
-        } else if (discovered.failed && !forSettings) {
-          throw new Error('Call-history filters could not be loaded. No spots shown.')
-        }
-      }
-      const key = typeof raw.spotCallFilter === 'string' ? raw.spotCallFilter : allCalls
       const provider = discovered.providers.find((entry) => entry.key === key)
       const unavailable =
         key !== allCalls && !provider?.available
@@ -194,10 +185,7 @@ export function createRbnSpots(options: Options) {
     distance: { spotRadiusGrid: '', spotRadiusMiles: '' },
     allContinents: { spotContinents: [] },
   } satisfies Record<string, Record<string, JSONValue>>
-  async function reset(
-    group: keyof typeof resetGroups | 'all' | 'history' | 'continents',
-    online: boolean,
-  ) {
+  async function reset(group: keyof typeof resetGroups | 'all' | 'history' | 'continents') {
     return serialized(async () => {
       const raw = ownSettings(await getSettings())
       const values: Record<string, JSONValue> = {}
@@ -216,13 +204,7 @@ export function createRbnSpots(options: Options) {
         values.spotLastContinents = raw.spotContinents as Continent[]
       }
       if (group === 'all' || group === 'history') {
-        const discovered = await discoverFilters(online, options.bridge)
-        if (discovered.failed)
-          throw new Error(
-            'Call-history defaults are unavailable. Retry the reset when extensions have loaded.',
-          )
-        values.spotCallFilter =
-          discovered.providers.find((provider) => provider.defaultSelected)?.key ?? allCalls
+        values.spotCallFilter = allCalls
       }
       if (group === 'all' || group === 'continents') {
         const defaults = defaultContinents(raw)
@@ -240,15 +222,15 @@ export function createRbnSpots(options: Options) {
     })
   }
   const actions = {
-    resetAllSpotSettings: (_args: unknown, ctx: HookContext) => reset('all', ctx.online),
-    resetSpotCallFilter: (_args: unknown, ctx: HookContext) => reset('history', ctx.online),
-    resetSpotMode: (_args: unknown, ctx: HookContext) => reset('mode', ctx.online),
-    resetSpotSpeed: (_args: unknown, ctx: HookContext) => reset('speed', ctx.online),
-    resetSpotSkimmers: (_args: unknown, ctx: HookContext) => reset('skimmers', ctx.online),
-    resetSpotGrids: (_args: unknown, ctx: HookContext) => reset('grids', ctx.online),
-    resetSpotContinents: (_args: unknown, ctx: HookContext) => reset('continents', ctx.online),
-    clearSpotContinents: (_args: unknown, ctx: HookContext) => reset('allContinents', ctx.online),
-    resetSpotDistance: (_args: unknown, ctx: HookContext) => reset('distance', ctx.online),
+    resetAllSpotSettings: (_args: unknown, _ctx: HookContext) => reset('all'),
+    resetSpotCallFilter: (_args: unknown, _ctx: HookContext) => reset('history'),
+    resetSpotMode: (_args: unknown, _ctx: HookContext) => reset('mode'),
+    resetSpotSpeed: (_args: unknown, _ctx: HookContext) => reset('speed'),
+    resetSpotSkimmers: (_args: unknown, _ctx: HookContext) => reset('skimmers'),
+    resetSpotGrids: (_args: unknown, _ctx: HookContext) => reset('grids'),
+    resetSpotContinents: (_args: unknown, _ctx: HookContext) => reset('continents'),
+    clearSpotContinents: (_args: unknown, _ctx: HookContext) => reset('allContinents'),
+    resetSpotDistance: (_args: unknown, _ctx: HookContext) => reset('distance'),
   }
   const settings: DynamicSettingsPanel & typeof actions = {
     ...actions,

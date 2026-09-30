@@ -124,7 +124,7 @@ describe('the installable bundle with a simulated host bridge', () => {
     const filter = runtime.hook('spotCallFilter:v1')
     expect(await filter.describe({}, ctx)).toMatchObject({
       available: false,
-      defaultSelected: true,
+      defaultSelected: false,
     })
     runtime.hook('dataFile').onLoadRawData?.({
       schema: 1,
@@ -142,8 +142,12 @@ describe('the installable bundle with a simulated host bridge', () => {
       available: false,
       calls: [],
     })
-    runtime.settingsGroups['extension_n1rwj-cwt'] = { spotsHistoryOnly: false }
-    expect(await filter.describe({}, ctx)).toMatchObject({ defaultSelected: false })
+    for (const spotsHistoryOnly of [false, true]) {
+      runtime.settingsGroups['extension_n1rwj-cwt'] = { spotsHistoryOnly }
+      expect(await filter.describe({}, ctx)).toMatchObject({ defaultSelected: false })
+      expect(runtime.settingsGroups['extension_n1rwj-cwt']).toEqual({ spotsHistoryOnly })
+    }
+    expect(runtime.hostCall.mock.calls.some(([method]) => method === 'setSettings')).toBe(false)
     expect(runtime.hostCall.mock.calls.some(([method]) => method === 'fetch')).toBe(false)
   })
 

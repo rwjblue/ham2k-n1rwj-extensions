@@ -28,10 +28,13 @@ so CWT, MST, and SST use the same contract without sharing exchange semantics.
 Use the current downloaded file, not prior QSOs or network lookups. Providers
 must not call spot sources: discovery/evaluation must not recurse into fetching.
 
-Selection belongs to the consumer. A default hint does not override an explicit
-choice. Persist a chosen default's hook key so uninstalling its provider does
-not silently broaden the feed. The host supplies no active operation to the
-spots hook, so this contract cannot automatically follow the current contest.
+Selection belongs to the consumer. RBN defaults to **All calls** and ignores
+default-selection hints; choose a history provider explicitly in RBN settings.
+The hint remains in protocol v1 for compatibility. Persist an explicitly chosen
+provider's hook key so uninstalling it does not silently broaden the feed.
+Previously saved selections remain unchanged. The host supplies no active
+operation to the spots hook, so this contract cannot automatically follow
+the current contest.
 
 ## What remains and what goes away
 
@@ -61,7 +64,7 @@ cannot preserve that distinction. At that point:
 1. Use cached history matching from the contest's supported relevance path.
    Let the host provide operation context and combine activity judgments;
    keep CWT, MST, and SST exchange/scoring rules independent.
-2. Remove RBN's `spots/filters.ts`, provider discovery/default selection,
+2. Remove RBN's `spots/filters.ts`, provider discovery/selection,
    `matchFilter` invocation, `selectSpots`'s `allowedCalls` gate, and the
    call-history selector/status UI. Keep the reception feed, mode/skimmer/grid
    preferences, and My Signal panel.
@@ -69,8 +72,8 @@ cannot preserve that distinction. At that point:
    MST, and SST, plus their transport adapters and the protocol types/validators
    in this package. Preserve the pure matcher and history caches.
 4. Migrate stored `spotCallFilter` choices and the legacy CWT
-   `spotsHistoryOnly` hint deliberately. Preserve an explicit All calls opt-out
-   and the default history-based narrowing where the native contract allows;
+   `spotsHistoryOnly` hint deliberately. Preserve All calls and saved
+   history-based selections where the native contract allows;
    a global provider selection may not map directly to operation-based settings.
    Do not silently broaden a selected unavailable filter. Decide older-host
    compatibility and manifest minimum versions before removing the fallback.

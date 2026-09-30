@@ -289,7 +289,44 @@ it('rechecks the selected provider after the network and does not leak removed f
   expect(await runtime.spots.fetchSpots({}, { online: true })).toEqual([])
 })
 
-it('keeps settings repairable during failed discovery, and honors an explicit all-calls choice', async () => {
+it('ignores default hints from older providers and resets history to all calls', async () => {
+  let preferences = {}
+  const invokeOne = vi.fn(async () => [])
+  const runtime = createRbnSpots({
+    now: () => now,
+    lookup: () => undefined,
+    getSettings: async () => ({ extensions: { 'extension_n1rwj-rbn': preferences } }),
+    setSettings: async (values) => {
+      preferences = { ...preferences, ...values }
+    },
+    bridge: {
+      invokeAll: async () => [
+        {
+          key: 'cwt',
+          ok: true,
+          value: { version: 1, label: 'CWT', available: false, defaultSelected: true },
+        },
+      ],
+      invokeOne,
+    },
+    fetch: async () => ({ status: 200, body: JSON.stringify({ spots: [row()] }) }),
+  })
+  expect(await runtime.spots.fetchSpots({}, { online: true })).toHaveLength(1)
+  expect(preferences).toEqual({})
+  expect(invokeOne).not.toHaveBeenCalled()
+  const form = await runtime.settings.getDefinition({ panelKey: 'n1rwj-rbn' }, { online: true })
+  expect(form.elements).toContainEqual(
+    expect.objectContaining({
+      key: 'spotCallFilter',
+      value: 'none',
+      description: 'Default: All calls.',
+    }),
+  )
+  await runtime.settings.resetSpotCallFilter({}, { online: true })
+  expect(preferences).toEqual({ spotCallFilter: 'none' })
+})
+
+it('defaults to all calls and keeps resets usable when call-history discovery fails', async () => {
   let preferences = {}
   const runtime = createRbnSpots({
     now: () => now,
@@ -306,14 +343,16 @@ it('keeps settings repairable during failed discovery, and honors an explicit al
     },
     fetch: async () => ({ status: 200, body: JSON.stringify({ spots: [row()] }) }),
   })
-  expect(await runtime.spots.fetchSpots({}, { online: true })).toEqual([])
+  expect(await runtime.spots.fetchSpots({}, { online: true })).toHaveLength(1)
   expect(
     (await runtime.settings.getDefinition({ panelKey: 'n1rwj-rbn' }, { online: true })).elements
       .length,
   ).toBeGreaterThan(0)
-  await expect(runtime.settings.resetAllSpotSettings({}, { online: true })).rejects.toThrow()
+  await runtime.settings.resetAllSpotSettings({}, { online: true })
+  expect(preferences).toMatchObject({ spotCallFilter: 'none' })
+  const reset = { ...preferences }
   await runtime.settings.resetSpotSpeed({}, { online: true })
-  expect(preferences).toEqual({ spotMinWpm: '', spotMaxWpm: '' })
+  expect(preferences).toEqual(reset)
   await runtime.settings.onChangeField(
     { panelKey: 'n1rwj-rbn', fieldKey: 'spotCallFilter', value: 'none', state: {} },
     { online: true },
