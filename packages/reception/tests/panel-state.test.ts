@@ -11,6 +11,45 @@ const args: PanelRenderArgs = {
   operation: { stationCall: 'N1RWJ' },
 }
 
+describe('band selection', () => {
+  it('keeps a band choice per placement until the saved band or operation changes', () => {
+    const stateFor = createPanelStateStore()
+    const state = stateFor(args)
+    state.selection.page = 4
+    applySceneEvent(state, 'band', 'band:40m')
+    expect(state.selection).toMatchObject({ band: '40m', page: 0 })
+    expect(stateFor(args).selection.band).toBe('40m')
+    expect(stateFor({ ...args, instanceId: 'two' }).selection).toEqual({})
+    const unrelated = stateFor({ ...args, config: { view: 'list' } })
+    expect(unrelated.selection.band).toBe('40m')
+    const savedBand = stateFor({ ...args, config: { view: 'list', band: '20m' } })
+    expect(savedBand.selection.band).toBeUndefined()
+    applySceneEvent(savedBand, 'band', 'band:all')
+    expect(savedBand.selection.band).toBe('all')
+    expect(
+      stateFor({ ...args, operation: { uuid: 'another', stationCall: 'N1RWJ' } }).selection,
+    ).toEqual({})
+  })
+
+  it('accepts reported bands from the rendered menu and validates control/action pairs', () => {
+    const state = createPanelStateStore()(args)
+    state.bands = ['all', '20m', '2m']
+    for (const [control, action] of [
+      ['sort', 'band:2m'],
+      ['band', 'sort:call'],
+      ['band', 'band:bogus'],
+      ['band', 'band:40m'],
+      ['band', 'band:2m:extra'],
+    ])
+      applySceneEvent(state, control, action)
+    expect(state.selection).toEqual({})
+    applySceneEvent(state, 'band', 'band:2m')
+    expect(state.selection).toMatchObject({ band: '2m', page: 0 })
+    applySceneEvent(state, 'band', 'band:all')
+    expect(state.selection.band).toBe('all')
+  })
+})
+
 describe('info navigation', () => {
   it('returns to the original report page after navigating info tabs and pages', () => {
     const stateFor = createPanelStateStore()

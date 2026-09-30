@@ -705,6 +705,32 @@ describe('RBN native panel integration', () => {
     // Saved preferences are also authoritative after an extension restart.
     expect(await setup().panel.render(changed, { online: true })).toEqual(filtered)
   })
+  it('filters from the header band menu until the saved Band changes', async () => {
+    const { panel } = setup()
+    await panel.render(args, { online: true })
+    await panel.onEvent?.(event('band', 'band:20m'), { online: true })
+    const filtered = await panel.render(args, { online: true })
+    expect(sceneText(filtered)).toContain('20m · 0 receivers')
+    expect(sceneText(filtered)).not.toContain('W1NT')
+    if (filtered.kind !== 'svgScene') throw new Error('Expected native scene')
+    expect(
+      sceneText(await panel.render({ ...args, instanceId: 'other' }, { online: true })),
+    ).toContain('W1NT')
+    await panel.onEvent?.(event('details', 'details:toggle'), { online: true })
+    expect(await detailsText(panel, args)).toContain('Latest report · 20m')
+    await panel.onEvent?.(event('details', 'details:toggle'), { online: true })
+    await panel.onEvent?.(event('band', 'band:all'), { online: true })
+    expect(sceneText(await panel.render(args, { online: true }))).toContain('W1NT')
+    await panel.onEvent?.(event('band', 'band:20m'), { online: true })
+    const unrelated = { ...args, config: { ...args.config, view: 'list' } }
+    expect(sceneText(await panel.render(unrelated, { online: true }))).toContain(
+      'No 20m reports in this time window.',
+    )
+    const savedBand = { ...unrelated, config: { ...unrelated.config, band: '40m' } }
+    expect(sceneText(await panel.render(savedBand, { online: true }))).toContain(
+      '40m · 2 receivers',
+    )
+  })
   it.each<PanelRenderArgs['config']>([
     { windowMinutes: 30 },
     { projection: 'azimuthal' },
@@ -761,9 +787,11 @@ describe('RBN native panel integration', () => {
       const { panel } = setup(current)
       const result = await panel.render(args, { online: true })
       if (result.kind !== 'svgScene') throw new Error('Expected native scene')
-      expect(result.scene.controls?.some((control) => ['view', 'band'].includes(control.id))).toBe(
-        false,
-      )
+      expect(result.scene.controls?.some((control) => control.id === 'view')).toBe(false)
+      expect(result.scene.controls?.find((control) => control.id === 'band')?.menu).toContainEqual({
+        label: 'All bands',
+        event: 'band:all',
+      })
       const fields = (await panel.getPanels({}, { online: true }))[0].form
       for (const [key, label, values] of [
         ['view', 'View', ['both', 'map', 'list']],
@@ -787,7 +815,7 @@ describe('RBN native panel integration', () => {
     for (const [controlId, action] of [
       ['sort', 'band:20m'],
       ['band', 'band:bogus'],
-      ['band', 'band:20m'],
+      ['band', 'band:20m:extra'],
       ['view', 'view:map'],
       ['view', 'view:list:extra'],
       ['unknown', 'view:list'],

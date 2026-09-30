@@ -358,7 +358,7 @@ export function createRbnClient(options: RbnClientOptions): RbnClient {
     }
     const call = normalizeCall(query.call)
     const windowMinutes = Number.isFinite(query.windowMinutes)
-      ? Math.min(120, Math.max(5, Math.round(query.windowMinutes)))
+      ? Math.min(120, Math.max(1, Math.round(query.windowMinutes)))
       : 30
     const normalized = { call, windowMinutes }
     observePlacement(normalized, requestOptions)

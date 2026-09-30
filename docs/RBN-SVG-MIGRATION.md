@@ -53,10 +53,11 @@ descending report time. The band does not follow the operation's active band.
 Settings belong to the panel placement, so explicit call/grid overrides remain
 in effect when that layout is used with another operation. Clearing them
 restores inheritance. The [panel](../extensions/tools/n1rwj-rbn/src/panel.ts)
-keeps sort/page/details state in memory per instance, scoped by operation UUID
-and station callsign. Switching operations or restarting restores saved sort
-defaults. View and band always come from the persisted panel settings. Saving
-unrelated settings preserves the current sort choices.
+keeps band/sort/page/details state in memory per instance, scoped by operation UUID
+and station callsign. Switching operations or restarting restores saved band and
+sort defaults. View comes from the persisted panel settings; the header band menu
+temporarily overrides the saved Band. Saving unrelated settings preserves these
+choices, while changing a saved Band or sort default resets that control.
 
 ## Why the refresh model works
 
@@ -113,7 +114,7 @@ would need host support.
 
 For SVG scenes, controls dispatch an action to the panel's `onEvent`. The
 extension validates control/action pairs and updates bounded, per-instance
-sort/direction/page/details state. Returning `{values:{}}` is intentional:
+band/sort/direction/page/details state. Returning `{values:{}}` is intentional:
 current `ExtensionPanel._sceneEvent` requests an authoritative render in its
 `finally` block, so structural changes arrive in the next scene. Numeric
 patches are useful for local animation; this static map needs none.
@@ -134,7 +135,7 @@ receives unscaled role font size; its reserved bounds use scaled font size.
   `<text>` is not portable through Flutter's vector renderer.
 - The scene has no scrolling container. The list therefore paginates,
   becoming cards at narrow widths; details also paginate when necessary.
-- The host tune form persists view and band; native menu buttons expose sort
+- The host tune form persists view and the band default; native menus expose band and sort
   options. Drawn backgrounds/text accompany the controls' hit regions, with 44-pixel minimum targets.
 - The renderer respects the native limits: 128 layers, 64 controls, 32 menu
   items, 256 KiB per SVG/literal string and 1 MiB combined artwork/text.
@@ -222,7 +223,8 @@ render deadline; they do not guarantee response times from the public service.
    the real public call in the panel's Watch callsign setting. Use the public
    operation grid. Do not transmit, spot, or log fictitious contacts.
 5. Verify map + table at desktop width, then map/cards at narrow width.
-   Use the panel tune settings to select each view and band. Test both SNR
+   Use the panel tune settings to select each view and band, then use the header
+   band menu to filter the map and list and return to All bands. Test both SNR
    directions, next/previous page, and Details.
    Missing measurements must remain last in either sort direction.
 6. Wait for a new checked timestamp. Confirm view/band/sort/page survive the

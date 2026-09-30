@@ -148,7 +148,10 @@ export function panelModel(
       purpose: `See where ${snapshot.call || 'the watched station'} is being heard.`,
       facts: [
         { label: 'Direction', value: 'Who hears me' },
-        { label: 'Window', value: `Last ${config.windowMinutes} minutes` },
+        {
+          label: 'Window',
+          value: `Last ${config.windowMinutes} ${config.windowMinutes === 1 ? 'minute' : 'minutes'}`,
+        },
         {
           label: 'Last successful check',
           value: snapshot.lastSuccessMs === null ? 'None yet' : utcLabel(snapshot.lastSuccessMs),
@@ -243,9 +246,10 @@ export function createRbnPanel(
           preferences,
         ),
         args.environment,
-        { ...state.selection, view: config.view, band: config.band },
+        { ...state.selection, view: config.view, band: state.selection.band ?? config.band },
       )
       state.selection = rendered.selection
+      state.bands = rendered.bands
       return {
         kind: 'svgScene',
         title: `My Signal${call ? ` · ${call}` : ''}`,

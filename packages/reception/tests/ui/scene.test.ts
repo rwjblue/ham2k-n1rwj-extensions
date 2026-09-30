@@ -110,6 +110,18 @@ describe('RBN native scene', () => {
       expect(refresh.label).toContain('Refresh receiver reports')
       expect(refresh.y).toBe(details.y)
       expect(refresh.x + refresh.width).toBeLessThan(details.x)
+      const band = scene.controls?.find((control) => control.id === 'band')
+      if (!band) throw new Error('Missing band menu')
+      expect(band.y).toBe(refresh.y)
+      expect(band.x + band.width).toBeLessThan(refresh.x)
+      expect(band.y + band.height).toBeGreaterThanOrEqual(
+        layer(scene, 'summary').y + layer(scene, 'summary').height,
+      )
+      expect(band.menu).toEqual([
+        { label: 'All bands', event: 'band:all' },
+        { label: '20m', event: 'band:20m' },
+        { label: '40m', event: 'band:40m' },
+      ])
       for (const id of ['status', 'summary']) {
         const summary = layer(scene, id)
         expect(summary.x + summary.width).toBeLessThan(refresh.x)
@@ -250,7 +262,7 @@ describe('RBN native scene', () => {
       const { scene } = renderReceptionScene(model, environment(width, height), { view: 'map' })
       const map = layer(scene, 'reception-map-0')
       expect(map.height).toBeGreaterThanOrEqual(height - 100)
-      expect(scene.controls?.map((control) => control.id)).toEqual(['refresh', 'details'])
+      expect(scene.controls?.map((control) => control.id)).toEqual(['band', 'refresh', 'details'])
       expect(layer(scene, 'summary').y + layer(scene, 'summary').height).toBeLessThan(map.y)
       expect(map.y + map.height).toBeLessThan(layer(scene, 'source').y)
       assertSceneBounds(scene)
@@ -285,7 +297,11 @@ describe('RBN native scene', () => {
 
   it('makes controls explicit host events, without HTML or local animation bindings', () => {
     const { scene } = renderReceptionScene(model, environment())
-    expect(scene.controls?.some((control) => ['view', 'band'].includes(control.id))).toBe(false)
+    expect(scene.controls?.some((control) => control.id === 'view')).toBe(false)
+    expect(scene.controls?.find((control) => control.id === 'band')?.menu).toContainEqual({
+      label: 'All bands',
+      event: 'band:all',
+    })
     expect(scene.controls?.find((control) => control.id === 'sort')?.menu).toContainEqual({
       label: 'SNR',
       event: 'sort:snr',
@@ -297,6 +313,39 @@ describe('RBN native scene', () => {
       'details:toggle',
     )
     expect(scene.values).toEqual({})
+  })
+
+  it('offers configured and observed bands even without reports in the selected band', () => {
+    const rendered = renderReceptionScene(
+      { ...model, bands: ['all', '20m', '20m', '2m'], rows: [] },
+      environment(),
+      { band: '40m' },
+    )
+    expect(rendered.bands).toEqual(['all', '20m', '2m', '40m'])
+    expect(rendered.scene.controls?.find((control) => control.id === 'band')).toMatchObject({
+      label: 'Filter reports by band; currently 40m',
+      menu: [
+        { label: 'All bands', event: 'band:all' },
+        { label: '20m', event: 'band:20m' },
+        { label: '2m', event: 'band:2m' },
+        { label: '40m', event: 'band:40m' },
+      ],
+    })
+    expect(text(rendered.scene)).toContain('No 40m reports in this time window.')
+    expect(
+      renderReceptionScene(model, environment(), { details: true }).scene.controls?.some(
+        (control) => control.id === 'band',
+      ),
+    ).toBe(false)
+    const capped = renderReceptionScene(
+      { ...model, bands: Array.from({ length: 40 }, (_, index) => `${index}m`) },
+      environment(),
+      { band: '70cm' },
+    )
+    expect(capped.bands).toHaveLength(32)
+    expect(capped.bands).toContain('all')
+    expect(capped.bands).toContain('70cm')
+    expect(capped.scene.controls?.find((control) => control.id === 'band')?.menu).toHaveLength(32)
   })
 
   it('keeps warnings first and makes provenance available under About on a phone', () => {

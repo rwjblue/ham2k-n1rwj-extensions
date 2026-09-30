@@ -40,7 +40,7 @@ export function decodeSnapshots(
       !isValidCall(saved.call) ||
       typeof saved.windowMinutes !== 'number' ||
       !Number.isInteger(saved.windowMinutes) ||
-      saved.windowMinutes < 5 ||
+      saved.windowMinutes < 1 ||
       saved.windowMinutes > 120 ||
       !timestamp(saved.lastAttemptMs, now) ||
       saved.lastAttemptMs < now - maxAge ||

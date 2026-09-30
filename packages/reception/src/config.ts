@@ -14,6 +14,8 @@ export interface PanelConfig {
   band: string
 }
 
+export const receptionWindowMinutes = [1, 3, 5, 10, 15, 30, 45, 60]
+
 export const receptionBands = [
   'all',
   '160m',
@@ -34,7 +36,7 @@ export function readConfig(config: Record<string, JSONValue> = {}): PanelConfig 
   return {
     watchCall: typeof config.watchCall === 'string' ? config.watchCall.trim().toUpperCase() : '',
     gridOverride: typeof config.grid === 'string' ? config.grid.trim().toUpperCase() : '',
-    windowMinutes: [15, 30, 60].includes(Number(config.windowMinutes))
+    windowMinutes: receptionWindowMinutes.includes(Number(config.windowMinutes))
       ? Number(config.windowMinutes)
       : 15,
     projection: config.projection === 'azimuthal' ? 'azimuthal' : 'regional',
@@ -129,7 +131,10 @@ export function receptionConfigFields(stationLabel = 'Receiver', cwSpeed = true)
       key: 'windowMinutes',
       label: 'Report window',
       value: 15,
-      options: [15, 30, 60].map((value) => ({ label: `Last ${value} minutes`, value })),
+      options: receptionWindowMinutes.map((value) => ({
+        label: `Last ${value} ${value === 1 ? 'minute' : 'minutes'}`,
+        value,
+      })),
     },
     {
       type: 'field',

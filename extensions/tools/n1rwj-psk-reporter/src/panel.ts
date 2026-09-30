@@ -121,7 +121,10 @@ export function pskPanelModel(
         : `See where ${call || 'the watched station'} is being heard.`,
       facts: [
         { label: 'Direction', value: incoming ? 'Who I hear' : 'Who hears me' },
-        { label: 'Window', value: `Last ${config.windowMinutes} minutes` },
+        {
+          label: 'Window',
+          value: `Last ${config.windowMinutes} ${config.windowMinutes === 1 ? 'minute' : 'minutes'}`,
+        },
         { label: 'Live feed', value: feedState },
         { label: 'Recent history', value: live.history?.message || 'Not requested' },
       ],
@@ -234,9 +237,10 @@ export function createPskPanel(live: LiveReception): PanelHook {
       const rendered = renderReceptionScene(model, args.environment, {
         ...state.selection,
         view: config.view,
-        band: config.band,
+        band: state.selection.band ?? config.band,
       })
       state.selection = rendered.selection
+      state.bands = rendered.bands
       return {
         kind: 'svgScene',
         title: model.title,

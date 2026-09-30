@@ -126,6 +126,24 @@ describe('PSK Reporter payloads and subscriptions', () => {
 })
 
 describe('bounded live report store', () => {
+  it.each([1, 3, 5, 10, 45])('filters the %i-minute window at its exact boundary', (minutes) => {
+    const store = createReportStore()
+    const cutoff = now / 1000 - minutes * 60
+    store.ingest(payload({ rc: 'W1AW', t_tx: cutoff }), now)
+    store.ingest(payload({ rc: 'W1NT', t_tx: cutoff - 1 }), now)
+    store.ingest(payload(), now)
+    expect(store.snapshot(now, minutes).reports.map((report) => report.receiver.call)).toEqual([
+      'W1AW',
+      'CU3AT',
+    ])
+    expect(store.snapshot(now, 60).reports).toHaveLength(3)
+  })
+  it('retains the default window for unsupported values', () => {
+    const store = createReportStore()
+    store.ingest(payload({ rc: 'W1AW', t_tx: now / 1000 - 15 * 60 }), now)
+    store.ingest(payload({ rc: 'W1NT', t_tx: now / 1000 - 15 * 60 - 1 }), now)
+    expect(store.snapshot(now, 2).reports.map((report) => report.receiver.call)).toEqual(['W1AW'])
+  })
   it('keeps separate transmitters, receivers, bands and modes; newest wins over stronger SNR', () => {
     const store = createReportStore()
     store.ingest(payload({ rp: 10 }), now)

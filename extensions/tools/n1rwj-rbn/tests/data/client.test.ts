@@ -136,6 +136,58 @@ describe('Vail ReRBN client', () => {
     )
   })
 
+  it.each([1, 3, 5, 10, 45])(
+    'queries and expires reports at the exact %i minute window boundary',
+    async (windowMinutes) => {
+      let clock = NOW
+      const cutoff = NOW - windowMinutes * 60_000
+      const fetch = vi.fn(async (_url: string) =>
+        response(
+          payload({
+            spots: [
+              spotPayload({ id: 124, timestamp: new Date(cutoff - 1).toISOString() }),
+              spotPayload({ id: 125, timestamp: new Date(cutoff).toISOString() }),
+              spotPayload({ id: 126, timestamp: new Date(cutoff + 1).toISOString() }),
+            ],
+            total: 3,
+          }),
+        ),
+      )
+      const client = createRbnClient({ fetch, now: () => clock })
+      const shortQuery = { ...query, windowMinutes }
+      const first = await client.getSnapshot(shortQuery)
+      expect(first.windowMinutes).toBe(windowMinutes)
+      expect(first.reports.map((report) => report.id)).toEqual(['126', '125'])
+      expect(fetch).toHaveBeenCalledExactlyOnceWith(
+        `https://vailrerbn.com/api/v1/spots?call=N1RWJ&since=${cutoff / 1000}&limit=500`,
+      )
+      clock++
+      expect((await client.getSnapshot(shortQuery)).reports.map((report) => report.id)).toEqual([
+        '126',
+      ])
+      clock++
+      expect(await client.getSnapshot(shortQuery)).toMatchObject({ status: 'empty', reports: [] })
+      expect(fetch).toHaveBeenCalledTimes(1)
+    },
+  )
+
+  it.each([
+    [0, 1],
+    [7, 7],
+    [7.4, 7],
+    [121, 120],
+    [Number.NaN, 30],
+  ])('normalizes a %s minute window to %i minutes', async (requested, expected) => {
+    const fetch = vi.fn(async (_url: string) => response(payload()))
+    const client = createRbnClient({ fetch, now: () => NOW })
+    expect((await client.getSnapshot({ ...query, windowMinutes: requested })).windowMinutes).toBe(
+      expected,
+    )
+    expect(fetch).toHaveBeenCalledExactlyOnceWith(
+      `https://vailrerbn.com/api/v1/spots?call=N1RWJ&since=${NOW / 1000 - expected * 60}&limit=500`,
+    )
+  })
+
   it('uses the supplied real clock for report windows, cooldowns, and expiry during time travel', async () => {
     let developerTime = NOW + 7 * 24 * 60 * 60_000
     const fetch = vi.fn(async (_url: string) => response(payload()))

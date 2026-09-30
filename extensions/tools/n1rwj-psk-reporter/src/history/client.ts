@@ -1,5 +1,6 @@
 import type { FetchOptions, FetchResponse, JSONValue } from '@ham2k/extension-sdk'
 import { normalizeCall } from '../../../../../packages/reception/src/callsign.ts'
+import { receptionWindowMinutes } from '../../../../../packages/reception/src/config.ts'
 import type {
   ReceptionDirection,
   ReceptionReport,
@@ -331,7 +332,7 @@ export function createHistoryClient(
     const key = keyFor(call, direction)
     for (const [id, entry] of entries) if (observedAt - entry.seen > 60 * 60_000) entries.delete(id)
     let entry = entries.get(key)
-    const minutes = [15, 30, 60].includes(window) ? window : 15
+    const minutes = receptionWindowMinutes.includes(window) ? window : 15
     if (!entry) {
       entry = {
         call: normalizeCall(call),
@@ -407,7 +408,7 @@ export function createHistoryClient(
       if (!online || stopped || !pskTopic(call, direction)) return
       const entry = entries.get(keyFor(call, direction))
       if (!entry) return
-      const minutes = [15, 30, 60].includes(window) ? window : 15
+      const minutes = receptionWindowMinutes.includes(window) ? window : 15
       if (minutes > entry.window) entry.revision++
       entry.window = Math.max(entry.window, minutes)
       entry.seen = time()

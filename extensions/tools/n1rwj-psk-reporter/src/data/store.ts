@@ -1,3 +1,4 @@
+import { receptionWindowMinutes } from '../../../../../packages/reception/src/config.ts'
 import {
   type ReceptionReport,
   receptionKey,
@@ -69,7 +70,7 @@ export function createReportStore(capacity = 1000) {
     ingest: (payload: string, now: number) => ingestReport(parsePskPayload(payload), now),
     snapshot(now: number, windowMinutes: number) {
       prune(now)
-      const window = [15, 30, 60].includes(windowMinutes) ? windowMinutes : 15
+      const window = receptionWindowMinutes.includes(windowMinutes) ? windowMinutes : 15
       return {
         reports: [...reports.values()].filter((report) => report.timeMs >= now - window * 60_000),
         capped: droppedAt !== undefined,

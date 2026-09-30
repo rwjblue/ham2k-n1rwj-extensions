@@ -4,7 +4,7 @@ import { createPersistentStorage } from '../../../../../packages/reception/src/s
 import { backoffKey, decodeSnapshots, snapshotKey } from '../../src/data/cache.ts'
 import { createRbnClient } from '../../src/data/client.ts'
 import { createRbnTransport } from '../../src/data/transport.ts'
-import { NOW, payload } from './fixtures.ts'
+import { NOW, payload, spotPayload } from './fixtures.ts'
 
 const query = { call: 'N1RWJ', windowMinutes: 30 }
 function setup() {
@@ -57,6 +57,37 @@ it('restores reports offline with their timestamps and locations, then catches u
   await client.getSnapshot(query)
   expect(s.fetch).toHaveBeenCalledTimes(2)
 })
+
+it.each([1, 3])(
+  'restores a %i minute query and expires its saved window boundary',
+  async (windowMinutes) => {
+    const s = setup()
+    const cutoff = NOW - windowMinutes * 60_000
+    s.fetch.mockResolvedValue({
+      status: 200,
+      body: JSON.stringify(
+        payload({
+          spots: [
+            spotPayload({ id: 124, timestamp: new Date(NOW).toISOString() }),
+            spotPayload({ id: 125, timestamp: new Date(cutoff).toISOString() }),
+          ],
+          total: 2,
+        }),
+      ),
+    })
+    const shortQuery = { ...query, windowMinutes }
+    const first = await s.restart().client.getSnapshot(shortQuery)
+    expect(first.reports.map((report) => report.id)).toEqual(['124', '125'])
+    expect(decodeSnapshots(s.values()[snapshotKey], NOW).snapshots[0].windowMinutes).toBe(
+      windowMinutes,
+    )
+    s.advance(1)
+    const restored = await s.restart().client.getSnapshot(shortQuery, { online: false })
+    expect(restored).toMatchObject({ windowMinutes, status: 'stale', lastSuccessMs: NOW })
+    expect(restored.reports).toEqual([first.reports[0]])
+    expect(s.fetch).toHaveBeenCalledTimes(1)
+  },
+)
 
 it('bypasses a restored cooldown manually and anchors the next automatic request to that attempt', async () => {
   const s = setup()

@@ -16,7 +16,7 @@ through synchronized release bumps; the lockfile pins its resolution.
 | `panel-state.ts` | Bounded per-placement state and validated scene controls |
 | `timers.ts` | Injected host timeouts with one pending callback per slot and cancellation guards |
 | `map/` | Bundled geography, projections, paths, label placement and themes |
-| `ui/` | Pure native SVG scenes, responsive cards/tables, sorting, report info and pagination |
+| `ui/` | Pure native SVG scenes, responsive cards/tables, band menus, sorting, report info and pagination |
 
 Reports preserve both endpoints. SNR belongs to the receiver even when the UI
 shows remote transmitters. Keys include transmitter, receiver, band and mode;
@@ -28,6 +28,11 @@ location enrichment. Presentation options supply attribution, endpoint labels,
 optional CW-speed sorting and the refresh action. Shared rendering performs no
 network or storage operations. RBN retains HTTP snapshot caching and its
 receiver-directory adapter; PSK manages an MQTT stream independently.
+
+The band label in the scene header opens a native menu. Band and sort choices
+stay per panel placement until the saved default changes, the operation changes,
+or the extension restarts. Menu actions are validated against the bands offered
+by the latest scene, including bands observed in reports.
 
 Reception schedulers use API-3 host timeouts for relative deadlines and finite
 visibility leases. Panel-provided real-time samples supply epoch timestamps;

@@ -96,6 +96,8 @@ function backgroundPanel(fetch: HistoryHost['fetch']) {
   return {
     panel,
     socket,
+    args: currentArgs,
+    stop: () => live.stop(),
     render: (instanceId = 'one', online = true) =>
       panel.render(currentArgs(instanceId), { online }),
     event: (controlId: string, action: string, online = true) =>
@@ -333,6 +335,65 @@ it('does not open a socket or fabricate reports while offline', async () => {
   expect(text).toContain('Offline · reception paused')
   expect(open).not.toHaveBeenCalled()
   expect(text).not.toContain('CU3AT')
+})
+
+it('filters cached reports through the header menu per placement and respects a saved Band change', async () => {
+  const fetch = vi.fn<HistoryHost['fetch']>(async () => historyResponse())
+  const s = backgroundPanel(fetch)
+  expect(sceneText(await s.render('one', false))).toContain('K1ABC')
+  await s.event('band', 'band:40m', false)
+  expect(sceneText(await s.render('one', false))).toContain('No 40m reports in this time window.')
+  expect(sceneText(await s.render('one', false))).not.toContain('K1ABC')
+  expect(sceneText(await s.render('two', false))).toContain('K1ABC')
+  await s.event('details', 'details:toggle', false)
+  expect(await detailsText(s)).toContain('Latest report · 40m')
+  await s.event('details', 'details:toggle', false)
+  await s.event('band', 'band:all', false)
+  expect(sceneText(await s.render('one', false))).toContain('All bands · 1 receiver')
+  expect(sceneText(await s.render('one', false))).toContain('K1ABC')
+  await s.event('band', 'band:40m', false)
+  const saved = { ...s.args(), config: { view: 'list', band: 'all' } }
+  expect(sceneText(await s.panel.render(saved, { online: false }))).toContain('K1ABC')
+  s.stop()
+})
+
+it('accepts a reported band outside the tune form and ignores invalid menu actions', async () => {
+  const live = createLiveReception(() => {
+    throw new Error('Unexpected socket')
+  })
+  const cached = live.snapshot('one', 'N1RWJ', 'outgoing', 15, false, now)
+  vi.spyOn(live, 'snapshot').mockReturnValue({
+    ...cached,
+    reports: [report, { ...report, id: '2m', band: '2m', frequencyHz: 144174000 }],
+  })
+  const panel = createPskPanel(live)
+  const initial = await panel.render(args, { online: false })
+  if (initial.kind !== 'svgScene') throw new Error('Expected native scene')
+  expect(initial.scene.controls?.find((control) => control.id === 'band')?.menu).toContainEqual({
+    label: '2m',
+    event: 'band:2m',
+  })
+  const event = (controlId: string, action: string, phase = 'activate' as const) => ({
+    ...args,
+    event: { controlId, action, phase, sequence: 1 },
+  })
+  for (const [controlId, action] of [
+    ['sort', 'band:2m'],
+    ['band', 'band:bogus'],
+    ['band', 'band:2m:extra'],
+  ])
+    await panel.onEvent?.(event(controlId, action), { online: false })
+  await panel.onEvent?.(
+    { ...event('band', 'band:2m'), event: { ...event('band', 'band:2m').event, phase: 'change' } },
+    { online: false },
+  )
+  expect(await panel.render(args, { online: false })).toEqual(initial)
+  await panel.onEvent?.(event('band', 'band:2m'), { online: false })
+  const filtered = sceneText(await panel.render(args, { online: false }))
+  expect(filtered).toContain('2m · 1 receiver')
+  expect(filtered).toContain('144174.0')
+  expect(filtered).not.toContain('14074.0')
+  live.stop()
 })
 
 it('discards a render hidden during cache restoration and allows a later render to resume', async () => {

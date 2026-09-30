@@ -225,7 +225,8 @@ Physical phone and Linux runtime checks remain outstanding.
 
 The operation provides the defaults. Open the tune button beside the panel title
 to change its settings; they are also available in **Edit Layout**.
-**View** and **Band** live here to leave more room for the map.
+**View** and the saved **Band** default live here. Tap **All bands** or the active
+band in the panel summary to choose a band without opening settings.
 
 ![RBN view and band settings in Ham2K's tune dialog](../../../docs/images/rbn/rbn-settings.jpg)
 
@@ -233,7 +234,7 @@ to change its settings; they are also available in **Edit Layout**.
 | --- | --- | --- |
 | **Watch callsign** | Uses the operation's station callsign | Watch another exact callsign |
 | **Map origin grid** | Uses the operation's latitude/longitude, otherwise its grid | Use a 4, 6, or 8 character Maidenhead locator |
-| **Report window** | Last 15 minutes | Last 30 or 60 minutes |
+| **Report window** | Last 15 minutes | Last 1, 3, 5, 10, 30, 45, or 60 minutes |
 | **Band** | All bands | Select one band |
 | **View** | Map and receivers | Map or receivers only |
 | **Default sort / direction** | Newest reports first | Receiver, SNR, distance, frequency, or CW speed; either direction |
@@ -258,10 +259,11 @@ If no valid callsign is available, it prompts for one without requesting reports
 
 View and band are saved per panel placement through the tune settings and survive
 refreshes, operation changes, and restarts. Saving a different band keeps the
-selected view. In-panel sort choices survive refreshes and unrelated settings
-changes, and reset when switching operations or restarting the extension.
-Changing a saved sort default applies to that control only. Changing settings
-returns to the first page.
+selected view. In-panel band and sort choices survive refreshes and unrelated
+settings changes, and reset when switching operations or restarting the extension.
+Saving a different Band or sort default applies to that control only. Choose the
+Band in tune settings to keep it across restarts. Changing settings returns to
+the first page.
 
 ## Map and receiver list
 
@@ -281,8 +283,10 @@ skimmer location. Receivers without a valid grid remain in the list.
 
 Use **View** in the panel's tune settings to choose **Map and receivers**, **Map**,
 or **Receivers**, and **Band** to select a supported band or **All bands**, even
-before reports arrive. The panel keeps a compact status and band summary above
-the map, with report timing, map origin, and provenance in **Details** (ⓘ or !).
+before reports arrive. The compact band summary above the map also opens a
+native band menu; **All bands** restores the full view. Both the map and receiver
+list follow this filter, and **Details** (ⓘ or !) shows timing for the selected
+band along with map origin and provenance.
 The list
 contains the latest report from each receiver on each band and mode: mode,
 frequency, SNR, CW speed

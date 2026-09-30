@@ -1,11 +1,12 @@
 import type { PanelRenderArgs } from '@ham2k/extension-sdk'
-import { type PanelConfig, readConfig } from './config.ts'
+import { type PanelConfig, readConfig, receptionBands } from './config.ts'
 import type { SceneSelection } from './ui/scene.ts'
 
 export interface PanelState {
   signature: string
   config: PanelConfig
   selection: Partial<SceneSelection>
+  bands?: readonly string[]
   reportPage?: number
 }
 
@@ -23,7 +24,7 @@ export function createPanelStateStore() {
       selections.set(key, state)
       if (selections.size > 32) selections.delete(selections.keys().next().value as string)
     } else if (JSON.stringify(state.config) !== JSON.stringify(config)) {
-      for (const field of ['sort', 'direction'] as const) {
+      for (const field of ['band', 'sort', 'direction'] as const) {
         if (state.config[field] !== config[field]) delete state.selection[field]
       }
       state.selection.page = 0
@@ -43,6 +44,13 @@ export function applySceneEvent(
   const [prefix, value] = action.split(':')
   if (action !== `${prefix}:${value}`) return
   if (
+    controlId === 'band' &&
+    prefix === 'band' &&
+    (state.bands ?? receptionBands).includes(value)
+  ) {
+    state.selection = { ...state.selection, band: value, page: 0 }
+    state.reportPage = 0
+  } else if (
     controlId === 'sort' &&
     prefix === 'sort' &&
     ['age', 'call', 'snr', 'distance', 'frequency', ...(cwSpeed ? ['wpm'] : [])].includes(value)

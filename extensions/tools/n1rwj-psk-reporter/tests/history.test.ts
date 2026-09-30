@@ -110,6 +110,41 @@ describe('PSK history XML', () => {
 })
 
 describe('shared backfill scheduling', () => {
+  it.each([1, 3, 5, 10, 45])(
+    'queries, filters and reloads the %i-minute history window',
+    async (minutes) => {
+      const s = setup()
+      const rowAt = (receiver: string, secondsAgo: number) =>
+        row()
+          .replace('receiverCallsign="CU3AT"', `receiverCallsign="${receiver}"`)
+          .replace(String(initial / 1000 - 30), String(initial / 1000 - secondsAgo))
+      s.host.fetch.mockResolvedValue({
+        status: 200,
+        body: xml(row() + rowAt('W1AW', minutes * 60) + rowAt('W1NT', minutes * 60 + 1)),
+      })
+      s.observe('N1RWJ', minutes)
+      await flush()
+      expect(s.host.fetch).toHaveBeenCalledTimes(1)
+      expect(s.host.fetch.mock.calls[0][0]).toContain(`flowStartSeconds=-${minutes * 60}&`)
+      expect(s.ingest.mock.calls[0][0].map((report) => report.receiver.call)).toEqual([
+        'CU3AT',
+        'W1AW',
+      ])
+      await s.client.force('N1RWJ', 'outgoing', minutes, true)
+      expect(s.host.fetch).toHaveBeenCalledTimes(2)
+      expect(s.host.fetch.mock.calls[1][0]).toBe(s.host.fetch.mock.calls[0][0])
+    },
+  )
+  it('broadens a one-minute history window when a 45-minute reload is requested', async () => {
+    const s = setup()
+    s.observe('N1RWJ', 1)
+    await flush()
+    await s.client.force('N1RWJ', 'outgoing', 45, true)
+    expect(s.host.fetch.mock.calls.map(([url]) => url)).toEqual([
+      historyUrl('N1RWJ', 'outgoing', 1),
+      historyUrl('N1RWJ', 'outgoing', 45),
+    ])
+  })
   it('queries and reloads an exact incoming receiver ID while retaining transmitter validation', async () => {
     const s = setup()
     const receiver = 'US-E-015'

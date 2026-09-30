@@ -69,6 +69,13 @@ behavior. Warnings and next steps appear before general reference material.
 Closing info returns to the report page you were viewing. See the
 [design review and rendered mockups](../../../docs/RECEPTION-INFO-DESIGN.md).
 
+Tap **All bands** or the active band in the panel summary to open a native band
+menu. The map, report list, and latest-report details follow the chosen band;
+**All bands** restores the full view. This choice stays with that panel placement
+through refreshes and unrelated settings changes, and resets when switching
+operations or restarting the extension. Changing the saved **Band** in tune
+settings replaces the current choice and keeps that default across restarts.
+
 - The shared [reception workspace](../../../packages/reception/README.md)
   supplies RBN's map, SVG renderer, settings, and panel state. Settings offer
   **Who hears me** and **Who I hear**, map/list layouts, band/window selection,
@@ -109,7 +116,7 @@ Closing info returns to the report page you were viewing. See the
   is not presented as live reception. No per-report render or whole-log query occurs.
 - Recent history uses PSK Reporter's documented XML query API on startup,
   after a collection gap, and when a larger report window needs older data.
-  It requests the configured 15/30/60-minute window across all bands, with a
+  It requests the configured 1/3/5/10/15/30/45/60-minute window across all bands, with a
   1,000-record limit. History and MQTT reports share the same bounded cache;
   newer observations win. Exact callsign and direction filtering also applies
   to history. Unlocated stations remain in the list.

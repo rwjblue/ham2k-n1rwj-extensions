@@ -24,6 +24,7 @@ export interface SceneSelection {
 export interface SceneResult {
   scene: SvgScene
   selection: SceneSelection
+  bands: string[]
   pageCount: number
   pageSize: number
   totalRows: number
@@ -141,6 +142,14 @@ export function renderReceptionScene(
     details: requested.details === true,
     detailsTab: requested.detailsTab ?? 'status',
   }
+  const availableBands = [
+    ...new Set(['all', ...(model.bands ?? model.rows.map((row) => row.band)), selection.band]),
+  ]
+  // The host accepts at most 32 menu entries; retain the active filter and All.
+  if (availableBands.length > 32) {
+    availableBands.splice(32)
+    if (!availableBands.includes(selection.band)) availableBands[31] = selection.band
+  }
   const rows = sortedSceneReports(
     model.rows.filter((row) => selection.band === 'all' || row.band === selection.band),
     selection.sort,
@@ -149,6 +158,7 @@ export function renderReceptionScene(
   const result: SceneResult = {
     scene,
     selection,
+    bands: availableBands,
     pageCount: 1,
     pageSize: 1,
     totalRows: rows.length,
@@ -290,16 +300,35 @@ export function renderReceptionScene(
         y + (index + 1) * labelLine,
         w - 112,
       )
-  } else
+  } else {
     text(
       'summary',
       w >= 600 * (label.scaledFontSize / label.fontSize)
-        ? `${bandLabel} · ${summary}`
-        : `${bandLabel} · ${receivers} ${station}${receivers === 1 ? '' : 's'}`,
+        ? `▾ ${bandLabel} · ${summary}`
+        : `▾ ${bandLabel} · ${receivers} ${station}${receivers === 1 ? '' : 's'}`,
       left,
       y + labelLine,
       w - 112,
     )
+    // A native menu over the existing header keeps the map's space unchanged.
+    // Its 44px target includes the band label and remains separate from actions.
+    controls.push({
+      id: 'band',
+      label: `Filter reports by band; currently ${bandLabel}`,
+      kind: 'button',
+      x: left,
+      y,
+      width: Math.min(
+        w - 112,
+        Math.max(44, (bandLabel.length + 2) * label.scaledFontSize * 0.72 + 8),
+      ),
+      height: Math.max(buttonHeight, labelLine * 2),
+      menu: availableBands.map((band) => ({
+        label: band === 'all' ? 'All bands' : band,
+        event: `band:${band}`,
+      })),
+    })
+  }
   if (model.presentation?.refreshLabel)
     button('refresh', '↻', right - 104, y, 48, {
       event: 'refresh:reports',
@@ -440,7 +469,7 @@ export function renderReceptionScene(
     return result
   }
 
-  // View and band are persisted by the host's panel tune form.
+  // View and the saved band default are persisted by the host's panel tune form.
   const footerTop = Math.max(y, bottom - labelLine)
   const contentBottom = footerTop - 8
   const sideBySide = selection.view === 'both' && w >= 1080
