@@ -19,7 +19,7 @@ const select = (reports: Spot[], skimmers: string[] = []) =>
   selectSpots(reports, undefined, { skimmers, grids: [] }, () => undefined, now)
 
 describe('RBN station references', () => {
-  it.each(['CW', 'RTTY'])(
+  it.each(['CW', 'RTTY', 'FT8', 'FT4'])(
     'gives different stations at the same frequency distinct full-call references (%s)',
     (mode) => {
       const reports = parseReports(
@@ -42,10 +42,11 @@ describe('RBN station references', () => {
           refs: reference(call),
         })),
       )
+      expect(reports.every(({ spot }) => spot.label === undefined)).toBe(true)
     },
   )
 
-  it.each(['CW', 'RTTY'])(
+  it.each(['CW', 'RTTY', 'FT8', 'FT4'])(
     'keeps a station reference stable across receivers, time, frequency, and band (%s)',
     (mode) => {
       const reports = parseReports(

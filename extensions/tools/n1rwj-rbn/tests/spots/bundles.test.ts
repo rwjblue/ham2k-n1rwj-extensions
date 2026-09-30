@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises'
 import { createContext, runInContext } from 'node:vm'
 import type {
+  ActivityHook,
   DataFileDefinition,
   DynamicSettingsPanel,
   ExtensionDefinition,
@@ -20,6 +21,7 @@ async function harness(saved: Record<string, JSONValue> = {}, contests = ['cwt',
   const preferences: Record<string, JSONValue> = structuredClone(saved)
   const definitions: ExtensionDefinition[] = []
   const registered = new Map<string, Map<string, RegisterHookParams>>()
+  const hostCalls = vi.fn()
   const sharedModules = Object.fromEntries(
     await Promise.all(
       Object.keys(manifest.sharedDependencies).map(async (name) => {
@@ -96,6 +98,7 @@ async function harness(saved: Record<string, JSONValue> = {}, contests = ['cwt',
         categories.set(category, hook)
       },
       hostCall: async (method, params) => {
+        hostCalls(method, params)
         if (method === 'getSettings') return { extensions: preferences }
         if (method === 'setSettings') {
           const key = `extension_${definition.key}`
@@ -128,6 +131,8 @@ async function harness(saved: Record<string, JSONValue> = {}, contests = ['cwt',
   await settings.getDefinition({ panelKey: 'n1rwj-rbn' }, ctx)
   await new Promise((resolve) => setTimeout(resolve, 0))
   return {
+    definitions,
+    hostCalls,
     preferences,
     requests,
     registered,
@@ -150,6 +155,61 @@ async function harness(saved: Record<string, JSONValue> = {}, contests = ['cwt',
       }),
   }
 }
+
+it('bundled RBN recognizes new and already-saved station refs offline without changing the log or export hooks', async () => {
+  const runtime = await harness({ 'extension_n1rwj-rbn': { unrelated: 42 } }, [])
+  const activity = runtime.hook<ActivityHook>('n1rwj-rbn', 'activity')
+  expect(runtime.definitions[0].hooks).toContain('activity')
+  expect(activity.operationControls).toBeUndefined()
+  expect(activity.suggest).toBeUndefined()
+  expect(activity.processQsoBeforeSave).toBeUndefined()
+  for (const category of ['export', 'adifFields', 'adifImport']) {
+    expect(runtime.registered.get('n1rwj-rbn')?.has(category)).toBe(false)
+  }
+  const args: Parameters<NonNullable<ActivityHook['loggingControls']>>[0][] = [
+    { operation: {} },
+    {
+      operation: { uuid: 'saved-operation', refs: [{ type: 'cwt', ref: '20260930T1300' }] },
+      qso: {
+        uuid: 'saved-qso',
+        our: { call: 'N1RWJ' },
+        their: { call: 'K1ABC/P' },
+        freq: 14032,
+        band: '20m',
+        mode: 'CW',
+        refs: [
+          { type: 'rbn', ref: 'K1ABC/P' },
+          { type: 'rbn', ref: 'W9NEW' },
+          { type: 'cwt', ref: '20260930T1300', theirName: 'Al', theirNumber: '1234' },
+        ],
+      },
+    },
+  ]
+  const originalArgs = structuredClone(args)
+  const preferences = structuredClone(runtime.preferences)
+  const requestCount = runtime.requests.mock.calls.length
+  const hostCallCount = runtime.hostCalls.mock.calls.length
+  const getQsos = vi.fn(async () => {
+    throw new Error('Logging controls must not read the full log')
+  })
+  for (const input of args) {
+    expect(
+      await activity.loggingControls?.(input, { online: false, locale: 'en', getQsos }),
+    ).toEqual([
+      {
+        key: 'n1rwj-rbn/station',
+        label: 'RBN',
+        icon: 'radar',
+        input: { kind: 'refList', refType: 'rbn' },
+      },
+    ])
+  }
+  expect(args).toEqual(originalArgs)
+  expect(runtime.preferences).toEqual(preferences)
+  expect(runtime.requests).toHaveBeenCalledTimes(requestCount)
+  expect(runtime.hostCalls).toHaveBeenCalledTimes(hostCallCount)
+  expect(getQsos).not.toHaveBeenCalled()
+})
 
 it('RBN defaults to all calls and respects explicit CWT filtering, removal and saved choices across restarts', async () => {
   const runtime = await harness()

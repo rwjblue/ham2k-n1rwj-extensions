@@ -145,16 +145,17 @@ for the same station still collapse normally. It does not claim a park,
 summit, or contest activity.
 
 The inspected HaLo source displays the spot's label, so this reference does
-not add text to the Spots row or map popup. Native UI verification remains
-pending. HaLo can copy the reference into a contact when selecting a spot or
-applying Spot History hints, where it remains in the saved QSON data. It has
+not add text to the Spots row or map popup. HaLo can copy the reference into
+a contact when selecting a spot or applying Spot History hints, where it
+remains in the saved QSON data. It has
 an activity logging control with `input: { kind: 'refList', refType: 'rbn' }`
 and the RBN radar icon. HaLo uses that control to recognize both new and
 already-saved RBN references while the extension is enabled, replacing the
 red question-mark badge without rewriting or deleting contact data.
 
 The registration also adds one collapsed **RBN** chip to the logging panel's
-secondary controls. Opening it lets you edit the contact's RBN references;
+secondary controls. You can hide it in logging-control settings without
+affecting reference icons. Opening it lets you edit the contact's RBN references;
 it does not add a primary exchange field, operation setup, or activity
 suggestions. This badge behavior and chip placement are verified against
 HaLo source and the bundled registration; native UI verification remains

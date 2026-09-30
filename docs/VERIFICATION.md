@@ -1,5 +1,29 @@
 # Verification and compatibility
 
+## Release 0.7.4 preparation — 2026-09-30
+
+Prepared synchronized version **0.7.4** after reviewing changes since v0.7.3.
+The authored [release notes](releases/v0.7.4.md) select **CWT, MST, SST, and
+RBN** for catalog publication. CQ WW, PSK Reporter, and WRT explicitly have
+no extension-specific changes; WRT does not invoke the changed N1MM downloader.
+The root lockfile changes only synchronized workspace versions, with no
+universal dependency update. GitHub archives all seven extension bundles.
+
+`mise run format`, `mise run release:notes v0.7.4`, and
+`mise run release v0.7.4 --dry-run` passed, including **965 tests across 74
+files**, lint, strict application/task typechecks, ES2020 builds, official
+packaging, synchronized versions, and checksums for all fourteen assets.
+RBN remains verified against the installed Next build 177 JavaScript kernel;
+native UI badge rendering and chip behavior remain unverified.
+
+CWT runtime, adapters, documentation, and regression behavior match the live
+`codex/cwt-call-history` source branch at `8da9a0ca` for
+[Ham2K/extensions PR #1](https://github.com/ham2k/extensions/pull/1).
+Upstream validation passed **130 tests**, typecheck, and official build/pack;
+the upstream checkout remains clean. MST/SST-specific code, RBN, and personal
+release versioning/packaging are exempt from that synchronization. CQ WW
+behavior is unchanged.
+
 ## RBN reference badge — 2026-09-30 (unreleased)
 
 RBN registers one unconditional `activity.loggingControls` descriptor with
@@ -22,9 +46,16 @@ deduplication, receiver filtering, and export behavior remain unchanged.
 Focused bundle regressions cover registration for new and saved references,
 including portable callsigns, offline use, and preservation of unrelated
 references. Station-reference tests cover all four supported modes and the
-existing filtering and deduplication behavior. Native app UI behavior has not
-been verified for this change. Validation results are recorded below after
-the local checks complete.
+existing filtering and deduplication behavior.
+
+`mise run format` and `mise run check` passed **965 tests across 74 files**,
+lint, strict typechecks, all seven ES2020 builds, and official packaging.
+`mise run verify-host n1rwj-rbn` passed against the installed Next 26.9.0
+build 177 JavaScript kernel, confirming the new `activity/n1rwj-rbn` hook
+alongside the existing hooks and declared shared-library compatibility.
+This runs the installed kernel under Node VM, with simulated timer delivery;
+it does not exercise the native app UI. Native badge rendering and chip
+behavior have not been verified for this change.
 
 This is an RBN-only change, exempt from CWT and CQ WW upstream
 synchronization: no contest or shared runtime code changed. No release version
