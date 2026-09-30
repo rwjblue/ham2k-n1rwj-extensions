@@ -1,5 +1,153 @@
 # Verification and compatibility
 
+## RBN fresh retry — 2026-09-30 16:57 UTC (unreleased)
+
+Repeated the comparison after the operator requested another attempt. Froze
+**16:47:00–16:57:00 UTC** (`since=1790786820&until=1790787420`), reread current
+source, and ran the same actual runtime with All calls, all modes/continents,
+no grid-region or CW speed restriction, and the existing response/pagination
+bounds. All **28 API requests returned HTTP 200**, the slowest in 1,169 ms.
+Requests ran at 17:01:07–17:01:10 UTC. No timeout, rate-limit or feed warning
+occurred. Refetched the live directory (350 nodes) and retained the geographic
+planner's 11 directed IDs plus nine global-band queries.
+
+The visible built-in browser comparison used 40m and the same receiver groups,
+100 rows, unrestricted modes/station/speed, and UTC minute labels. Split the
+radius receiver list into three groups so row bounds did not hide the window.
+
+| Comparison | API | Direct RBN website |
+| --- | ---: | ---: |
+| KM3T-2/-3, separately queried across all bands | 0 reports each | 3 raw 40m CW rows, 2 unique stations |
+| Bare KM3T, 40m CW | 7 raw reports, 3 unique stations | Full family: 8 rows, 4 unique stations |
+| FN41FR, 100 miles, 40m CW | 11 unique API reception IDs, 4 unique stations | 12 rows, the same 4 unique stations |
+
+The radius matches **K3WA (7010 kHz), KG4EXY (7064), VE3DZZ (7026), and
+WA8VTD (7002.6)** with no missing/extra station. Runtime results total
+**863 station/band/mode spots**, including **16 on 40m** and four CW on 40m.
+The feed parsed 12,433 reports; local selection retained 2,114 rows including
+query overlap, or 1,242 original API reception IDs. Offline NA filtering of
+that evidence retained the same 863/16/four results.
+
+Exact node filtering still cannot be confirmed: Vail returns zero for the
+suffixed IDs. The website's exact pair shows only **KG4EXY and VE3DZZ**;
+its additional **K3WA and WA8VTD** reports come from KM3T-5. This demonstrates
+that replacing KM3T-2/-3 with the bare family would silently widen the choice.
+The saved IDs therefore remain strict, accompanied by the explanatory notice.
+Bare KM3T returned 602 reports and 556 deduplicated spots across all bands.
+Vail is missing the family's WA8VTD CW report visible on the website; W1NT
+supplies that station to the radius result. The missing row is absent from
+the complete directed API response before local filtering. Raw source parity
+and exact node identity remain limitations, as do minute-level boundary times
+and the unverified digital website comparison described below.
+
+New evidence is saved locally in `dist/verification/rbn-20260930-1657/`:
+`compact-summary.json`, `requests.json`, raw payloads, source hashes, parsed and
+selected reports, receiver directory, browser DOM captures and screenshots.
+No further runtime edits were needed by this retry. The **990-test** full
+working-copy check below remains valid. Before committing the receiver-filtering
+changes, an isolated checkout excluding the pending station-reference fix,
+Settings Report extension, and investigation drafts passed **941 tests across
+72 files**, lint, strict typechecks, ES2020 builds, and official packaging.
+No build was installed or published.
+
+## RBN live receiver comparison — 2026-09-30 (unreleased)
+
+Completed the requested one-time retry after approximately 30 minutes. Vail
+responded successfully. This run found an additional identity mismatch;
+the earlier directed-query change alone does **not** fix exact suffixed IDs.
+Vail returns `KM3T` and `W1NT`, while the RBN directory and website identify
+`KM3T-1/-2/-3/-5` and `W1NT-2/-6`. The exposed API payload has no original
+node-ID field. Its [documented spotter filter](https://vailrerbn.com/docs/endpoints)
+cannot recover those identities from the bare reports.
+
+The frozen API interval was **2026-09-30 14:33:00–14:43:00 UTC**, inclusive:
+`since=1790778780&until=1790779380`. Ran the actual current feed, parser,
+query planner, receiver directory adapter, and selector with a fixed clock.
+Call-history was **All calls** (`allowedCalls` undefined), modes/continents
+were unrestricted, grid regions were blank, and CW speed bounds were absent.
+Every request used the runtime's four-second timeout, maximum 1 MB response,
+1,000 rows per page, and at most two pages. Request URLs, statuses, totals,
+timings, responses, parsed reports, selected spots, runner source, and source
+hashes are saved locally under
+`dist/verification/rbn-20260930-1443/`, with the repeat under `after-fix/`.
+
+Opened the direct RBN website in a visible Codex in-app browser, first without
+receiver/band/mode/station/speed restrictions. Then applied only the equivalent
+receiver and 40m constraints. Read the displayed `z` times as UTC. Used a
+one-hour age view to retain the frozen interval and 100 visible rows. The
+combined radius list hit that bound, so split it into KM3T-family, W1NT-family,
+and other nearby receivers; each view reached beyond the frozen interval or
+had no reports. Saved DOM rows and screenshots. Website times have minute
+precision, so rows labelled 14:43 are a boundary comparison rather than proof
+of exact second-level inclusion. Excluding that minute preserves the same
+interior station matches. API requests ran well after the frozen interval,
+allowing ingestion time; residual differences remain documented below.
+
+| Selection / source | Raw reports | Unique station/band/mode results |
+| --- | ---: | ---: |
+| API `spotter=KM3T-2`, all bands/modes | 0 (HTTP 200) | 0 |
+| API `spotter=KM3T-3`, all bands/modes | 0 (HTTP 200) | 0 |
+| Website KM3T-2/-3, 40m | 14 CW rows | 8 CW stations |
+| API bare `KM3T`, all bands/modes | 633 | 575 |
+| API bare `KM3T`, 40m CW subset | 21 | 8 |
+| Website all nearby directory nodes, 40m | 30 CW rows | 9 CW stations |
+| Updated radius feed after local filtering | 2,082 parsed reports including overlapping queries | 871 across all bands/modes; 50 on 40m, including 9 CW |
+
+Both exact IDs were queried separately with band and mode omitted, for example
+`https://vailrerbn.com/api/v1/spots?spotter=KM3T-2&since=1790778780&until=1790779380&limit=1000&offset=0`.
+The bare control changes only `spotter` to `KM3T`. Its eight matching 40m CW
+calls are **K1ZHG, KA2QPG, KB2FSB, KU3J, N2ESE, N2QLV, VE3NFN, VE3YTX**,
+with matching frequencies. The radius adds **VA3CJW**, also matching the website.
+No unique 40m CW station is missing or extra in this radius comparison.
+
+Raw reception reports are **not identical**. The website's full KM3T family
+has 22 rows versus Vail's 21: the call-count comparison has one fewer N2QLV
+and KA2QPG report, and one additional K1ZHG report in Vail (the latter at the
+14:43 boundary). Website KA2QPG/VE3NFN times also differ by about one minute.
+W1NT has eight website rows versus seven API reports: its N2QLV report at
+14:40, 7061 kHz is absent from Vail. The combined receiver-family API controls
+therefore have 28 reports versus 30 website rows. Repeated reports, lost
+suffixes, and minute-level timing prevent exact node-level reconciliation.
+The direct website main view returned CW rows; API FT8/FT4 totals were retained
+and checked through runtime parsing/filtering, but were not independently
+matched to a digital website view. This verifies the compared CW station set,
+not full upstream report parity across modes.
+
+The live directory contained 350 nodes. Before this follow-up fix, radius
+planning used nine directed IDs plus nine global-band queries: 25 successful
+requests, 9,998 parsed reports, and 651 deduplicated spots (43 on 40m). Global
+page bounds still truncated busy bands. Adding the bare-family queries
+retrieved reports beyond those pages. The repeat used 11 directed IDs plus
+nine global-band queries, retaining the supplement for report-grid-only
+receivers: all 27 API requests succeeded, producing 11,261 parsed reports.
+Local filtering selected 2,082 reports; normal station/band/mode deduplication
+produced 871 spots, **220 more**, with no previously selected result removed.
+The 40m increase from 43 to 50 comprises seven digital results; CW remains nine.
+Deduplicating the overlapping responses by their original API report IDs gives
+1,265 selected receptions, including 87 on 40m and 28 CW receptions on 40m.
+An offline replay of the pre-fix feed with the original exact directory lookup
+and an NA continent selection yields only **two** spots, neither on 40m:
+bare KM3T/W1NT reports had no matching directory continent.
+Reapplying an NA continent filter offline to this same fresh evidence also
+produced 871/50/nine; that check is not a separate live NA request simulation.
+
+The fix queries bare families for geography and derives cached directory
+metadata only when all sibling nodes agree on each field, including any bare
+node. Conflicting grids are excluded from region/radius filtering; exact
+suffixed reports retain exact metadata. Missing grids retain the documented
+approximate report-grid fallback. Exact suffix choices remain unchanged and
+strict; settings now explain the API limitation and offer the bare callsign
+as an explicit family selection. No original receiver ID is fabricated.
+
+Regressions cover query alias bounds, consensus and ambiguous metadata,
+persisted-directory reload/removal, radius/continent integration, and the
+suffix notice without silently changing the selection. `mise run format` and
+`mise run check` passed **990 tests across 77 files**, strict typechecks, lint,
+ES2020 builds and official packaging. Live verification uses the actual source
+with a network adapter; it is not a native Ham2K installation/UI test. Nothing
+was published or installed. RBN-only changes are exempt from CWT/CQ WW PR
+synchronization; unrelated working-copy changes were preserved.
+
 ## RBN Spots timeout recovery — 2026-09-30 (unreleased)
 
 The reported `TimeoutException after 0:00:01.999978` matches the native
@@ -10,13 +158,14 @@ each requested HTTP timeout across headers and body. The feed now allows
 four seconds per page, keeping its two sequential pages within eight seconds
 of network time and reserving approximately two seconds for other hook work.
 
-Each band query now keeps successful pages independently. Failed
+Each receiver/band query now keeps successful pages independently. Failed
 queries merge their fresh pages with unexpired prior reports, deduplicated
 and bounded to 2,000 reports per query. Successful queries replace their own
 cache, including empty results. An incomplete refresh returns available
 reports with a settings warning instead of discarding all successful queries.
-The warning survives throttled refreshes and clears after recovery. Current
-receiver/history filters, coalescing, and shared API backoff remain in effect.
+The warning survives throttled refreshes and clears after recovery. Existing
+mode/scope cache fallback, current receiver/history filters, coalescing, and
+shared API backoff remain in effect.
 
 Two live CW requests (20m and KM3T-2) each exceeded a 15-second allowance
 without an HTTP response. The health endpoint also returned no HTTP response
@@ -39,6 +188,47 @@ not been published or installed by this verification.
 
 These changes affect only RBN source, tests, and documentation, so they are
 exempt from synchronization to the CWT and CQ WW upstream PRs.
+
+## RBN receiver filtering — 2026-09-30 (unreleased)
+
+The native Spots feed previously downloaded at most 2,000 worldwide reports
+per band before applying local receiver filters. A live Vail ReRBN ten-minute
+40m query returned 3,583 reports in total; its first 1,000 included no reports
+named KM3T-2 or KM3T-3. This established the worldwide snapshot bound, but did
+not establish why those IDs were missing: the later live comparison above
+found that Vail reports bare receiver names. Subsequent API timeouts prevented
+measuring matches on the omitted pages during the initial investigation.
+The official RBN directory places both receivers in FN42ET, approximately
+74.97 miles from FN41FR, so both pass a 100-mile radius.
+
+The feed now queries each selected receiver across bands before pagination
+when the selection has up to 32 IDs. Geographic selections resolve candidates
+from the current receiver directory. Queries retain exact local ID matching,
+directory-grid precedence, and report-grid fallback; a worldwide supplement
+preserves unknown receivers when no receiver continent is selected. Larger
+selections retain the bounded worldwide feed. Mode and query scope identify
+the cache, so receiver edits and directory loads can immediately retrieve
+the new selection; offline and failed refreshes reapply current filters to
+unexpired cached reports.
+
+The reported website comparison also had two independent restrictions: the
+operator selected a CWT/MST/SST call-history filter, while the website showed
+all calls over six hours. RBN Spots retain ten minutes and collapse repeated
+station/band/mode reports. The guide and settings now explain how to compare
+equivalent views.
+
+Deterministic tests cover the capped worldwide-feed reproduction, exact KM3T
+IDs, FN41FR within 100 miles, unknown receiver fallback, query pagination,
+empty selections, cache scope changes, mode isolation, directory reloads,
+offline filtering, and failed-refresh reuse. `mise run format` and
+`mise run check` pass, including **934 tests across 73 files**, lint, strict
+typechecks, ES2020 builds, and official packaging. These are unit/bundle
+checks; live directed-query and native Ham2K verification remain outstanding
+because Vail ReRBN timed out during follow-up requests. The local RBN 0.7.2
+candidate has not been published or installed by this verification.
+
+RBN source, tests, and documentation are independent of CWT/CQ WW behavior,
+so this change is exempt from synchronization to either upstream contest PR.
 
 ## Release 0.7.2 publication — 2026-09-29
 

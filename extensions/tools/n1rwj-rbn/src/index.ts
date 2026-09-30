@@ -18,6 +18,7 @@ defineExtension({
       fetch: rbnFetch,
       healthTimers: host,
       lookup: receivers.lookup,
+      receiverEntries: receivers.entries,
       continentNear: receivers.continentNear,
       setSettings: setRbnSettings,
     })

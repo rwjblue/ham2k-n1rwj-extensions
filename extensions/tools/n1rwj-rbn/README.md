@@ -39,7 +39,12 @@ Open **Settings → RBN → Spots — Who I might hear** to choose:
   positive speed are excluded while a limit is set; digital reports are unaffected.
   Speed filtering reuses cached reports and runs before duplicate reports are
   collapsed. Vail ReRBN supplies `wpm` but documents no speed-range query parameter.
-- **Only these skimmers:** exact IDs, including suffixes such as `KM3T-5`.
+- **Only these skimmers:** IDs as reported by Vail, for example `KM3T`.
+  Live comparison found that Vail omits numeric node suffixes: `KM3T-2`
+  and `KM3T-3` requests return no reports, while `KM3T` includes the receiver
+  family. Individual nodes cannot be isolated without their original IDs.
+  Existing suffixed selections are preserved and show an explanatory notice;
+  they are never silently widened to include other nodes.
 - **Receiver grid regions:** Maidenhead prefixes, for example `FN, EM`, `JO`,
   or `FN42`. These select the receiving skimmers, not the spotted stations.
 - **Receiver continents:** select one or more continents; an explicit empty
@@ -95,13 +100,29 @@ filtering replaces the temporary call-history bridge. The logger's native
 continent filter applies to the spotted station, independently of these controls.
 
 Reports cover ten minutes on 160, 80, 40, 30, 20, 17, 15, 12, and 10 meters.
-Each refresh is capped at two pages of 1,000 reports per band; a busy band can
-exceed this snapshot, particularly with digital modes. In **All** mode, the
-report limit is shared across modes, so a busy mode can crowd out others.
-Requests are coalesced
+Selections of up to 32 skimmers fetch reports separately for each receiver,
+across all supported bands. Grid, continent, and distance filters also use
+these receiver queries when the cached directory identifies up to 32 query IDs.
+Geographic queries include the original directory IDs and their bare numeric
+suffix families. Bare IDs use directory metadata only when every family node
+agrees on that field, including any bare directory entry. Conflicting grids
+are excluded from region/radius filtering rather than replaced by a registered
+callsign grid. Continent disagreement remains unknown. Missing directory grids
+retain the existing approximate report-grid fallback.
+This selects your receivers before the response limit, so unrelated skimmers
+cannot crowd out their reports. Each receiver query is capped at two pages of
+1,000 reports; busy receivers can still exceed this snapshot, particularly
+with digital modes.
+
+Larger selections use the worldwide snapshot, capped at two pages of 1,000
+reports per band before local filtering. Geographic selections without a
+continent filter also retain this snapshot for receivers absent from the
+directory whose report grids may match. In **All** mode, each query's report
+limit is shared across modes. Requests are coalesced
 and cached for at least a minute. Both Spots and My Signal honor shared API
 rate-limit backoff. Offline or failed refreshes use only unexpired cached
-reports, reapplying current filters. Settings apply on the next Spots refresh.
+reports, reapplying current filters. Changing receiver selections or loading
+new directory entries chooses a fresh query on the next online Spots refresh.
 
 A failed request keeps successful reports from other receivers or bands,
 including a first page when the second page fails. RBN settings explains when
@@ -110,6 +131,11 @@ queries; a successful query replaces its previous reports, including an empty
 result. Requests allow four seconds per page and retry on a later Spots refresh,
 after at least a minute or the service's longer rate-limit delay. Restarting the
 app clears the in-memory Spots cache and cannot resolve an unavailable service.
+
+When comparing with the RBN website, choose **All calls** to remove the
+CWT/MST/SST call-history restriction and compare the same ten-minute window,
+band, and mode. A six-hour website view includes older reports; repeated
+reports for the same station, band, and mode collapse to one spot here.
 
 As a workaround for [HALO-741](https://cabo.ham2k.com/halo/c/741), RBN spots
 carry an `rbn` reference containing the full callsign, including portable
@@ -372,7 +398,8 @@ Rate-limit responses pause requests across all panels until the retry delay
 has passed.
 
 Receiver positions and countries come from the public [RBN node directory](https://www.reversebeacon.net/nodes/),
-matched by full receiver callsign, including skimmer suffixes. Ham2K downloads
+matched by full receiver callsign, including skimmer suffixes, or by unanimous
+directory metadata when Vail supplies a bare receiver-family ID. Ham2K downloads
 and caches this as **RBN receiver directory** in **Settings → Data Files**.
 The file becomes eligible for refresh after seven days, on the host's next
 data-file sync (such as startup or reconnection); it is not a weekly timer.

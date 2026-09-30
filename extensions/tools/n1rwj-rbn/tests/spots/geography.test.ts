@@ -1,5 +1,6 @@
 import { expect, it } from 'vitest'
 import { receiverLocation } from '../../src/data/parser.ts'
+import { createReceiverData } from '../../src/data/receivers.ts'
 import { distanceKm } from '../../src/model.ts'
 import { parseReports, type ReceiverLookup, selectSpots } from '../../src/spots/model.ts'
 import { readPreferences, validateEdit, validation } from '../../src/spots/preferences.ts'
@@ -62,6 +63,65 @@ it('uses directory grid then report fallback, excludes unknown positions only wi
   ])
   expect(selectSpots(reports, undefined, readPreferences({}), lookup, now)).toHaveLength(3)
   expect(selectSpots(reports, new Set(['N2ABC']), prefs, lookup, now)).toHaveLength(1)
+})
+
+it('uses unanimous family locations for bare reports without inventing an exact receiver ID', () => {
+  const directory = createReceiverData()
+  directory.dataFile.onLoadRawData({
+    schema: 1,
+    nodes: [
+      { call: 'KM3T-2', grid: 'FN42ET', country: 'United States', continent: 'NA' },
+      { call: 'KM3T-3', grid: 'FN42ET', country: 'United States', continent: 'NA' },
+    ],
+  })
+  const reports = parseReports([row('KM3T', 'JO31')], 'rbn', now)
+  const selected = selectSpots(
+    reports,
+    undefined,
+    readPreferences({ spotRadiusGrid: 'FN41FR', spotRadiusMiles: 100, spotContinents: ['NA'] }),
+    directory.lookup,
+    now,
+  )
+  expect(selected).toMatchObject([
+    { spot: { sourceInfo: { spotter: 'KM3T', spotterGrid: 'FN42ET' } } },
+  ])
+  expect(
+    selectSpots(
+      reports,
+      undefined,
+      readPreferences({ spotSkimmers: 'KM3T-2, KM3T-3' }),
+      directory.lookup,
+      now,
+    ),
+  ).toEqual([])
+})
+
+it('rejects ambiguous family grids before deduplication while retaining known exact receiver locations', () => {
+  const directory = createReceiverData()
+  directory.dataFile.onLoadRawData({
+    schema: 1,
+    nodes: [
+      { call: 'KM3T-2', grid: 'FN42ET', country: 'United States', continent: 'NA' },
+      { call: 'KM3T-3', grid: 'JO31', country: 'United States', continent: 'NA' },
+    ],
+  })
+  const reports = parseReports(
+    [row('KM3T', 'FN42ET', 1000), row('KM3T-2', 'JO31', 2000)],
+    'rbn',
+    now,
+  )
+  const select = (raw: Record<string, unknown>) =>
+    selectSpots(reports, undefined, readPreferences(raw), directory.lookup, now)
+  expect(select({})[0].spot.sourceInfo?.spotter).toBe('KM3T')
+  expect(select({ spotContinents: ['NA'] })[0].spot.sourceInfo?.spotter).toBe('KM3T')
+  for (const preferences of [
+    { spotGrids: 'FN' },
+    { spotRadiusGrid: 'FN41FR', spotRadiusMiles: 100 },
+  ])
+    expect(select(preferences)).toMatchObject([
+      { spot: { sourceInfo: { spotter: 'KM3T-2', spotterGrid: 'FN42ET' } } },
+    ])
+  expect(select({ spotSkimmers: 'KM3T', spotGrids: 'FN' })).toEqual([])
 })
 
 it('uses great-circle miles across the date line and includes the exact distance boundary', () => {

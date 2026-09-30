@@ -1,17 +1,22 @@
 import type { DataFileDefinition } from '@ham2k/extension-sdk'
 import { type Coordinates, distanceKm, normalizeCall, type RbnReport } from '../model.ts'
 import { type Continent, continentCode } from './continents.ts'
+import { receiverFamily } from './identity.ts'
 import { isValidReceiver, receiverLocation, record } from './parser.ts'
 
 export const receiverDirectoryUrl = 'https://www.reversebeacon.net/cont_includes/status.php?t=skt'
 const maxNodes = 10_000
 const invalidDirectory = 'Invalid RBN receiver directory. Previous data retained.'
 
-interface Receiver {
+export interface Receiver {
   call: string
   grid: string | null
   country: string | null
   continent: Continent | null
+}
+
+export interface ReceiverMetadata extends Receiver {
+  gridAmbiguous?: boolean
 }
 
 interface ReceiverSnapshot {
@@ -130,8 +135,36 @@ function readSnapshot(raw: unknown): ReceiverSnapshot {
   return { schema: 1, nodes }
 }
 
+/** Derive aliases without adding inferred nodes to the saved directory. */
+function familyMetadata(nodes: ReadonlyMap<string, Receiver>): Map<string, ReceiverMetadata> {
+  const groups = new Map<string, { receiver: ReceiverMetadata; suffixed: boolean }>()
+  for (const node of nodes.values()) {
+    const family = receiverFamily(node.call)
+    const suffixed = family !== node.call
+    const group = groups.get(family)
+    if (!group) {
+      groups.set(family, { receiver: { ...node, call: family }, suffixed })
+      continue
+    }
+    group.suffixed ||= suffixed
+    const consensus = group.receiver
+    if (consensus.grid !== node.grid) {
+      consensus.grid = null
+      consensus.gridAmbiguous = true
+    }
+    if (consensus.country !== node.country) consensus.country = null
+    if (consensus.continent !== node.continent) consensus.continent = null
+  }
+  const aliases = new Map<string, ReceiverMetadata>()
+  for (const [family, group] of groups) {
+    if (group.suffixed) aliases.set(family, group.receiver)
+  }
+  return aliases
+}
+
 export function createReceiverData() {
   let current = new Map<string, Receiver>()
+  let families = new Map<string, ReceiverMetadata>()
   const dataFile = {
     key: 'n1rwj-rbn_receivers',
     name: 'RBN receiver directory',
@@ -154,15 +187,26 @@ export function createReceiverData() {
     },
     onLoadRawData(raw: unknown) {
       const snapshot = readSnapshot(raw)
-      current = new Map(snapshot.nodes.map((node) => [node.call, node]))
+      const nodes = new Map(snapshot.nodes.map((node) => [node.call, node]))
+      const aliases = familyMetadata(nodes)
+      current = nodes
+      families = aliases
     },
     async onRemoveRawData() {
       current = new Map()
+      families = new Map()
     },
   } satisfies DataFileDefinition
+  function lookup(call: string): ReceiverMetadata | undefined {
+    // A suffixed report identifies one receiver. A bare report may identify any
+    // sibling, even when the directory also contains a node with the bare ID.
+    return receiverFamily(call) === call
+      ? (families.get(call) ?? current.get(call))
+      : current.get(call)
+  }
   function enrichReports(reports: readonly RbnReport[]): RbnReport[] {
     return reports.map((report) => {
-      const node = current.get(report.receiver)
+      const node = lookup(report.receiver)
       if (!node) return report
       const [latitude, longitude] = receiverLocation(node.grid)
       return {
@@ -195,5 +239,11 @@ export function createReceiverData() {
     }
     return nearby.size === 1 ? [...nearby][0] : null
   }
-  return { dataFile, enrichReports, continentNear, lookup: (call: string) => current.get(call) }
+  return {
+    dataFile,
+    enrichReports,
+    continentNear,
+    lookup,
+    entries: (): readonly Receiver[] => [...current.values()],
+  }
 }

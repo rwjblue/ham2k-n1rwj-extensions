@@ -147,6 +147,54 @@ test.each([undefined, 'all', 'CW', 'RTTY', 'FT8', 'FT4'])(
   },
 )
 
+test('paginates each selected receiver across bands without accepting other skimmers', async () => {
+  const urls: URL[] = []
+  const feed = createSpotFeed({
+    source: 'n1rwj-rbn',
+    now: () => at,
+    queries: { skimmers: ['KM3T-2', 'KM3T-3'], includeGlobal: false },
+    fetch: async (url) => {
+      const parsed = new URL(url)
+      urls.push(parsed)
+      const spotter = parsed.searchParams.get('spotter')
+      return response(
+        Array.from({ length: 1000 }, (_, index) =>
+          row({
+            spotter: index ? spotter : 'KM3T-20',
+            frequency: index % 2 ? 7032 : 14032,
+          }),
+        ),
+        5000,
+      )
+    },
+  })
+  const reports = await feed.get(true)
+  assert.equal(urls.length, 4)
+  assert.ok(urls.every((url) => !url.searchParams.has('band')))
+  assert.deepEqual([...new Set(urls.map((url) => url.searchParams.get('offset')))], ['0', '1000'])
+  assert.deepEqual([...new Set(reports.map((spot) => spot.band))].sort(), ['20m', '40m'])
+  assert.deepEqual([...new Set(reports.map((spot) => spot.spot.sourceInfo?.spotter))].sort(), [
+    'KM3T-2',
+    'KM3T-3',
+  ])
+  assert.deepEqual(await feed.get(true), reports)
+  assert.deepEqual(await feed.get(false), reports)
+  assert.equal(urls.length, 4)
+})
+
+test('an empty receiver selection makes no request and never falls back to all receivers', async () => {
+  const feed = createSpotFeed({
+    source: 'n1rwj-rbn',
+    now: () => at,
+    queries: { skimmers: [], includeGlobal: false },
+    fetch: async () => {
+      assert.fail('No receivers can match')
+    },
+  })
+  assert.deepEqual(await feed.get(true), [])
+  assert.deepEqual(await feed.get(false), [])
+})
+
 test('rate limits pause retries across bands and recover after retryAfter', async () => {
   const f = fixture()
   let requests = 0

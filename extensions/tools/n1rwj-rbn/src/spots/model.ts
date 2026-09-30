@@ -77,7 +77,7 @@ export interface ReceiverSelection {
 }
 export type ReceiverLookup = (
   call: string,
-) => { grid: string | null; continent?: Continent | null } | undefined
+) => { grid: string | null; continent?: Continent | null; gridAmbiguous?: boolean } | undefined
 
 /** Filter receivers before collapsing duplicate station reports. */
 export function selectSpots(
@@ -107,6 +107,9 @@ export function selectSpots(
     const receiver = String(info.spotter ?? '')
     if (receivers.skimmers.length && !receivers.skimmers.includes(receiver)) continue
     const directory = lookup(receiver)
+    // A bare API ID may represent several physical nodes. A registered report
+    // grid cannot resolve conflicting node locations in the RBN directory.
+    if (directory?.gridAmbiguous && (receivers.grids.length || receivers.radius)) continue
     const grid = directory?.grid ?? String(info.spotterGrid ?? '')
     if (
       receivers.continents?.length &&

@@ -4,6 +4,7 @@ import { parseRbnPayload, receiverLocation } from '../../src/data/parser.ts'
 import {
   createReceiverData,
   parseReceiverDirectory,
+  type Receiver,
   receiverDirectoryUrl,
 } from '../../src/data/receivers.ts'
 import { NOW, payload, spotPayload } from './fixtures.ts'
@@ -33,6 +34,159 @@ async function refresh(data: ReturnType<typeof createReceiverData>, body = direc
 }
 
 describe('RBN receiver directory', () => {
+  it('resolves bare receiver metadata only when all numeric siblings agree', () => {
+    const data = createReceiverData()
+    const nodes: Receiver[] = ['KM3T-2', 'KM3T-3'].map((call) => ({
+      call,
+      grid: 'FN42EB',
+      country: 'United States',
+      continent: 'NA',
+    }))
+    data.dataFile.onLoadRawData({ schema: 1, nodes })
+    expect(data.lookup('KM3T')).toEqual({ ...nodes[0], call: 'KM3T' })
+    expect(data.lookup('KM3T-2')).toEqual(nodes[0])
+    expect(data.lookup('KM3T-3')).toEqual(nodes[1])
+    expect(data.lookup('KM3T-4')).toBeUndefined()
+    expect(data.lookup('W1MISSING')).toBeUndefined()
+    expect(data.entries()).toEqual(nodes)
+    const original = reports('KM3T', null)
+    const [latitude, longitude] = receiverLocation('FN42EB')
+    expect(data.enrichReports(original)[0]).toMatchObject({
+      receiver: 'KM3T',
+      country: 'United States',
+      receiverLatitude: latitude,
+      receiverLongitude: longitude,
+    })
+    expect(original[0].receiverLatitude).toBeNull()
+  })
+
+  it('includes a bare directory node in sibling consensus instead of preferring it', () => {
+    const data = createReceiverData()
+    const nodes: Receiver[] = ['KM3T', 'KM3T-2', 'KM3T-3'].map((call) => ({
+      call,
+      grid: call === 'KM3T' ? 'FN41FR' : 'FN42EB',
+      country: 'United States',
+      continent: 'NA',
+    }))
+    data.dataFile.onLoadRawData({ schema: 1, nodes })
+    expect(data.lookup('KM3T')).toEqual({
+      call: 'KM3T',
+      grid: null,
+      gridAmbiguous: true,
+      country: 'United States',
+      continent: 'NA',
+    })
+    expect(data.lookup('KM3T-2')).toEqual(nodes[1])
+    expect(data.entries()).toEqual(nodes)
+    expect(data.enrichReports(reports('KM3T', null))[0]).toMatchObject({
+      receiver: 'KM3T',
+      receiverLatitude: null,
+      receiverLongitude: null,
+      country: 'United States',
+    })
+  })
+
+  it.each([
+    { grid: 'JO31', country: 'United States', continent: 'NA' as const },
+    { grid: null, country: 'United States', continent: 'NA' as const },
+    { grid: 'FN42EB', country: 'Germany', continent: 'EU' as const },
+    { grid: 'FN42EB', country: null, continent: null },
+  ])('resolves each metadata field independently for conflicting siblings (%j)', (other) => {
+    const data = createReceiverData()
+    const first: Receiver = {
+      call: 'KM3T-2',
+      grid: 'FN42EB',
+      country: 'United States',
+      continent: 'NA',
+    }
+    const second = { call: 'KM3T-3', ...other }
+    data.dataFile.onLoadRawData({ schema: 1, nodes: [first, second] })
+    expect(data.lookup('KM3T')).toEqual({
+      call: 'KM3T',
+      grid: first.grid === second.grid ? first.grid : null,
+      ...(first.grid !== second.grid ? { gridAmbiguous: true } : {}),
+      country: first.country === second.country ? first.country : null,
+      continent: first.continent === second.continent ? first.continent : null,
+    })
+    expect(data.lookup('KM3T-2')).toEqual(first)
+    expect(data.lookup('KM3T-3')).toEqual(second)
+  })
+
+  it('does not infer a location when the bare node lacks a grid known by its siblings', () => {
+    const data = createReceiverData()
+    data.dataFile.onLoadRawData({
+      schema: 1,
+      nodes: ['KM3T', 'KM3T-2', 'KM3T-3'].map((call) => ({
+        call,
+        grid: call === 'KM3T' ? null : 'FN42EB',
+        country: 'United States',
+        continent: 'NA',
+      })),
+    })
+    expect(data.lookup('KM3T')).toMatchObject({ grid: null, gridAmbiguous: true })
+    expect(data.lookup('KM3T-2')?.grid).toBe('FN42EB')
+  })
+
+  it('leaves non-numeric suffixes distinct and preserves direct bare metadata', () => {
+    const data = createReceiverData()
+    const node: Receiver = {
+      call: 'KM3T-CW',
+      grid: 'FN42EB',
+      country: 'United States',
+      continent: 'NA',
+    }
+    data.dataFile.onLoadRawData({ schema: 1, nodes: [node] })
+    expect(data.lookup('KM3T')).toBeUndefined()
+    expect(data.lookup('KM3T-CW')).toEqual(node)
+    expect(data.enrichReports(reports('KM3T', null))[0].receiverLatitude).toBeNull()
+    const bare = { ...node, call: 'KM3T' }
+    data.dataFile.onLoadRawData({ schema: 1, nodes: [node, bare] })
+    expect(data.lookup('KM3T')).toEqual(bare)
+  })
+
+  it('persists only directory nodes and derives family consensus again on cache replay', async () => {
+    const data = createReceiverData()
+    const saved = await refresh(
+      data,
+      row('KM3T-2', 'FN42EB', 'United States') + row('KM3T-3', 'FN41FR', 'United States'),
+    )
+    expect(saved.nodes.map((node) => node.call)).toEqual(['KM3T-2', 'KM3T-3'])
+    expect(saved.nodes.every((node) => !('gridAmbiguous' in node))).toBe(true)
+    const restarted = createReceiverData()
+    restarted.dataFile.onLoadRawData(JSON.parse(JSON.stringify(saved)))
+    expect(restarted.lookup('KM3T')).toEqual(data.lookup('KM3T'))
+    expect(restarted.lookup('KM3T')).toMatchObject({ grid: null, gridAmbiguous: true })
+  })
+
+  it('rebuilds aliases after loads, retains them after invalid loads, and removes them with data', async () => {
+    const data = createReceiverData()
+    const node: Receiver = {
+      call: 'KM3T-2',
+      grid: 'FN42EB',
+      country: 'United States',
+      continent: 'NA',
+    }
+    data.dataFile.onLoadRawData({ schema: 1, nodes: [node] })
+    expect(data.lookup('KM3T')?.grid).toBe('FN42EB')
+    data.dataFile.onLoadRawData({
+      schema: 1,
+      nodes: [node, { ...node, call: 'KM3T-3', grid: 'JO31' }],
+    })
+    expect(data.lookup('KM3T')).toMatchObject({ grid: null, gridAmbiguous: true })
+    expect(() => data.dataFile.onLoadRawData({ schema: 1, nodes: [] })).toThrow()
+    expect(data.lookup('KM3T')).toMatchObject({ grid: null, gridAmbiguous: true })
+    data.dataFile.onLoadRawData({ schema: 1, nodes: [{ ...node, grid: 'FN41FR' }] })
+    expect(data.lookup('KM3T')).toEqual({ ...node, call: 'KM3T', grid: 'FN41FR' })
+    data.dataFile.onLoadRawData({ schema: 1, nodes: [{ ...node, call: 'W1OTHER' }] })
+    expect(data.lookup('KM3T')).toBeUndefined()
+    expect(data.lookup('W1OTHER')).toBeDefined()
+    data.dataFile.onLoadRawData({ schema: 1, nodes: [node] })
+    expect(data.lookup('KM3T')).toBeDefined()
+    await data.dataFile.onRemoveRawData()
+    expect(data.lookup('KM3T')).toBeUndefined()
+    expect(data.lookup('KM3T-2')).toBeUndefined()
+  })
+
   it('suggests a local continent only when known receivers within 250 km agree', () => {
     const data = createReceiverData()
     const [latitude, longitude] = receiverLocation('FN42')

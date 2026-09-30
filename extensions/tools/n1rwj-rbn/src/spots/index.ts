@@ -16,19 +16,17 @@ import { createSpotFeed } from './feed.ts'
 import { allCalls, discoverFilters, type FilterBridge, matchFilter } from './filters.ts'
 import { createHealthCheck } from './health.ts'
 import { type ReceiverLookup, selectSpots } from './model.ts'
-import {
-  ownSettings,
-  readPreferences,
-  spotModes,
-  tokens,
-  validateEdit,
-  validation,
-} from './preferences.ts'
+import { ownSettings, readPreferences, tokens, validateEdit, validation } from './preferences.ts'
+import { planSpotQueries, type ReceiverQueryEntry } from './queries.ts'
 import { settingsDefinition } from './settings.ts'
+
+const maxCachedFeeds = 8
+const maxCachedReports = 100_000
 
 interface Options {
   fetch(url: string, options?: FetchOptions): Promise<FetchResponse>
   lookup: ReceiverLookup
+  receiverEntries?: () => readonly ReceiverQueryEntry[]
   now?: () => number
   healthTimers?: TimerDriver
   bridge?: FilterBridge
@@ -43,9 +41,23 @@ export function createRbnSpots(options: Options) {
   const setSettings = options.setSettings ?? host.setSettings
   const now = options.now ?? Date.now
   const checkHealth = createHealthCheck(options.fetch, now, options.healthTimers)
-  const feeds = new Map(
-    spotModes.map((mode) => [mode, createSpotFeed({ ...options, source: manifest.key, mode })]),
-  )
+  // Cache by receiver query as well as mode: changing skimmers or loading the
+  // directory must not reuse a worldwide snapshot missing the chosen receivers.
+  const feeds = new Map<
+    string,
+    { mode: string; feed: ReturnType<typeof createSpotFeed>; reports: Spot[] }
+  >()
+  function pruneFeeds() {
+    let count = [...feeds.values()].reduce((sum, entry) => sum + entry.reports.length, 0)
+    for (const [key, entry] of feeds) {
+      if (feeds.size <= maxCachedFeeds && count <= maxCachedReports) break
+      count -= entry.reports.length
+      feeds.delete(key)
+    }
+  }
+  function cachedReports(mode: string): Spot[] {
+    return [...feeds.values()].flatMap((entry) => (entry.mode === mode ? entry.reports : []))
+  }
   let status = ''
   let generation = 0
   let location: DeviceLocation | null = null
@@ -145,15 +157,31 @@ export function createRbnSpots(options: Options) {
           return []
         }
         const prefs = readPreferences(selected.raw)
-        const feed = feeds.get(prefs.mode)
-        if (!feed) return []
         let reports: Spot[]
-        try {
-          reports = await feed.get(ctx.online)
-          status = ctx.online ? feed.getStatus() : 'Offline: showing unexpired cached reports only.'
-        } catch (error) {
-          status = `${error instanceof Error ? error.message : 'RBN unavailable.'} Showing available unexpired reports.`
-          reports = await feed.get(false)
+        if (ctx.online) {
+          const queries = planSpotQueries(prefs, options.receiverEntries?.())
+          const key = JSON.stringify([prefs.mode, queries])
+          const entry = feeds.get(key) ?? {
+            mode: prefs.mode,
+            feed: createSpotFeed({ ...options, source: manifest.key, mode: prefs.mode, queries }),
+            reports: [],
+          }
+          feeds.delete(key)
+          feeds.set(key, entry)
+          pruneFeeds()
+          try {
+            reports = await entry.feed.get(true)
+            entry.reports = reports
+            pruneFeeds()
+            status = entry.feed.getStatus()
+            if (status) reports = cachedReports(prefs.mode)
+          } catch (error) {
+            status = `${error instanceof Error ? error.message : 'RBN unavailable.'} Showing available unexpired reports.`
+            reports = cachedReports(prefs.mode)
+          }
+        } else {
+          reports = cachedReports(prefs.mode)
+          status = 'Offline: showing unexpired cached reports only.'
         }
         // Compatibility bridge only: the feed cache above retains every report.
         // Once native relevance can preserve our history-based preference, remove

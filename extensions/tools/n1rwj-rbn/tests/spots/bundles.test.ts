@@ -32,7 +32,8 @@ async function harness(saved: Record<string, JSONValue> = {}, contests = ['cwt',
     status: 200,
     body: JSON.stringify({
       spots:
-        new URL(url).searchParams.get('band') === '20m'
+        new URL(url).searchParams.get('band') === '20m' ||
+        new URL(url).searchParams.get('spotter') === 'KM3T-5'
           ? ['K1ABC/P', 'W9NEW', 'N2SST'].map((callsign) => ({
               callsign,
               spotter: 'KM3T-5',

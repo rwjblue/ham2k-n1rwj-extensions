@@ -4,6 +4,7 @@
 import type { FetchOptions, FetchResponse, Spot } from '@ham2k/extension-sdk'
 import { RbnRequestError, requestFailure } from '../data/errors.ts'
 import { bands, maxAgeMs, parseReports, record } from './model.ts'
+import type { SpotQueryPlan } from './queries.ts'
 
 const endpoint = 'https://vailrerbn.com/api/v1/spots'
 const pageSize = 1000
@@ -17,6 +18,7 @@ export interface FeedOptions {
   fetch(url: string, options?: FetchOptions): Promise<FetchResponse>
   source: string
   mode?: string
+  queries?: SpotQueryPlan
   now?: () => number
 }
 
@@ -25,7 +27,11 @@ export function createSpotFeed(options: FeedOptions) {
   const now = options.now ?? Date.now
   const mode = options.mode ?? 'all'
   const modeQuery = mode === 'all' ? '' : `mode=${mode}&`
-  const queries = bands.map(({ name: band }) => ({ band }))
+  const plan = options.queries ?? { skimmers: [], includeGlobal: true }
+  const queries = [
+    ...plan.skimmers.map((spotter) => ({ spotter, band: undefined })),
+    ...(plan.includeGlobal ? bands.map(({ name: band }) => ({ band, spotter: undefined })) : []),
+  ]
   const cached = new Map<number, Spot[]>()
   let nextFetchAt = 0
   let status = ''
@@ -65,7 +71,7 @@ export function createSpotFeed(options: FeedOptions) {
     try {
       for (let page = 0; page < maxPages; page++) {
         const response = await options.fetch(
-          `${endpoint}?${modeQuery}band=${query.band}&since=${since}&until=${until}&limit=${pageSize}&offset=${page * pageSize}`,
+          `${endpoint}?${modeQuery}${query.spotter ? `spotter=${encodeURIComponent(query.spotter)}&` : `band=${query.band}&`}since=${since}&until=${until}&limit=${pageSize}&offset=${page * pageSize}`,
           { timeout: requestTimeoutMs },
         )
         if (response.status === 429) {
@@ -103,7 +109,10 @@ export function createSpotFeed(options: FeedOptions) {
           throw new RbnRequestError('response', 'Vail ReRBN exceeded the requested report limit.')
         reports.push(
           ...parseReports(payload.spots, options.source, at).filter(
-            (spot) => spot.band === query.band && (mode === 'all' || spot.mode === mode),
+            (spot) =>
+              (!query.band || spot.band === query.band) &&
+              (!query.spotter || spot.spot.sourceInfo?.spotter === query.spotter) &&
+              (mode === 'all' || spot.mode === mode),
           ),
         )
         if (
@@ -126,7 +135,8 @@ export function createSpotFeed(options: FeedOptions) {
       if (now() < nextFetchAt) return Promise.resolve(cachedReports())
       const at = now()
       // Settle every query before allowing another refresh, including after errors.
-      // Keep each band independent so one failure preserves other reports.
+      // Each directed query covers all bands for one exact skimmer. The limit
+      // then applies to that receiver instead of unrelated worldwide reports.
       inFlight = Promise.all(queries.map((query) => fetchQuery(query, at)))
         .then((results) => {
           for (const [index, result] of results.entries()) {

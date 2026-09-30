@@ -2,7 +2,7 @@ import type { FormActionElement, FormDefinition } from '@ham2k/extension-sdk'
 import { type Continent, continents } from '../data/continents.ts'
 import { allCalls, type Provider } from './filters.ts'
 import type { HealthNotice } from './health.ts'
-import { radiusIssue, speedIssue, spotModes } from './preferences.ts'
+import { radiusIssue, speedIssue, spotModes, tokens } from './preferences.ts'
 
 interface Selection {
   raw: Record<string, unknown>
@@ -32,6 +32,9 @@ export function settingsDefinition(
       value: provider.key,
     })),
   ]
+  const suffixed = tokens(
+    typeof selected.raw.spotSkimmers === 'string' ? selected.raw.spotSkimmers : '',
+  ).filter((call) => /-\d+$/.test(call))
   if (!choices.some((entry) => entry.value === selected.key))
     choices.push({ label: `Unavailable: ${selected.key}`, value: selected.key })
   return {
@@ -111,11 +114,19 @@ export function settingsDefinition(
         key: 'spotSkimmers',
         label: 'Only these skimmers',
         description:
-          'Default: blank, allowing all skimmers. Separate exact IDs with spaces or commas, e.g. KM3T-5.',
+          'Default: blank, allowing all skimmers. Separate reported IDs with spaces or commas, e.g. KM3T. Vail currently omits numeric node suffixes; a bare ID includes that receiver family.',
         value: selected.raw.spotSkimmers ?? '',
         uppercase: true,
       },
       reset('resetSpotSkimmers', 'Reset skimmers — All'),
+      ...(suffixed.length
+        ? [
+            {
+              type: 'markdown' as const,
+              text: `Vail currently reports bare receiver IDs, so ${suffixed.join(', ')} may return no spots. Enter the bare callsign (for example KM3T) to include that receiver family. Individual suffixed nodes cannot be isolated when the feed omits their IDs. Your saved selection has been preserved.`,
+            },
+          ]
+        : []),
       {
         type: 'field',
         fieldType: 'text',
@@ -161,7 +172,7 @@ export function settingsDefinition(
       reset('resetSpotDistance', 'Reset distance — No limit or origin'),
       {
         type: 'markdown',
-        text: 'Distance is approximate, measured between grid centers. Refresh the RBN receiver directory in Data Files to load continents and updated grids. Receivers with no known continent are excluded when continents are selected; receivers with no known grid are excluded when a grid region or distance limit is set.',
+        text: 'Distance is approximate, measured between grid centers. Refresh the RBN receiver directory in Data Files to load continents and updated grids. Bare receiver IDs use directory metadata only when their nodes agree. Conflicting node grids are excluded from grid-region and distance filters. Receivers with no known continent are excluded when continents are selected; receivers with no known grid are excluded when a grid region or distance limit is set.',
       },
       {
         type: 'markdown',
@@ -170,7 +181,7 @@ export function settingsDefinition(
           radiusIssue(selected.raw) ||
           speedIssue(selected.raw) ||
           status ||
-          'Reports cover the last ten minutes on 160–10m, including WARC bands. Busy bands may exceed the bounded snapshot. Changes apply on the next Spots refresh.',
+          'Reports cover the last ten minutes on 160–10m, including WARC bands. Choose All calls to compare with an unfiltered RBN website view. Busy receivers or bands may exceed the bounded snapshot. Changes apply on the next Spots refresh.',
       },
     ],
   }
