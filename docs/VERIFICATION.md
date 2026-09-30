@@ -1,5 +1,40 @@
 # Verification and compatibility
 
+## Release 0.7.3 publication — 2026-09-30
+
+Published [v0.7.3](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.7.3)
+from signed commit `236b11a248221ec32d3a82e075f555aa079f52c4` at
+14:24:36 US Eastern time (18:24:36 UTC). GitHub verifies the signature as
+valid, and the tag and workflow target that exact tested commit. The published
+body matches the authored [release notes](releases/v0.7.3.md) byte-for-byte.
+
+The [main Check workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/36758235873)
+and [Release workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/36758360368)
+passed. The upload job finished at 18:25:12 UTC, with all seven bundles and
+seven matching checksum files uploaded by 18:25:10 UTC. The catalog job
+finished successfully at 18:25:32 UTC and approved **CWT**, **PSK Reporter**,
+and **RBN** on `stable` at 18:25:27, 18:25:28, and 18:25:30 UTC respectively.
+CQ WW, MST, SST, and WRT were explicitly skipped according to their reviewed
+no-change sections. All submitted release notes were accepted.
+
+`mise run release:catalog v0.7.3 --dry-run` downloaded and validated every
+published bundle and checksum without resubmitting anything. It selected the
+same three catalog entries and skipped the same four unchanged extensions.
+Published archive SHA-256 values for the changed entries:
+
+| Extension | SHA-256 |
+| --- | --- |
+| CWT | `55aa589edb84e2e4c1bbd195e35a07e539dcf2e44cbb8c68a8297f806c37bd88` |
+| PSK Reporter | `d5fde5f1abdc6ce993536c2fb6fd6e5722f78ae00728863b4d192a046d9fad28` |
+| RBN | `82741e672584dd1aa02a37a79df9d0d5000816843dd7f914cc34fbc45cd96e83` |
+
+Publication validation does not extend the native UI/device acceptance
+record. The release notes retain Vail's receiver-node and report-parity
+limitations and the unverified native behavior of the new station reference.
+CWT remains synchronized to its upstream PR source branch as recorded in
+preparation below. These publication records are personal repository
+documentation, exempt from upstream runtime synchronization.
+
 ## Release 0.7.3 preparation — 2026-09-30
 
 Prepared synchronized version **0.7.3** from main after reviewing the full
