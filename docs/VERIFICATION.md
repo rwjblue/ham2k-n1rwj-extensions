@@ -1,5 +1,65 @@
 # Verification and compatibility
 
+## Reception time windows and band menus: native macOS acceptance — 2026-09-30
+
+Installed the local RBN and PSK Reporter candidates containing commit
+`8b38ab47` through **Settings → Features & Extensions → Install from file**
+in published **Ham2K Next 26.9.0 build 177**. Both candidates declare
+**0.7.4 / extension API 3** and differ from the published v0.7.4 artifacts.
+Read-only comparisons confirmed that each installed `index.js` matched the
+script in its candidate archive byte-for-byte. Version numbers alone were
+not used to identify the tested implementation.
+
+| Candidate bundle | Archive SHA-256 | Installed and archived `index.js` SHA-256 |
+| --- | --- | --- |
+| `n1rwj-rbn-0.7.4.h2kext` | `41a1f8e6571fbbe3a9749e730ddabe703761ef49673af4643ec20ad2b3c4a259` | `18083601ecfa192888b6c764b5da08ae0b04a9748e0fd47cb4f1d30168f2b61d` |
+| `n1rwj-psk-reporter-0.7.4.h2kext` | `4e5fea1d859d9b76d0a98f59a994fc6bae853032850b8c20af7d8bbb3df93788` | `5a24a3bc4adbd1fa9da2c1e2730cfa6f1a2d612dfbdee7133577972f13bc0072` |
+
+Both installed scripts contain the shared reception renderer, placement
+state, and validated event handlers, the **1, 3, 5, 10, 15, 30, 45, and 60
+minute** choices, and the new native band menu. Native accessibility text and
+screenshots confirmed the following in the existing **W8CAR/TEST** operation,
+which remained at **zero QSOs**:
+
+- Both panel band labels opened native menus. Selecting **20m** in RBN and
+  **40m** in PSK Reporter changed the active filter. Views without matching
+  reports displayed the corresponding band-specific empty-report message.
+- Both native tune dialogs offered all eight report-window choices. Saving
+  **1 minute** succeeded in each panel, and each panel's report details showed
+  **Last 1 minute**.
+- PSK Reporter watched public **OE3OBB** in a **45-minute** window with an
+  explicit **FN42** test map origin; that origin was a rendering fixture, not
+  a verified transmitter location. Live and recent-history reports populated
+  approximately **450 receivers on 40m** during the observation. Selecting
+  **20m** removed the 40m rows and receiver markers; **All bands** restored
+  them. Report details showed **Last 45 minutes**. The service reported an
+  incomplete history caused by its report limit, so these counts do not
+  establish complete reception coverage or raw-feed parity.
+- RBN watched public **W6WX** with explicit **CM87XH** origin and a
+  **45-minute** window in the combined map/list view. **All bands** displayed
+  **3 receivers, 4 bands, and 6 rows** in the observed snapshot. Selecting
+  **20m** narrowed this to **2 receivers, 1 band, and 2 rows**, with **WT8P**
+  and **N6TV** on the map. Details showed **Latest report · 20m** and
+  **Last 45 minutes**; the selected view included a report aged **44 minutes**.
+
+No code defect was observed in these native interactions. The screenshots
+were inspected during the run and were not saved as repository artifacts.
+These are focused native macOS checks; they do not establish phone or Linux
+acceptance, complete service history, or background/restart lifecycle behavior.
+After testing, RBN's captured settings were restored: blank watched callsign
+and map-origin grid, **15-minute** window, **Map** view, saved and in-panel
+**All bands**, and report-time sorting in descending order. The temporary
+PSK Reporter panel was removed and the layout saved. The original **INFO /
+SPOTS / MAP / My Signal** tabs remained, with **MAP** selected. Returned to
+the original **N1RWJ for CWT 1900z / ROB CWA** operation with **21 QSOs**;
+the test operation still had **zero QSOs**. The radio remained at
+**7047.41 kHz CW / 75 W**. Both locally built candidates remain installed
+intentionally.
+
+The reception workspace is consumed by RBN and PSK Reporter only. These
+changes and their verification are exempt from CWT and CQ WW upstream
+synchronization; no contest behavior changed.
+
 ## Release 0.7.4 publication — 2026-09-30
 
 Published [v0.7.4](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.7.4)
