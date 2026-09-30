@@ -19,6 +19,7 @@ import {
 } from '../../../../packages/reception/src/reports.ts'
 import { renderReceptionScene } from '../../../../packages/reception/src/ui/scene.ts'
 import type { UiModel } from '../../../../packages/reception/src/ui/types.ts'
+import { watchStationPattern } from './data/receiver.ts'
 import type { LiveReception, LiveSnapshot } from './live.ts'
 
 function realNowMillis(args: PanelRenderArgs): number | undefined {
@@ -38,7 +39,19 @@ export const configFields: SettingsField[] = [
       { label: 'Who I hear', value: 'incoming' },
     ],
   },
-  ...receptionConfigFields('Station', false),
+  ...receptionConfigFields('Station', false).map((field) =>
+    field.key === 'watchCall'
+      ? {
+          ...field,
+          label: 'Watch callsign or receiver ID',
+          description:
+            'Leave blank to follow this operation. Who I hear accepts your receiving software’s exact ID, such as SWL or US-E-015. Who hears me requires a transmitting callsign.',
+          pattern: watchStationPattern,
+          patternError:
+            'Use an exact callsign or receiver ID, with slashes instead of dots and no wildcards.',
+        }
+      : field,
+  ),
 ]
 
 /** Pure presentation shared by recorded fixtures and live snapshots. */
@@ -63,7 +76,7 @@ export function pskPanelModel(
     subscribing: 'Subscribing',
     live: 'Connected',
     retrying: 'Reconnecting',
-    invalid: 'Callsign required',
+    invalid: incoming ? 'Receiver ID required' : 'Callsign required',
     limit: 'Subscription limit reached',
     offline: 'Paused while offline',
   }[live.state]

@@ -188,7 +188,9 @@ export function createLiveReception(
           state: error,
           message:
             error === 'invalid'
-              ? 'Set a valid callsign to receive reports.'
+              ? direction === 'incoming'
+                ? 'Set an exact receiver ID to receive reports.'
+                : 'Set a valid callsign to receive reports.'
               : error === 'limit'
                 ? 'At most eight callsign/direction subscriptions can be active.'
                 : 'Offline · reception paused',

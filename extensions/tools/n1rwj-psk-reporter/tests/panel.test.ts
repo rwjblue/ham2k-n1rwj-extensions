@@ -168,6 +168,75 @@ it('uses the same renderer for both directions without RBN branding or invented 
   }
 })
 
+it.each(['FN31', '', 'ZZ99'])(
+  'retains a non-callsign receiver in the list and maps it only with a valid grid (%s)',
+  (grid) => {
+    const reception = parsePskPayload(
+      JSON.stringify({
+        sc: 'N1RWJ',
+        rc: 'US-E-015',
+        rl: grid,
+        md: 'FT8',
+        b: '20m',
+        f: 14074000,
+        t: now / 1000,
+      }),
+    )
+    if (!reception) throw new Error('Expected a report from the SWL receiver')
+    const model = pskPanelModel(args, [reception], now, connection)
+    expect(model.rows).toHaveLength(1)
+    expect(model.rows[0]).toMatchObject({ call: 'US-E-015', frequencyKhz: 14074 })
+    const { scene } = renderReceptionScene(model, environment(), { view: 'list' })
+    expect(scene.layers.map((layer) => layer.text?.literal ?? '').join('\n')).toContain('US-E-015')
+    if (grid === 'FN31') {
+      expect(model.mapOptions?.stations).toHaveLength(1)
+      expect(model.mapOptions?.stations[0]).toMatchObject({ key: 'US-E-015', label: 'US-E-015' })
+      expect(model.rows[0].distanceKm).toBeGreaterThan(0)
+    } else {
+      expect(model.mapOptions?.stations).toEqual([])
+      expect(model.rows[0].distanceKm).toBeUndefined()
+      expect(model.rows[0].bearingDeg).toBeUndefined()
+    }
+  },
+)
+
+it('shows transmitters heard by an explicitly watched non-callsign receiver', () => {
+  const reception = { ...report, receiver: { ...report.receiver, call: 'US-E-015' } }
+  const model = pskPanelModel(
+    { ...args, config: { watchCall: 'US-E-015', receptionDirection: 'incoming' } },
+    [reception],
+    now,
+    connection,
+  )
+  expect(model.rows.map((row) => row.call)).toEqual(['N1RWJ'])
+  expect(model.mapOptions?.stations.map((station) => station.key)).toEqual(['N1RWJ'])
+  expect(model.mapOptions?.origin?.label).toBe('US-E-015')
+  expect(model.details?.purpose).toContain('US-E-015 reports hearing')
+})
+
+it('allows receiver IDs in the watch field while rejecting malformed IDs and MQTT wildcards', async () => {
+  const panel = createPskPanel(createLiveReception(() => fakeSocket().socket))
+  const fields = (await panel.getPanels({}, { online: false }))[0].form
+  const field = fields?.find((field) => field.type === 'field' && field.key === 'watchCall')
+  if (field?.type !== 'field' || !field.pattern) throw new Error('Expected watch ID validation')
+  expect(field.label).toBe('Watch callsign or receiver ID')
+  const pattern = new RegExp(field.pattern)
+  for (const value of [
+    '',
+    'N1RWJ',
+    'N1RWJ/P',
+    'SWL',
+    'FWG',
+    'I0-1589',
+    'US-E-015',
+    'My SWL',
+    'SWL_1',
+  ])
+    expect(pattern.test(value), value).toBe(true)
+  for (const value of ['#', '+', 'SWL+#', 'N1RWJ.P', 'SWL\n1', 'SWL\0', 'ÉCOUTE', 'X'.repeat(255)])
+    expect(pattern.test(value), value).toBe(false)
+})
+
 it('keeps suffixes exact and filters stale or unrelated reports', () => {
   expect(
     pskPanelModel({ ...args, config: { watchCall: 'N1RWJ/P' } }, [report], now, connection).rows,

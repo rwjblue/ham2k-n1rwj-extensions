@@ -85,7 +85,7 @@ it('keeps initial and manual history requests outside rendering with only SDK ti
         await pending
         return {
           status: 200,
-          body: `<pskreporter><receptionReport senderCallsign="N1RWJ" receiverCallsign="W1AW" receiverLocator="FN31" frequency="14074000" mode="FT8" flowStartSeconds="${now / 1000}"/></pskreporter>`,
+          body: `<pskreporter><receptionReport senderCallsign="N1RWJ" receiverCallsign="US-E-015" receiverLocator="FN31" frequency="14074000" mode="FT8" flowStartSeconds="${now / 1000}"/></pskreporter>`,
         }
       }
       if (method.startsWith('webSocket')) return null
@@ -116,7 +116,12 @@ it('keeps initial and manual history requests outside rendering with only SDK ti
   await settleHostCalls()
   const completed = await hook.render(args(), { online: true })
   expect(completed.triggers).toBeUndefined()
-  expect(JSON.stringify(completed)).toContain('W1AW')
+  expect(JSON.stringify(completed)).toContain('US-E-015')
+  if (completed.kind !== 'svgScene') throw new Error('Expected native reception scene')
+  expect(
+    completed.scene.layers.find((layer) => layer.id === 'map-receiver-label:US-E-015')?.text
+      ?.literal,
+  ).toBe('US-E-015')
   expect((await hook.getPanels({}, { online: true }))[0].on).toEqual(['operation', 'tick:5'])
 
   defer()
@@ -137,7 +142,7 @@ it('keeps initial and manual history requests outside rendering with only SDK ti
   await settleHostCalls()
   const reloading = await hook.render(args(), { online: true })
   expect(reloading.triggers).toEqual(['tick:1'])
-  expect(JSON.stringify(reloading)).toContain('W1AW')
+  expect(JSON.stringify(reloading)).toContain('US-E-015')
   await reload()
   expect(requests).toBe(2)
 
@@ -147,7 +152,7 @@ it('keeps initial and manual history requests outside rendering with only SDK ti
   const failed = await hook.render(args(), { online: true })
   expect(failed.triggers).toBeUndefined()
   expect(JSON.stringify(failed)).toContain('History unavailable')
-  expect(JSON.stringify(failed)).toContain('W1AW')
+  expect(JSON.stringify(failed)).toContain('US-E-015')
   expect(requests).toBe(2)
   await required(definition).onHide?.()
 })

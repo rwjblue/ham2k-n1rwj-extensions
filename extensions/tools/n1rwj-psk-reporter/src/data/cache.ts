@@ -30,13 +30,14 @@ function encode(store: Store, now: number): string {
 
 function restore(value: JSONValue | null, store: Store, now: number) {
   if (value === null) return
-  if (typeof value !== 'string' || value.length > 1_000_000) throw new Error('Invalid cache')
+  // Freeform receiver IDs also lengthen the parser's fallback report IDs.
+  if (typeof value !== 'string' || value.length > 2_000_000) throw new Error('Invalid cache')
   const saved = JSON.parse(value)
   if (saved?.version !== 1 || !Array.isArray(saved.reports) || saved.reports.length > 1000)
     throw new Error('Invalid cache')
   for (const raw of saved.reports) {
     const report = parsePskPayload(JSON.stringify(raw))
-    if (report && typeof raw.id === 'string' && raw.id.length <= 256) {
+    if (report && typeof raw.id === 'string' && raw.id.length <= 640) {
       report.id = raw.id
       store.ingestReport(report, now)
     }

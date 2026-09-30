@@ -5,6 +5,7 @@ import { createHistoryClient, type HistoryHost, historyUrl } from '../src/histor
 import { historyLimit, parseHistoryXml } from '../src/history/parser.ts'
 
 const initial = Date.UTC(2026, 8, 24, 18)
+const receiverIds = ['SWL', 'FWG', 'I0-1589', 'US-E-015']
 const row = (attrs = '') =>
   `<receptionReport senderCallsign="N1RWJ" receiverCallsign="CU3AT" senderLocator="FN42" receiverLocator="HM68" frequency="14074000" mode="FT8" sNR="-12" flowStartSeconds="${initial / 1000 - 30}" ${attrs}/>`
 const xml = (rows = row()) =>
@@ -68,6 +69,24 @@ describe('PSK history XML', () => {
     expect(parseHistoryXml(minimal).reports[0].receiver.location).toBeUndefined()
     expect(parseHistoryXml('<pskreporter/>').reports).toEqual([])
   })
+  it.each(receiverIds)('retains receiver ID %s with or without a valid locator', (call) => {
+    const located = row().replace('receiverCallsign="CU3AT"', `receiverCallsign="${call}"`)
+    const result = parseHistoryXml(
+      xml(
+        located +
+          located.replace('receiverLocator="HM68"', '') +
+          located.replace('receiverLocator="HM68"', 'receiverLocator="ZZ99"'),
+      ),
+    )
+    expect(result.incomplete).toBe(false)
+    expect(result.reports.map((report) => report.receiver.call)).toEqual([call, call, call])
+    expect(result.reports[0].receiver.location).toMatchObject({
+      grid: 'HM68',
+      source: 'reported-grid',
+    })
+    expect(result.reports[1].receiver.location).toBeUndefined()
+    expect(result.reports[2].receiver.location).toBeUndefined()
+  })
   it.each([
     '<html><body>Just a moment...</body></html>',
     '<pskreporter><error message="busy"/></pskreporter>',
@@ -91,6 +110,51 @@ describe('PSK history XML', () => {
 })
 
 describe('shared backfill scheduling', () => {
+  it('queries and reloads an exact incoming receiver ID while retaining transmitter validation', async () => {
+    const s = setup()
+    const receiver = 'US-E-015'
+    s.host.fetch.mockResolvedValue({
+      status: 200,
+      body: xml(row().replace('CU3AT', receiver) + row()),
+    })
+    s.client.observe(receiver, 'incoming', 15, true, true)
+    await flush()
+    expect(s.host.fetch).toHaveBeenCalledTimes(1)
+    expect(s.host.fetch.mock.calls[0][0]).toContain(`receiverCallsign=${receiver}&`)
+    expect(s.store.snapshot(initial, 15).reports.map((report) => report.receiver.call)).toEqual([
+      receiver,
+    ])
+    await s.client.force(receiver, 'incoming', 15, true)
+    expect(s.host.fetch).toHaveBeenCalledTimes(2)
+    s.client.observe(receiver, 'outgoing', 15, true, true)
+    await s.client.force(receiver, 'outgoing', 15, true)
+    expect(s.host.fetch).toHaveBeenCalledTimes(2)
+  })
+  it('loads receiver IDs without callsign syntax without an incomplete-history warning', async () => {
+    const s = setup()
+    const rows = receiverIds
+      .map((call, index) => {
+        const report = row().replace('receiverCallsign="CU3AT"', `receiverCallsign="${call}"`)
+        return index < 2 ? report : report.replace('receiverLocator="HM68"', '')
+      })
+      .join('')
+    s.host.fetch.mockResolvedValue({ status: 200, body: xml(rows) })
+    s.observe()
+    await flush()
+    const reports = s.store.snapshot(initial, 15).reports
+    expect(reports.map((report) => report.receiver.call)).toEqual(receiverIds)
+    expect(reports.map((report) => report.receiver.location?.grid)).toEqual([
+      'HM68',
+      'HM68',
+      undefined,
+      undefined,
+    ])
+    expect(s.observe()).toMatchObject({
+      message: 'Recent history loaded',
+      pending: false,
+      warning: undefined,
+    })
+  })
   it('fetches startup history once across placements and merges without overwriting newer live reports', async () => {
     const s = setup()
     const live = parseHistoryXml(xml()).reports[0]

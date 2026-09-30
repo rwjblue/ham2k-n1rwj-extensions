@@ -117,6 +117,59 @@ it('restores a full-hour checkpoint with original age, identity and exact portab
   expect(fresh.snapshot(initial + 3601_000, 60)).toEqual({ reports: [], capped: false })
 })
 
+it('restores a full cache of maximum-length receiver IDs with escaped fallback report IDs', async () => {
+  const s = setup()
+  await s.cache.ready()
+  for (let index = 0; index < 1000; index++) {
+    const receiver = `${'"\\'.repeat(125)}${String(index).padStart(4, '0')}`
+    expect(s.store.ingest(payload({ rc: receiver, sq: undefined }), initial)).toBe(true)
+  }
+  const expected = s.store.snapshot(initial, 60).reports
+  expect(expected).toHaveLength(1000)
+  expect(expected[0].id.length).toBeGreaterThan(256)
+  await s.cache.flush()
+  expect(String(s.values()[reportCacheKey]).length).toBeGreaterThan(1_000_000)
+  const fresh = createReportStore()
+  const cache = createReportCache(s.storage, fresh, () => initial)
+  await cache.ready()
+  expect(cache.warning).toBeUndefined()
+  expect(fresh.snapshot(initial, 60).reports).toEqual(expected)
+})
+
+it('restores receiver IDs without callsign syntax and preserves reports without valid locators', async () => {
+  const s = setup()
+  const receiverIds = ['SWL', 'FWG', 'I0-1589', 'US-E-015']
+  await s.cache.ready()
+  for (const [index, rc] of receiverIds.entries()) {
+    expect(
+      s.store.ingest(
+        payload({ rc, rl: index < 2 ? 'HM68' : index === 2 ? undefined : 'ZZ99', sq: index + 1 }),
+        initial,
+      ),
+    ).toBe(true)
+  }
+  s.cache.tick()
+  await flush()
+  const fresh = createReportStore()
+  const cache = createReportCache(
+    createPersistentStorage(s.host, key),
+    fresh,
+    () => initial + 60_000,
+  )
+  await cache.ready()
+  const reports = fresh.snapshot(initial + 60_000, 15).reports
+  expect(reports.map((report) => report.receiver.call)).toEqual(receiverIds)
+  expect(reports.map((report) => report.id)).toEqual(['1', '2', '3', '4'])
+  expect(reports.map((report) => report.receiver.location?.grid)).toEqual([
+    'HM68',
+    'HM68',
+    undefined,
+    undefined,
+  ])
+  expect(reports.every((report) => report.transmitter.call === 'EA8/N1RWJ/P')).toBe(true)
+  expect(cache.warning).toBeUndefined()
+})
+
 it('batches writes, saves changes during an in-flight write and retries failures', async () => {
   const s = setup()
   await s.cache.ready()
@@ -199,7 +252,7 @@ it.each([
   'bad JSON',
   JSON.stringify({ version: 2, reports: [] }),
   JSON.stringify({ version: 1, reports: Array(1001).fill(null) }),
-  ' '.repeat(1_000_001),
+  JSON.stringify({ version: 1, reports: [], padding: ' '.repeat(2_000_001) }),
 ])('discards an invalid or oversized cache safely', async (value) => {
   const store = createReportStore()
   const cache = createReportCache(

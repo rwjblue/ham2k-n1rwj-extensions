@@ -47,6 +47,21 @@ describe('PSK Reporter payloads and subscriptions', () => {
     expect(report?.timeMs).toBe(now)
     expect(report?.wpm).toBeUndefined()
   })
+  it.each(['SWL', 'FWG', 'I0-1589', 'US-E-015', 'RX_ANTENNA-1', 'LISTENER ONE', 'ÉCOUTE', 'SWL📻'])(
+    'accepts the receiver ID %s without treating it as a transmitting callsign',
+    (receiver) => {
+      expect(parsePskPayload(payload({ rc: ` ${receiver.toLowerCase()} ` }))).toMatchObject({
+        transmitter: { call: 'N1RWJ' },
+        receiver: { call: receiver, location: { grid: 'HM68JP36', source: 'reported-grid' } },
+      })
+      expect(parsePskPayload(payload({ sc: receiver }))).toBeUndefined()
+    },
+  )
+  it('retains a maximum-length receiver ID and rejects oversized IDs', () => {
+    const receiver = 'R'.repeat(254)
+    expect(parsePskPayload(payload({ rc: receiver }))?.receiver.call).toBe(receiver)
+    expect(parsePskPayload(payload({ rc: `${receiver}R` }))).toBeUndefined()
+  })
   it.each(['not JSON', '[]', 'null', ' '.repeat(16_385)])(
     'rejects unsupported payload %s',
     (raw) => {
@@ -59,8 +74,17 @@ describe('PSK Reporter payloads and subscriptions', () => {
     { t: null, t_tx: null },
     { sc: '+' },
     { sc: 'N1RWJ..P' },
-    { rc: '.N1RWJ' },
-    { rc: 'N1RWJ/#' },
+    { rc: '' },
+    { rc: '   ' },
+    { rc: null },
+    { rc: 'SWL\nONE' },
+    { rc: 'SWL\u0000ONE' },
+    { rc: 'SWL\u007fONE' },
+    { rc: 'SWL\u0085ONE' },
+    { rc: 'SWL\u2028ONE' },
+    { rc: 'SWL\u2029ONE' },
+    { rc: 'SWL\ud800' },
+    { rc: 'SWL\udc00' },
     { md: '' },
     { b: 'garbage' },
     { t_tx: 1e15 },
@@ -74,6 +98,30 @@ describe('PSK Reporter payloads and subscriptions', () => {
     expect(pskTopic('N1RWJ/P', 'incoming')).toBe('pskr/filter/v2/+/+/+/N1RWJ.P/#')
     for (const call of ['', '+', '#', 'N1RWJ/#', 'N1RWJ.P', 'N1RWJ//P'])
       expect(pskTopic(call, 'outgoing')).toBeUndefined()
+  })
+  it.each(['SWL', 'FWG', 'I0-1589', 'US-E-015', 'RX_ANTENNA-1', 'LISTENER ONE'])(
+    'builds an exact incoming subscription for %s and rejects it for outgoing reception',
+    (receiver) => {
+      expect(pskTopic(` ${receiver.toLowerCase()} `, 'incoming')).toBe(
+        `pskr/filter/v2/+/+/+/${receiver}/#`,
+      )
+      expect(pskTopic(receiver, 'outgoing')).toBeUndefined()
+    },
+  )
+  it('does not turn an incoming receiver ID into a wildcard or an unsupported topic spelling', () => {
+    for (const receiver of [
+      '',
+      '+',
+      '#',
+      'SWL/#',
+      'SWL+',
+      'SWL.NAME',
+      'SWL\nONE',
+      'ÉCOUTE',
+      'R'.repeat(255),
+    ])
+      expect(pskTopic(receiver, 'incoming')).toBeUndefined()
+    expect(pskTopic('W/SWL/EN61', 'incoming')).toBe('pskr/filter/v2/+/+/+/W.SWL.EN61/#')
   })
 })
 

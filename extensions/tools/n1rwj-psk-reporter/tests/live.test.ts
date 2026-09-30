@@ -77,6 +77,24 @@ it('refuses malformed/wildcard subscriptions and bounds active placements/topics
   expect(s.sockets).toHaveLength(1)
 })
 
+it.each(['SWL', 'FWG', 'I0-1589', 'US-E-015'])(
+  'delivers %s receiver reports in both directions and checks the exact topic identity',
+  (receiver) => {
+    const s = setup()
+    s.connected()
+    s.snapshot('listener', receiver, true)
+    const receiverTopic = topic.replace('CU3AT', receiver)
+    s.sockets[0].receive(publication(receiverTopic, payload({ rc: receiver })))
+    expect(s.snapshot().reports[0]?.receiver.call).toBe(receiver)
+    expect(s.snapshot('listener', receiver, true).reports[0]?.transmitter.call).toBe('N1RWJ')
+    expect(s.snapshot('other', `${receiver}-OTHER`, true).reports).toEqual([])
+    s.sockets[0].receive(publication(receiverTopic, payload({ rc: `${receiver}-OTHER` })))
+    expect(s.snapshot().reports).toHaveLength(1)
+    expect(s.snapshot('other', `${receiver}-OTHER`, true).reports).toEqual([])
+    expect(s.snapshot('tx', receiver).state).toBe('invalid')
+  },
+)
+
 it('expires leases and stored reports; hidden traffic cannot keep the socket alive', () => {
   const s = setup()
   s.connected()

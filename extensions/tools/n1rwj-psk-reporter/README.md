@@ -156,8 +156,15 @@ while the app or its timers are suspended.
 
 This is a **live window with best-effort backfill**, without a promise of background
 capture or complete history. Cache contents can remain visible while offline or reconnecting. Incoming
-reports require uploads from receiving software. Portable prefixes and suffixes
-remain part of the exact watched callsign. MQTT uses dots for slashes in topics
+reports require uploads from receiving software. Receiver IDs need not be amateur
+callsigns: listener IDs such as `SWL`, `FWG`, `I0-1589`, and `US-E-015` retain
+their reports. Valid reported grids place them on the map; missing or invalid
+grids leave them in the list. To watch a listener in **Who I hear**, enter its
+exact ID in **Watch callsign or receiver ID**. **Who hears me** continues to
+require a transmitting callsign.
+
+Portable prefixes and suffixes remain part of the exact watched callsign.
+MQTT uses dots for slashes in topics
 and decodes dotted payload calls, matching
 [GridTracker's MQTT client](https://gitlab.com/gridtracker.org/gridtracker2/-/blob/10d0e195b34c3d2d46dd8d79ccf927ea13dbd6f6/src/renderer/lib/mqttPsk.js).
 The displayed calls and HTTP queries retain slashes. Portable delivery still

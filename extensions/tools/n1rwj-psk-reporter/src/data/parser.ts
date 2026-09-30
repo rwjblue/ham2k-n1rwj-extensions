@@ -4,6 +4,7 @@ import type {
   ReceptionReport,
   ReceptionStation,
 } from '../../../../../packages/reception/src/reports.ts'
+import { isValidReceiverId } from './receiver.ts'
 import { decodePskCall } from './subscriptions.ts'
 
 function station(call: string, locator: unknown): ReceptionStation {
@@ -38,7 +39,7 @@ export function parsePskPayload(payload: string): ReceptionReport | undefined {
   const time = raw.t_tx ?? raw.t
   if (
     !isValidCall(tx) ||
-    !isValidCall(rx) ||
+    !isValidReceiverId(rx) ||
     typeof raw.f !== 'number' ||
     !Number.isSafeInteger(raw.f) ||
     raw.f <= 0 ||
