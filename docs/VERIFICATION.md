@@ -1,5 +1,26 @@
 # Verification and compatibility
 
+## Release 0.7.5 publication — 2026-10-01
+
+Published [v0.7.5](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.7.5)
+from signed commit `bc7613c6f5885414802a55ad6d110fe31fb8e6e7` at 22:13:14 UTC
+(18:13 US Eastern time). GitHub verifies the signature, and the release tag
+resolves to this tested commit. The
+[check workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/36933681677)
+and [release workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/36933712586)
+succeeded. All seven bundles and seven checksum files are present, and the
+published body matches `docs/releases/v0.7.5.md` exactly.
+
+`mise run release:catalog v0.7.5 --dry-run` downloaded and validated every
+published asset and selected RBN and PSK Reporter. The catalog job returned
+**approved** on `stable` for PSK Reporter at 22:13:56 UTC and RBN at
+22:13:57 UTC. CQ WW, CWT, MST, SST, and WRT were skipped as intended.
+
+The preparation checks below remain the runtime verification scope; publication
+does not establish native UI or scheduling behavior for the new SNR option.
+These publication records are personal repository documentation, exempt from
+upstream CWT and CQ WW synchronization.
+
 ## Release 0.7.5 preparation — 2026-10-01
 
 Prepared synchronized version 0.7.5 for the optional RBN My Signal minimum
