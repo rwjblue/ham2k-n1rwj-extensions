@@ -7,16 +7,19 @@ import type {
   RegisterHookParams,
   ScoringHook,
 } from '@ham2k/extension-sdk'
-import { expect, test } from 'vitest'
+import { expect, test, vi } from 'vitest'
 import manifest from '../manifest.json'
 
 // Exercise the actual distributable in the ES2020 sandbox, with host-provided
 // libraries. Source-hook tests alone would miss a packaging or bridge mistake.
 test('the temporary bundle registers cqww and scores/exports RTTY without host IO', async () => {
+  const writeCabrillo = vi.fn((await import('@ham2k/lib-qson-cabrillo')).qsonToCabrillo)
   const sharedModules = Object.fromEntries(
     await Promise.all(
       Object.keys(manifest.sharedDependencies).map(async (name) => {
         const module = await import(name)
+        if (name === '@ham2k/lib-qson-cabrillo')
+          return [name, { ...module, qsonToCabrillo: writeCabrillo }]
         return [name, name === 'i18next' ? module.default : module]
       }),
     ),
@@ -89,5 +92,6 @@ test('the temporary bundle registers cqww and scores/exports RTTY without host I
     { operation, qsos: [qso], exportType: 'cqww-cabrillo' },
     ctx,
   )
+  expect(writeCabrillo).toHaveBeenCalledTimes(1)
   expect(file.content).toContain('RY 2026-09-26 1200 N1RWJ 599 05 MA W1AW 599 05 CT')
 })
