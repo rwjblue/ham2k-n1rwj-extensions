@@ -66,7 +66,11 @@ export function panelModel(
   const config = readConfig(args.config)
   const pending = snapshot.refresh?.state === 'pending'
   const origin = operationOrigin(args.operation, config.gridOverride)
-  const reports = latestReports(snapshot.reports)
+  const reports = latestReports(snapshot.reports).filter(
+    (report) =>
+      config.minSnrDb === null ||
+      (report.snrDb !== null && Number.isFinite(report.snrDb) && report.snrDb >= config.minSnrDb),
+  )
   const bands = [...new Set([...rbnBands, ...reports.map((report) => report.band), config.band])]
   const view = receptionView(reports.map(toReceptionReport), snapshot.call, 'outgoing', now, origin)
   const frameOptions = {
@@ -119,19 +123,21 @@ export function panelModel(
     lastReport: reports.length
       ? ageLabel(Math.max(...reports.map((report) => report.timeMs)), now)
       : undefined,
-    status: pending
-      ? snapshot.lastSuccessMs === null
-        ? 'Checking Vail ReRBN…'
-        : 'Cached · refreshing'
-      : snapshot.status === 'ready'
-        ? 'Recent reports'
-        : snapshot.status === 'empty'
-          ? 'No recent reports'
-          : snapshot.status === 'stale'
-            ? `Cached · ${failureLabel}`
-            : snapshot.failureKind
-              ? `Vail ReRBN · ${failureLabel}`
-              : 'Vail ReRBN unavailable',
+    status:
+      (pending
+        ? snapshot.lastSuccessMs === null
+          ? 'Checking Vail ReRBN…'
+          : 'Cached · refreshing'
+        : snapshot.status === 'ready'
+          ? 'Recent reports'
+          : snapshot.status === 'empty'
+            ? 'No recent reports'
+            : snapshot.status === 'stale'
+              ? `Cached · ${failureLabel}`
+              : snapshot.failureKind
+                ? `Vail ReRBN · ${failureLabel}`
+                : 'Vail ReRBN unavailable') +
+      (config.minSnrDb === null ? '' : ` · ≥ ${config.minSnrDb} dB`),
     statusKind: pending
       ? snapshot.lastSuccessMs === null
         ? 'empty'
@@ -152,6 +158,9 @@ export function panelModel(
           label: 'Window',
           value: `Last ${config.windowMinutes} ${config.windowMinutes === 1 ? 'minute' : 'minutes'}`,
         },
+        ...(config.minSnrDb === null
+          ? []
+          : [{ label: 'Minimum SNR', value: `${config.minSnrDb} dB (inclusive)` }]),
         {
           label: 'Last successful check',
           value: snapshot.lastSuccessMs === null ? 'None yet' : utcLabel(snapshot.lastSuccessMs),

@@ -618,6 +618,77 @@ describe('RBN native panel integration', () => {
     ])
     expect(model.mapOptions?.origin?.label).toBe('K8BTU')
   })
+  it('filters the map and list by the latest SNR per receiver, band, and mode', () => {
+    const reports = [
+      { ...snapshot.reports[0], id: 'strong-old', snrDb: 30, timeMs: now - 120_000 },
+      { ...snapshot.reports[0], id: 'weak-new', snrDb: 9 },
+      { ...snapshot.reports[0], id: 'other-mode', mode: 'RTTY', snrDb: 10 },
+      { ...snapshot.reports[0], id: 'other-band', band: '20m', snrDb: 15 },
+      { ...snapshot.reports[0], id: 'weak-station', receiver: 'WEAK', snrDb: 5 },
+      snapshot.reports[1],
+    ]
+    const current = { ...snapshot, reports }
+    const model = panelModel({ ...args, config: { ...args.config, minSnrDb: 10 } }, current, now)
+    expect(model.rows.map((row) => [row.call, row.band, row.mode, row.snrDb])).toEqual([
+      ['W1NT', '40m', 'RTTY', 10],
+      ['W1NT', '20m', 'CW', 15],
+    ])
+    expect(model.mapOptions?.stations.map((station) => station.label)).toEqual(['W1NT'])
+    expect(model.warnings).not.toContain('Unlocated receivers are listed but not mapped.')
+    expect(model.status).toContain('≥ 10 dB')
+    expect(model.details?.facts).toContainEqual({
+      label: 'Minimum SNR',
+      value: '10 dB (inclusive)',
+    })
+    // Filtering never rewrites the cached snapshot or substitutes an older strong report.
+    expect(current.reports).toEqual(reports)
+    expect(panelModel(args, current, now).rows).toHaveLength(5)
+  })
+  it.each([
+    [-10, [-10, 0, 10]],
+    [0, [0, 10]],
+    [11, []],
+  ])('handles a minimum SNR of %i including empty results', (minSnrDb, expected) => {
+    const reports = [-20, -10, 0, 10, null, Number.NaN, Infinity].map((snrDb, index) => ({
+      ...snapshot.reports[0],
+      id: String(index),
+      receiver: `RX${index}`,
+      snrDb,
+    }))
+    const model = panelModel(
+      { ...args, config: { ...args.config, minSnrDb } },
+      { ...snapshot, reports },
+      now,
+    )
+    expect(model.rows.map((row) => row.snrDb)).toEqual(expected)
+    expect(model.mapOptions?.stations).toHaveLength(expected.length)
+  })
+  it('keeps saved SNR filtering per placement across refreshes and restart and restores reports when cleared', async () => {
+    const { panel, getSnapshot } = setup()
+    const configured = { ...args, config: { ...args.config, minSnrDb: 1 } }
+    const filtered = await panel.render(configured, { online: true })
+    expect(sceneText(filtered)).toContain('≥ 1 dB')
+    expect(sceneText(filtered)).toContain('0 receivers')
+    expect(sceneText(filtered)).not.toContain('W1NT')
+    await panel.onEvent?.(event('refresh', 'refresh:reports', configured), { online: true })
+    expect(await panel.render(configured, { online: true })).toEqual(filtered)
+    expect(await setup().panel.render(configured, { online: true })).toEqual(filtered)
+    expect(
+      sceneText(await panel.render({ ...args, instanceId: 'other' }, { online: true })),
+    ).toContain('W1NT')
+    for (const minSnrDb of ['', null]) {
+      const cleared = await panel.render(
+        { ...configured, config: { ...configured.config, minSnrDb } },
+        { online: true },
+      )
+      expect(sceneText(cleared)).toContain('W1NT')
+      expect(sceneText(cleared)).toContain('UNKNOWN')
+      expect(sceneText(cleared)).not.toContain('≥')
+    }
+    for (const [query] of getSnapshot.mock.calls) {
+      expect(query).toEqual({ call: 'K8BTU', windowMinutes: 15 })
+    }
+  })
   it('passes every supported mode to the list while mapping a receiver only once', () => {
     const reports = ['CW', 'RTTY', 'FT8', 'FT4'].map((mode, index) => ({
       ...snapshot.reports[0],
@@ -736,6 +807,7 @@ describe('RBN native panel integration', () => {
     { projection: 'azimuthal' },
     { grid: 'FN31' },
     { watchCall: 'N1RWJ' },
+    { minSnrDb: 0 },
     { view: 'list', band: '40m' },
   ])('preserves sort choices after saving %j', async (config) => {
     const { panel } = setup()

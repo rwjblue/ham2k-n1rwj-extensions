@@ -236,6 +236,7 @@ band in the panel summary to choose a band without opening settings.
 | **Map origin grid** | Uses the operation's latitude/longitude, otherwise its grid | Use a 4, 6, or 8 character Maidenhead locator |
 | **Report window** | Last 15 minutes | Last 1, 3, 5, 10, 30, 45, or 60 minutes |
 | **Band** | All bands | Select one band |
+| **Minimum SNR (dB)** | Blank; no SNR filter | Show reports at or above a chosen SNR |
 | **View** | Map and receivers | Map or receivers only |
 | **Default sort / direction** | Newest reports first | Receiver, SNR, distance, frequency, or CW speed; either direction |
 | **Map projection** | Fit reporting receivers | From my station · distance rings |
@@ -245,6 +246,13 @@ operator's callsign. If the operation has multiple comma-separated station
 callsigns, the panel uses the first. Portable suffixes match exactly: `K1ABC`
 and `K1ABC/P` are different watched callsigns. The band selection does not
 automatically follow the operation's active band.
+
+**Minimum SNR (dB)** filters both the map and receiver list using the latest
+report per receiver, band, and mode. A report exactly at the minimum qualifies;
+reports with no SNR are hidden while the filter is enabled. Zero and negative
+values are supported. Clear the field to show all reports again. The minimum
+is saved per panel placement, appears in the panel status and Details, and
+does not change RBN Spots, downloaded reports, or refresh timing.
 
 With both overrides blank, switching operations follows the new station and
 location. An explicit override stays with that panel placement until you clear

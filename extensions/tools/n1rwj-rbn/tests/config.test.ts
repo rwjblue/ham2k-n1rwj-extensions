@@ -1,7 +1,31 @@
 import { describe, expect, it } from 'vitest'
-import { operationOrigin, readConfig, watchedCall } from '../src/config.ts'
+import { configFields, operationOrigin, readConfig, watchedCall } from '../src/config.ts'
 
 describe('operation identity and map origin', () => {
+  it('offers a blank optional numeric SNR setting', () => {
+    expect(configFields.find((field) => field.key === 'minSnrDb')).toMatchObject({
+      fieldType: 'number',
+      label: 'Minimum SNR (dB)',
+      value: null,
+      placeholder: 'No minimum',
+    })
+    expect(readConfig().minSnrDb).toBeNull()
+  })
+
+  it.each([0, -10, 20, 12.5, '0', '-10', ' 12.5 '])(
+    'accepts an explicit minimum SNR of %j',
+    (minSnrDb) => {
+      expect(readConfig({ minSnrDb }).minSnrDb).toBe(Number(minSnrDb))
+    },
+  )
+
+  it.each([null, '', '   ', 'invalid', '20 dB', false, [], {}, Number.NaN, Infinity, 'Infinity'])(
+    'disables SNR filtering for a blank or invalid value of %j',
+    (minSnrDb) => {
+      expect(readConfig({ minSnrDb }).minSnrDb).toBeNull()
+    },
+  )
+
   it('follows the first station without stripping portable or test suffixes', () => {
     expect(watchedCall({ stationCall: ' k8btu/test, N1RWJ' }, '')).toBe('K8BTU/TEST')
     expect(watchedCall({ stationCall: 'K8BTU/TEST' }, 'K8BTU')).toBe('K8BTU')
