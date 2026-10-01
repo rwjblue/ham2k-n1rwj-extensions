@@ -1,5 +1,34 @@
 # Verification and compatibility
 
+## Release 0.7.5 preparation — 2026-10-01
+
+Prepared synchronized version 0.7.5 for the optional RBN My Signal minimum
+SNR setting and the reception time-window and band-menu improvements.
+Reviewed the diff from v0.7.4: runtime changes affect RBN and PSK Reporter;
+CQ WW changes add synchronized regression coverage without changing runtime
+behavior. All package, manifest, and lockfile changes in the release
+preparation are synchronized version updates. The authored
+`docs/releases/v0.7.5.md` selects RBN and PSK Reporter for catalog publication.
+
+`mise run release:notes v0.7.5`, `mise run format`, and
+`mise run release v0.7.5 --dry-run` passed, including **1,044 tests across
+77 files**, lint, strict typechecks, seven ES2020 builds, official packaging,
+and validation of all seven bundle/checksum pairs. `mise run verify-host`
+passed for every extension against the installed **Ham2K Next 26.9.0 build
+177** JavaScript kernel under Node VM, including simulated timer wakes.
+
+The new SNR option has deterministic coverage for optional configuration,
+inclusive thresholds, zero and negative values, missing measurements,
+latest-report precedence, map/list filtering, persistence, and clearing.
+These checks do not establish native UI or scheduling behavior. Earlier
+local candidates have the focused native macOS time-window and band-menu
+acceptance recorded below; those candidates predate the SNR option and are
+not these exact release archives.
+
+The shared reception workspace affects RBN and PSK Reporter only. Reception
+changes and personal release versioning, packaging, and documentation are
+exempt from CWT and CQ WW upstream behavior synchronization.
+
 ## Reception time windows and band menus: native macOS acceptance — 2026-09-30
 
 Installed the local RBN and PSK Reporter candidates containing commit
