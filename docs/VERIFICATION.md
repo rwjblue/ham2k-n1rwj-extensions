@@ -1,5 +1,32 @@
 # Verification and compatibility
 
+## Release 0.7.6 preparation — 2026-10-02
+
+Prepared synchronized version 0.7.6 for optional RBN spot separation and
+in-panel My Signal view cycling. Reviewed the diff from v0.7.5: the runtime
+changes affect RBN alone. The shared reception view control is opt-in and
+only RBN enables it; PSK Reporter still renders its configured view and
+has no new control. The lockfile changes only synchronize workspace
+versions. `docs/releases/v0.7.6.md` selects RBN alone for catalog submission.
+
+`mise run release:notes v0.7.6`, `mise run format`, and
+`mise run release v0.7.6 --dry-run` passed, including **1,053 tests across
+77 files**, lint, strict typechecks, seven ES2020 builds, official packaging,
+and every release bundle/checksum pair. `mise run verify-host` passed for
+all extensions against installed **Ham2K Next 26.9.0 build 177** using its
+JavaScript kernel under Node VM and simulated timer wakes.
+
+Deterministic tests cover default merging without an activity control,
+explicit separation, cached reports, settings validation, resets and
+restarts; placement-specific view cycling, saved defaults, independent
+band/sort selections, distinct view icons, and unchanged map geometry
+across widths and font scales. Static screenshots use sample reports and
+approximate native text. No native app or on-air acceptance was performed
+for these changes or the release archives.
+
+RBN/reception UI changes and personal versioning, packaging, and publication
+records are exempt from upstream CWT and CQ WW behavior synchronization.
+
 ## Release 0.7.5 publication — 2026-10-01
 
 Published [v0.7.5](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.7.5)
