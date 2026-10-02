@@ -155,6 +155,9 @@ describe('RBN native scene', () => {
         if (!found) throw new Error(`Missing ${id}`)
         return found
       })
+      expect(controls[0].y).toBe(controls[2].y)
+      expect(controls[0].y).toBe(controls[3].y)
+      expect(controls[0].x + controls[0].width).toBeLessThan(controls[2].x)
       expect(controls[0].event).toBe('view:cycle')
       expect(controls[0].label).toBe('View: Map; switch to Receivers')
       for (const [index, first] of controls.entries()) {
@@ -170,7 +173,40 @@ describe('RBN native scene', () => {
       }
       const summary = layer(scene, 'summary')
       expect(summary.x + summary.width).toBeLessThanOrEqual(controls[0].x)
+      const original = renderReceptionScene(model, environment(width, 900, scale), {
+        view: 'map',
+      }).scene
+      expect(layer(scene, 'reception-map-0')).toMatchObject({
+        y: layer(original, 'reception-map-0').y,
+        height: layer(original, 'reception-map-0').height,
+      })
       assertSceneBounds(scene)
+    }
+  })
+  it('asks to enlarge a panel too narrow for the band menu and three actions', () => {
+    const { scene } = renderReceptionScene(
+      { ...model, presentation: { source: 'RBN', viewCycle: true } },
+      environment(220, 900),
+    )
+    expect(text(scene)).toContain('Enlarge this panel')
+    expect(scene.controls).toEqual([])
+    assertSceneBounds(scene)
+  })
+  it('changes the view icon and accessible label with the selected view', () => {
+    for (const [view, icon, name] of [
+      ['both', '◫', 'Map and receivers'],
+      ['map', '◎', 'Map'],
+      ['list', '≡', 'Receivers'],
+    ] as const) {
+      const { scene } = renderReceptionScene(
+        { ...model, presentation: { source: 'RBN', viewCycle: true } },
+        environment(390, 900),
+        { view },
+      )
+      expect(layer(scene, 'view-label').text?.literal).toBe(icon)
+      expect(scene.controls?.find((control) => control.id === 'view')?.label).toContain(
+        `View: ${name};`,
+      )
     }
   })
   it.each([390, 1366])('shows modes and CW-only WPM at width %i', (width) => {

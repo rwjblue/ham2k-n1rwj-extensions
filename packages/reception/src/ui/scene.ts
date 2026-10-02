@@ -260,7 +260,10 @@ export function renderReceptionScene(
     height,
     `<rect width="${width}" height="${height}" fill="${colors.surface}"/>`,
   )
-  if (w < 180 || bottom - top < labelLine * 2 + buttonHeight + 20) {
+  if (
+    w < (model.presentation?.viewCycle ? 212 : 180) ||
+    bottom - top < labelLine * 2 + buttonHeight + 20
+  ) {
     text('small-panel', `Enlarge this panel to see ${source} reports.`, left, top, w)
     return result
   }
@@ -276,12 +279,7 @@ export function renderReceptionScene(
   const bandLabel = selection.band === 'all' ? 'All bands' : selection.band
   const summary = `${receivers} ${station}${receivers === 1 ? '' : 's'} · ${bands} band${bands === 1 ? '' : 's'}${farthest ? ` · ${Math.round(farthest).toLocaleString('en-US')} km max` : ''}`
   const cycleView = model.presentation?.viewCycle === true && !selection.details
-  // Narrow headers keep the summary and view button on their own row so
-  // all three actions retain 44px targets without clipping receiver counts.
-  const stackedHeader = cycleView && w < 480 * (label.scaledFontSize / label.fontSize)
-  const headerTextWidth = w - (cycleView && !stackedHeader ? 168 : 112)
-  const summaryWidth = stackedHeader ? w - 56 : headerTextWidth
-  const summaryTop = stackedHeader ? y + buttonHeight + 6 : y
+  const headerTextWidth = w - (cycleView ? 168 : 112)
   const identityLines = selection.details
     ? wrapInfoText(`${source} · ${model.watchCall || 'No callsign'}`, w - 112, label)
     : []
@@ -308,14 +306,19 @@ export function renderReceptionScene(
         w - 112,
       )
   } else {
+    const countSummary = `▾ ${bandLabel} · ${receivers} ${station}${receivers === 1 ? '' : 's'}`
+    // Keep the count visible on small screens without adding another header row.
+    const compactSummary = `▾ ${selection.band === 'all' ? 'All' : bandLabel} · ${receivers} ${station === 'receiver' ? 'RX' : station === 'transmitter' ? 'TX' : 'stns'}`
     text(
       'summary',
-      w >= 600 * (label.scaledFontSize / label.fontSize)
-        ? `▾ ${bandLabel} · ${summary}`
-        : `▾ ${bandLabel} · ${receivers} ${station}${receivers === 1 ? '' : 's'}`,
+      cycleView && countSummary.length * label.scaledFontSize * 0.55 > headerTextWidth
+        ? compactSummary
+        : w >= 600 * (label.scaledFontSize / label.fontSize)
+          ? `▾ ${bandLabel} · ${summary}`
+          : countSummary,
       left,
-      stackedHeader ? summaryTop + (buttonHeight - labelLine) / 2 : y + labelLine,
-      summaryWidth,
+      y + labelLine,
+      headerTextWidth,
     )
     // A native menu over the existing header keeps the map's space unchanged.
     // Its 44px target includes the band label and remains separate from actions.
@@ -324,12 +327,12 @@ export function renderReceptionScene(
       label: `Filter reports by band; currently ${bandLabel}`,
       kind: 'button',
       x: left,
-      y: summaryTop,
+      y,
       width: Math.min(
-        summaryWidth,
+        headerTextWidth,
         Math.max(44, (bandLabel.length + 2) * label.scaledFontSize * 0.72 + 8),
       ),
-      height: stackedHeader ? buttonHeight : Math.max(buttonHeight, labelLine * 2),
+      height: Math.max(buttonHeight, labelLine * 2),
       menu: availableBands.map((band) => ({
         label: band === 'all' ? 'All bands' : band,
         event: `band:${band}`,
@@ -339,17 +342,10 @@ export function renderReceptionScene(
   if (cycleView) {
     const names = { both: 'Map and receivers', map: 'Map', list: 'Receivers' }
     const next = { both: 'map', map: 'list', list: 'both' } as const
-    button(
-      'view',
-      { both: '◫', map: '◎', list: '≡' }[selection.view],
-      stackedHeader ? right - 48 : right - 160,
-      summaryTop,
-      48,
-      {
-        event: 'view:cycle',
-        label: `View: ${names[selection.view]}; switch to ${names[next[selection.view]]}`,
-      },
-    )
+    button('view', { both: '◫', map: '◎', list: '≡' }[selection.view], right - 160, y, 48, {
+      event: 'view:cycle',
+      label: `View: ${names[selection.view]}; switch to ${names[next[selection.view]]}`,
+    })
   }
   if (model.presentation?.refreshLabel)
     button('refresh', '↻', right - 104, y, 48, {
@@ -369,9 +365,7 @@ export function renderReceptionScene(
         : `Report info${model.warnings?.length ? `, ${model.warnings.length} warnings` : ''}`,
     },
   )
-  y += stackedHeader
-    ? buttonHeight * 2 + 12
-    : Math.max(labelLine * Math.max(2, 1 + identityLines.length), buttonHeight) + 6
+  y += Math.max(labelLine * Math.max(2, 1 + identityLines.length), buttonHeight) + 6
 
   if (selection.details) {
     // A readable measure on desktop; the same cards reflow to narrow panels.

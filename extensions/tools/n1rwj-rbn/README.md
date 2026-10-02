@@ -221,7 +221,7 @@ Physical phone and Linux runtime checks remain outstanding.
 The operation provides the defaults. Open the tune button beside the panel title
 to change its settings; they are also available in **Edit Layout**.
 **View** and the saved **Band** default live here. The small view button beside
-the panel summary cycles **Map and receivers → Map → Receivers**. Tap **All bands** or the active
+refresh and info cycles **Map and receivers → Map → Receivers**. Tap **All bands** or the active
 band in the panel summary to choose a band without opening settings.
 
 ![RBN view and band settings in Ham2K's tune dialog](../../../docs/images/rbn/rbn-settings.jpg)
@@ -285,7 +285,7 @@ The map includes the selected band's located receivers across all list pages.
 Receiver positions come from RBN node grids, with registered grids as a fallback, and may differ from the actual
 skimmer location. Receivers without a valid grid remain in the list.
 
-Use the view-cycle button beside the report summary, or **View** in the panel's tune settings, to choose **Map and receivers**, **Map**,
+Use the view-cycle button beside refresh and info, or **View** in the panel's tune settings, to choose **Map and receivers**, **Map**,
 or **Receivers**, and **Band** to select a supported band or **All bands**, even
 before reports arrive. The compact band summary above the map also opens a
 native band menu; **All bands** restores the full view. Both the map and receiver
