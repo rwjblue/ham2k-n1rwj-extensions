@@ -18,6 +18,7 @@ type ResetMethod = keyof Omit<RbnSettings, keyof DynamicSettingsPanel>
 
 /** Actual bundles, separate SDK copies, the documented kernel dispatch boundary. */
 async function harness(saved: Record<string, JSONValue> = {}, contests = ['cwt', 'mst', 'sst']) {
+  const now = Date.parse('2026-10-02T16:00:00Z')
   const preferences: Record<string, JSONValue> = structuredClone(saved)
   const definitions: ExtensionDefinition[] = []
   const registered = new Map<string, Map<string, RegisterHookParams>>()
@@ -43,12 +44,17 @@ async function harness(saved: Record<string, JSONValue> = {}, contests = ['cwt',
               mode: 'CW',
               frequency: 14032,
               wpm: 25,
-              timestamp: new Date(Date.now() - 60_000).toISOString(),
+              timestamp: new Date(now - 60_000).toISOString(),
             }))
           : [],
     }),
   }))
   const context = createContext({
+    Date: class extends Date {
+      static now() {
+        return now
+      }
+    },
     __polo: {
       sharedModules,
       defineExtension: (definition: ExtensionDefinition) => definitions.push(definition),
@@ -157,7 +163,10 @@ async function harness(saved: Record<string, JSONValue> = {}, contests = ['cwt',
 }
 
 it('bundled RBN recognizes new and already-saved station refs offline without changing the log or export hooks', async () => {
-  const runtime = await harness({ 'extension_n1rwj-rbn': { unrelated: 42 } }, [])
+  const runtime = await harness(
+    { 'extension_n1rwj-rbn': { unrelated: 42, spotAllowMerging: false } },
+    [],
+  )
   const activity = runtime.hook<ActivityHook>('n1rwj-rbn', 'activity')
   expect(runtime.definitions[0].hooks).toContain('activity')
   expect(activity.operationControls).toBeUndefined()
@@ -207,8 +216,55 @@ it('bundled RBN recognizes new and already-saved station refs offline without ch
   expect(args).toEqual(originalArgs)
   expect(runtime.preferences).toEqual(preferences)
   expect(runtime.requests).toHaveBeenCalledTimes(requestCount)
-  expect(runtime.hostCalls).toHaveBeenCalledTimes(hostCallCount)
+  expect(runtime.hostCalls).toHaveBeenCalledTimes(hostCallCount + args.length)
   expect(getQsos).not.toHaveBeenCalled()
+})
+
+it('defaults to merging without an activity and toggles cached spots across restarts', async () => {
+  const runtime = await harness({}, [])
+  const ctx = { online: false }
+  const activity = runtime.hook<ActivityHook>('n1rwj-rbn', 'activity')
+  expect(await activity.loggingControls?.({ operation: {} }, ctx)).toEqual([])
+  const form = await runtime.settings.getDefinition({ panelKey: 'n1rwj-rbn' }, ctx)
+  expect(form.elements).toContainEqual(
+    expect.objectContaining({
+      key: 'spotAllowMerging',
+      fieldType: 'checkbox',
+      value: true,
+    }),
+  )
+  const first = await runtime.fetch()
+  expect(first).toHaveLength(3)
+  expect(first.every((spot) => spot.refs?.length === 0)).toBe(true)
+  const requests = runtime.requests.mock.calls.length
+  const edit = (value: JSONValue) =>
+    runtime.settings.onChangeField(
+      { panelKey: 'n1rwj-rbn', fieldKey: 'spotAllowMerging', value, state: {} },
+      ctx,
+    )
+  await expect(edit('false')).rejects.toThrow('merging')
+  await edit(false)
+  const separate = await runtime.fetch()
+  expect(separate.map((spot) => spot.refs)).toEqual(
+    separate.map((spot) => [{ type: 'rbn', ref: spot.their.call }]),
+  )
+  expect(await activity.loggingControls?.({ operation: {} }, ctx)).toHaveLength(1)
+  const restarted = await harness(runtime.preferences, [])
+  expect((await restarted.fetch()).map((spot) => spot.refs)).toEqual(
+    separate.map((spot) => spot.refs),
+  )
+  expect(
+    await restarted
+      .hook<ActivityHook>('n1rwj-rbn', 'activity')
+      .loggingControls?.({ operation: {} }, ctx),
+  ).toHaveLength(1)
+  await edit(true)
+  expect(await runtime.fetch()).toEqual(first)
+  expect(await activity.loggingControls?.({ operation: {} }, ctx)).toEqual([])
+  expect(runtime.requests).toHaveBeenCalledTimes(requests)
+  await edit(false)
+  await runtime.action('resetAllSpotSettings')
+  expect(await activity.loggingControls?.({ operation: {} }, ctx)).toEqual([])
 })
 
 it('RBN defaults to all calls and respects explicit CWT filtering, removal and saved choices across restarts', async () => {
@@ -227,7 +283,7 @@ it('RBN defaults to all calls and respects explicit CWT filtering, removal and s
   expect(first).toEqual(second)
   expect(first.map((spot) => spot.their.call)).toEqual(['K1ABC/P'])
   expect(first[0]).toMatchObject({ freq: 14032, spot: { source: 'n1rwj-rbn' } })
-  expect(first[0].refs).toEqual([{ type: 'rbn', ref: 'K1ABC/P' }])
+  expect(first[0].refs).toEqual([])
   expect(runtime.requests).toHaveBeenCalledTimes(9)
   const saved = await harness(runtime.preferences)
   expect(saved.preferences['extension_n1rwj-rbn']).toEqual({ spotCallFilter: 'n1rwj-cwt' })
@@ -271,8 +327,8 @@ it('adding CWT or a legacy default hint never selects a call-history filter auto
   }
 })
 
-it('bundled RBN gives calls on one frequency distinct stable references through cached refreshes', async () => {
-  const runtime = await harness({}, [])
+it('bundled RBN gives calls on one frequency distinct stable references when merging is disabled', async () => {
+  const runtime = await harness({ 'extension_n1rwj-rbn': { spotAllowMerging: false } }, [])
   const first = await runtime.fetch()
   expect(first.map((spot) => spot.freq)).toEqual([14032, 14032, 14032])
   expect(first).toEqual(
@@ -387,6 +443,7 @@ it('resets all spot settings in the bundle while preserving reception caches and
   await runtime.action('resetAllSpotSettings')
   const expected = {
     spotCallFilter: 'none',
+    spotAllowMerging: true,
     spotMode: 'all',
     spotMinWpm: '',
     spotMaxWpm: '',

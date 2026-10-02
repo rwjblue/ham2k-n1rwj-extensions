@@ -19,7 +19,13 @@ export function tokens(value: string): string[] {
     ),
   ]
 }
+/** Merging is the default, including settings saved before this preference existed. */
+export function allowSpotMerging(raw: Record<string, unknown>): boolean {
+  return raw.spotAllowMerging !== false
+}
 export function validation(key: string, value: unknown): string | null {
+  if (key === 'spotAllowMerging')
+    return typeof value === 'boolean' ? null : 'Choose whether to allow merging of RBN spots.'
   if (key === 'spotMinWpm' || key === 'spotMaxWpm') {
     if (value === null || (typeof value === 'string' && !value.trim())) return null
     return (typeof value === 'number' || typeof value === 'string') &&
@@ -111,6 +117,7 @@ export function validateEdit(
 
 export function readPreferences(raw: Record<string, unknown>): SpotPreferences {
   for (const key of [
+    'spotAllowMerging',
     'spotCallFilter',
     'spotMode',
     'spotSkimmers',

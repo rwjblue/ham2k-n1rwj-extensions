@@ -2,7 +2,7 @@ import type { FormActionElement, FormDefinition } from '@ham2k/extension-sdk'
 import { type Continent, continents } from '../data/continents.ts'
 import { allCalls, type Provider } from './filters.ts'
 import type { HealthNotice } from './health.ts'
-import { radiusIssue, speedIssue, spotModes, tokens } from './preferences.ts'
+import { allowSpotMerging, radiusIssue, speedIssue, spotModes, tokens } from './preferences.ts'
 
 interface Selection {
   raw: Record<string, unknown>
@@ -59,7 +59,16 @@ export function settingsDefinition(
       reset('resetAllSpotSettings', 'Reset all spot settings'),
       {
         type: 'markdown',
-        text: `Reset defaults: ${historyLabel}; All modes; no CW speed limits; all skimmers and grid regions; ${continentLabel}; no distance limit or origin grid. Receiver-continent defaults use the local suggestion, then your last selection. All settings below apply only to RBN Spots, across operations.`,
+        text: `Reset defaults: allow merging; ${historyLabel}; All modes; no CW speed limits; all skimmers and grid regions; ${continentLabel}; no distance limit or origin grid. Receiver-continent defaults use the local suggestion, then your last selection. All settings below apply only to RBN Spots, across operations.`,
+      },
+      {
+        type: 'field',
+        fieldType: 'checkbox',
+        key: 'spotAllowMerging',
+        label: 'Allow merging of RBN spots',
+        description:
+          'On by default: nearby spots can merge and no RBN activity control is added. Turn off to keep stations separately selectable, for example during CWT; this adds RBN references and an RBN logging control. Changes apply on the next Spots refresh.',
+        value: allowSpotMerging(selected.raw),
       },
       {
         type: 'field',

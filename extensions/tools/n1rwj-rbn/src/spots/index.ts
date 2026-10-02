@@ -1,4 +1,5 @@
 import type {
+  ActivityHook,
   DeviceLocation,
   DynamicSettingsPanel,
   FetchOptions,
@@ -16,7 +17,14 @@ import { createSpotFeed } from './feed.ts'
 import { allCalls, discoverFilters, type FilterBridge, matchFilter } from './filters.ts'
 import { createHealthCheck } from './health.ts'
 import { type ReceiverLookup, selectSpots } from './model.ts'
-import { ownSettings, readPreferences, tokens, validateEdit, validation } from './preferences.ts'
+import {
+  allowSpotMerging,
+  ownSettings,
+  readPreferences,
+  tokens,
+  validateEdit,
+  validation,
+} from './preferences.ts'
 import { planSpotQueries, type ReceiverQueryEntry } from './queries.ts'
 import { settingsDefinition } from './settings.ts'
 
@@ -197,7 +205,11 @@ export function createRbnSpots(options: Options) {
               )
         // A settings edit while the network was pending invalidates this answer.
         if (selected.generation !== generation) return []
-        return selectSpots(reports, allowed, prefs, options.lookup, now())
+        return selectSpots(reports, allowed, prefs, options.lookup, now()).map((spot) =>
+          allowSpotMerging(selected.raw)
+            ? { ...spot, refs: spot.refs?.filter((ref) => ref.type !== 'rbn') }
+            : spot,
+        )
       } catch (error) {
         status =
           error instanceof Error ? error.message : 'Spot filters unavailable. No spots shown.'
@@ -206,6 +218,7 @@ export function createRbnSpots(options: Options) {
     },
   }
   const resetGroups = {
+    merging: { spotAllowMerging: true },
     mode: { spotMode: 'all' },
     speed: { spotMinWpm: '', spotMaxWpm: '' },
     skimmers: { spotSkimmers: '' },
@@ -314,5 +327,18 @@ export function createRbnSpots(options: Options) {
       status = ''
     },
   }
-  return { spots, settings }
+  const activity: ActivityHook = {
+    async loggingControls() {
+      if (allowSpotMerging(ownSettings(await getSettings()))) return []
+      return [
+        {
+          key: `${manifest.key}/station`,
+          label: 'RBN',
+          icon: manifest.icon,
+          input: { kind: 'refList', refType: 'rbn' },
+        },
+      ]
+    },
+  }
+  return { spots, settings, activity }
 }

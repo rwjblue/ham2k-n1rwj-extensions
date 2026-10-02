@@ -1,4 +1,3 @@
-import type { ActivityHook } from '@ham2k/extension-sdk'
 import { defineExtension, host } from '@ham2k/extension-sdk'
 import manifest from '../manifest.json'
 import { rbnClient, rbnFetch, setRbnSettings } from './data/host-client.ts'
@@ -15,7 +14,7 @@ defineExtension({
     const receivers = createReceiverData()
     // Share receiver metadata, never receiver selection. Spots preferences are
     // owned by createRbnSpots; My Signal uses its own per-panel configuration.
-    const { spots, settings } = createRbnSpots({
+    const { spots, settings, activity } = createRbnSpots({
       fetch: rbnFetch,
       healthTimers: host,
       lookup: receivers.lookup,
@@ -24,22 +23,7 @@ defineExtension({
       setSettings: setRbnSettings,
     })
     registerHook('spots', { hook: spots })
-    // HaLo resolves reference icons through logging controls, including refs
-    // already saved on QSOs. Keep this unconditional and outside contest UI.
-    registerHook('activity', {
-      hook: {
-        async loggingControls() {
-          return [
-            {
-              key: `${manifest.key}/station`,
-              label: 'RBN',
-              icon: manifest.icon,
-              input: { kind: 'refList', refType: 'rbn' },
-            },
-          ]
-        },
-      } satisfies ActivityHook,
-    })
+    registerHook('activity', { hook: activity })
     registerHook('settingsPanel', { hook: settings })
     registerHook('dataFile', { key: receivers.dataFile.key, hook: receivers.dataFile })
     registerHook('panel', {

@@ -24,6 +24,11 @@ guarantee live reports or a match for your filters.
 Enable **N1RWJ RBN** and select **RBN** in the native Spots source filter.
 Open **Settings → RBN → Spots — Who I might hear** to choose:
 
+- **Allow merging of RBN spots:** on by default. Nearby stations can merge in
+  the native Spots panel, and the extension contributes no RBN activity control.
+  Turn it off when hunting individual stations, for example during CWT, to keep
+  spots separately selectable and enable the RBN logging control. The choice
+  survives restarts and applies on the next Spots refresh, including cached reports.
 - **Call-history filter:** **All calls** is the default, with no history filter.
   Choose CWT, MST, or SST explicitly when you want that call-history filter.
   A selected missing extension or file
@@ -63,7 +68,7 @@ Open **Settings → RBN → Spots — Who I might hear** to choose:
   clearing its origin. Distances use the great-circle path between grid centers.
 
 **Reset all spot settings**, at the top of that section, restores **All calls**,
-All modes, no CW speed limits, all skimmers and grid regions, the local/last
+allow merging, All modes, no CW speed limits, all skimmers and grid regions, the local/last
 receiver-continent selection, and no distance limit or origin. The defaults are
 listed beside the reset control. Resets remain available even when call-history
 extensions have not loaded. Previously saved call-history choices are preserved
@@ -137,29 +142,19 @@ CWT/MST/SST call-history restriction and compare the same ten-minute window,
 band, and mode. A six-hour website view includes older reports; repeated
 reports for the same station, band, and mode collapse to one spot here.
 
-As a workaround for [HALO-741](https://cabo.ham2k.com/halo/c/741), RBN spots
-carry an `rbn` reference containing the full callsign, including portable
-suffixes. Different stations on the same frequency stay separately selectable.
-The reference stays stable across receivers and refreshes; repeated reports
-for the same station still collapse normally. It does not claim a park,
-summit, or contest activity.
+When **Allow merging of RBN spots** is off, the workaround for
+[HALO-741](https://cabo.ham2k.com/halo/c/741) attaches an `rbn` reference
+containing the full callsign, including portable suffixes. Different stations
+on the same frequency stay separately selectable. HaLo copies this reference
+when you select a spot for logging.
 
-The inspected HaLo source displays the spot's label, so this reference does
-not add text to the Spots row or map popup. HaLo can copy the reference into
-a contact when selecting a spot or applying Spot History hints, where it
-remains in the saved QSON data. It has
-an activity logging control with `input: { kind: 'refList', refType: 'rbn' }`
-and the RBN radar icon. HaLo uses that control to recognize both new and
-already-saved RBN references while the extension is enabled, replacing the
-red question-mark badge without rewriting or deleting contact data.
-
-The registration also adds one collapsed **RBN** chip to the logging panel's
-secondary controls. You can hide it in logging-control settings without
-affecting reference icons. Opening it lets you edit the contact's RBN references;
-it does not add a primary exchange field, operation setup, or activity
-suggestions. This badge behavior and chip placement are verified against
-HaLo source and the bundled registration; native UI verification remains
-pending.
+This also adds one collapsed **RBN** chip to the logging panel's secondary
+controls and supplies the radar icon for new and saved RBN references. It does
+not add operation setup or activity suggestions. Turning merging back on hides
+the chip and omits RBN references from incoming spots; existing contacts retain
+their references. Existing badges may use the generic icon while the control is
+hidden. A mounted native panel may need reopening to reload its activity icons.
+Unit and bundle checks cover these descriptors; native UI verification is pending.
 
 There is no ADIF program-field or export handler for RBN. Export behavior
 is unchanged: a custom template that explicitly displays all contact
