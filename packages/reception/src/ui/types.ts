@@ -35,6 +35,7 @@ export interface UiModel {
     source: string
     stationLabel?: 'Receiver' | 'Transmitter' | 'Station'
     refreshLabel?: string
+    viewCycle?: boolean
     cwSpeed?: boolean
     details?: string[]
   }

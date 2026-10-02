@@ -275,6 +275,13 @@ export function renderReceptionScene(
   )
   const bandLabel = selection.band === 'all' ? 'All bands' : selection.band
   const summary = `${receivers} ${station}${receivers === 1 ? '' : 's'} · ${bands} band${bands === 1 ? '' : 's'}${farthest ? ` · ${Math.round(farthest).toLocaleString('en-US')} km max` : ''}`
+  const cycleView = model.presentation?.viewCycle === true && !selection.details
+  // Narrow headers keep the summary and view button on their own row so
+  // all three actions retain 44px targets without clipping receiver counts.
+  const stackedHeader = cycleView && w < 480 * (label.scaledFontSize / label.fontSize)
+  const headerTextWidth = w - (cycleView && !stackedHeader ? 168 : 112)
+  const summaryWidth = stackedHeader ? w - 56 : headerTextWidth
+  const summaryTop = stackedHeader ? y + buttonHeight + 6 : y
   const identityLines = selection.details
     ? wrapInfoText(`${source} · ${model.watchCall || 'No callsign'}`, w - 112, label)
     : []
@@ -287,7 +294,7 @@ export function renderReceptionScene(
       : `${testObservation ? 'TEST · ' : ''}${model.status ?? `${stationLabel} reports`}`,
     left,
     y,
-    w - 112,
+    headerTextWidth,
     label,
     colors.accent,
   )
@@ -307,8 +314,8 @@ export function renderReceptionScene(
         ? `▾ ${bandLabel} · ${summary}`
         : `▾ ${bandLabel} · ${receivers} ${station}${receivers === 1 ? '' : 's'}`,
       left,
-      y + labelLine,
-      w - 112,
+      stackedHeader ? summaryTop + (buttonHeight - labelLine) / 2 : y + labelLine,
+      summaryWidth,
     )
     // A native menu over the existing header keeps the map's space unchanged.
     // Its 44px target includes the band label and remains separate from actions.
@@ -317,17 +324,32 @@ export function renderReceptionScene(
       label: `Filter reports by band; currently ${bandLabel}`,
       kind: 'button',
       x: left,
-      y,
+      y: summaryTop,
       width: Math.min(
-        w - 112,
+        summaryWidth,
         Math.max(44, (bandLabel.length + 2) * label.scaledFontSize * 0.72 + 8),
       ),
-      height: Math.max(buttonHeight, labelLine * 2),
+      height: stackedHeader ? buttonHeight : Math.max(buttonHeight, labelLine * 2),
       menu: availableBands.map((band) => ({
         label: band === 'all' ? 'All bands' : band,
         event: `band:${band}`,
       })),
     })
+  }
+  if (cycleView) {
+    const names = { both: 'Map and receivers', map: 'Map', list: 'Receivers' }
+    const next = { both: 'map', map: 'list', list: 'both' } as const
+    button(
+      'view',
+      { both: '◫', map: '◎', list: '≡' }[selection.view],
+      stackedHeader ? right - 48 : right - 160,
+      summaryTop,
+      48,
+      {
+        event: 'view:cycle',
+        label: `View: ${names[selection.view]}; switch to ${names[next[selection.view]]}`,
+      },
+    )
   }
   if (model.presentation?.refreshLabel)
     button('refresh', '↻', right - 104, y, 48, {
@@ -347,7 +369,9 @@ export function renderReceptionScene(
         : `Report info${model.warnings?.length ? `, ${model.warnings.length} warnings` : ''}`,
     },
   )
-  y += Math.max(labelLine * Math.max(2, 1 + identityLines.length), buttonHeight) + 6
+  y += stackedHeader
+    ? buttonHeight * 2 + 12
+    : Math.max(labelLine * Math.max(2, 1 + identityLines.length), buttonHeight) + 6
 
   if (selection.details) {
     // A readable measure on desktop; the same cards reflow to narrow panels.
@@ -469,7 +493,7 @@ export function renderReceptionScene(
     return result
   }
 
-  // View and the saved band default are persisted by the host's panel tune form.
+  // View and band defaults are persisted by the host's panel tune form.
   const footerTop = Math.max(y, bottom - labelLine)
   const contentBottom = footerTop - 8
   const sideBySide = selection.view === 'both' && w >= 1080

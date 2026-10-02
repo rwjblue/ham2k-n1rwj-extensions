@@ -115,7 +115,7 @@ export function panelModel(
     args.environment?.brightness ??
     (themeMode === 'light' || themeMode === 'dark' ? themeMode : undefined)
   return {
-    presentation: rbnPresentation,
+    presentation: { ...rbnPresentation, viewCycle: true },
     title: test ? 'My Signal · TEST observation' : 'My Signal',
     watchCall: snapshot.call,
     fetchedAt: snapshot.lastSuccessMs === null ? undefined : utcLabel(snapshot.lastSuccessMs),
@@ -255,7 +255,11 @@ export function createRbnPanel(
           preferences,
         ),
         args.environment,
-        { ...state.selection, view: config.view, band: state.selection.band ?? config.band },
+        {
+          ...state.selection,
+          view: state.selection.view ?? config.view,
+          band: state.selection.band ?? config.band,
+        },
       )
       state.selection = rendered.selection
       state.bands = rendered.bands

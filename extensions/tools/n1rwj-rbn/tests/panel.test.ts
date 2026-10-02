@@ -776,6 +776,50 @@ describe('RBN native panel integration', () => {
     // Saved preferences are also authoritative after an extension restart.
     expect(await setup().panel.render(changed, { online: true })).toEqual(filtered)
   })
+  it('cycles views per placement and preserves the choice until its saved default changes', async () => {
+    const { panel } = setup()
+    const viewLabel = (result: Awaited<ReturnType<typeof panel.render>>) => {
+      if (result.kind !== 'svgScene') throw new Error('Expected native scene')
+      return result.scene.controls?.find((control) => control.id === 'view')?.label
+    }
+    expect(viewLabel(await panel.render(args, { online: true }))).toContain(
+      'View: Map and receivers;',
+    )
+    await panel.onEvent?.(event('band', 'band:40m'), { online: true })
+    await panel.onEvent?.(event('sort', 'sort:snr'), { online: true })
+    for (const name of ['Map', 'Receivers', 'Map and receivers']) {
+      await panel.onEvent?.(event('view', 'view:cycle'), { online: true })
+      const rendered = await panel.render(args, { online: true })
+      expect(viewLabel(rendered)).toContain(`View: ${name};`)
+      expect(sceneText(rendered)).toContain('40m · 2 receivers')
+      expect(
+        viewLabel(await panel.render({ ...args, reason: 'tick' }, { online: true })),
+      ).toContain(`View: ${name};`)
+    }
+    await panel.onEvent?.(event('view', 'view:cycle'), { online: true })
+    expect(
+      viewLabel(await panel.render({ ...args, instanceId: 'other' }, { online: true })),
+    ).toContain('View: Map and receivers;')
+    const unrelated = { ...args, config: { ...args.config, projection: 'azimuthal' } }
+    expect(viewLabel(await panel.render(unrelated, { online: true }))).toContain('View: Map;')
+    const saved = { ...unrelated, config: { ...unrelated.config, view: 'list' } }
+    const list = await panel.render(saved, { online: true })
+    expect(viewLabel(list)).toContain('View: Receivers;')
+    expect(sceneText(list)).toContain('Sort: SNR')
+    expect(sceneText(list)).toContain('40m · 2 receivers')
+    await panel.onEvent?.(event('view', 'view:cycle', saved), { online: true })
+    expect(viewLabel(await setup().panel.render(saved, { online: true }))).toContain(
+      'View: Receivers;',
+    )
+    expect(
+      viewLabel(
+        await panel.render(
+          { ...saved, operation: { ...saved.operation, uuid: 'other' } },
+          { online: true },
+        ),
+      ),
+    ).toContain('View: Receivers;')
+  })
   it('filters from the header band menu until the saved Band changes', async () => {
     const { panel } = setup()
     await panel.render(args, { online: true })
@@ -859,7 +903,9 @@ describe('RBN native panel integration', () => {
       const { panel } = setup(current)
       const result = await panel.render(args, { online: true })
       if (result.kind !== 'svgScene') throw new Error('Expected native scene')
-      expect(result.scene.controls?.some((control) => control.id === 'view')).toBe(false)
+      expect(result.scene.controls?.find((control) => control.id === 'view')?.event).toBe(
+        'view:cycle',
+      )
       expect(result.scene.controls?.find((control) => control.id === 'band')?.menu).toContainEqual({
         label: 'All bands',
         event: 'band:all',

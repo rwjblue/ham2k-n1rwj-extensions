@@ -24,7 +24,7 @@ export function createPanelStateStore() {
       selections.set(key, state)
       if (selections.size > 32) selections.delete(selections.keys().next().value as string)
     } else if (JSON.stringify(state.config) !== JSON.stringify(config)) {
-      for (const field of ['band', 'sort', 'direction'] as const) {
+      for (const field of ['view', 'band', 'sort', 'direction'] as const) {
         if (state.config[field] !== config[field]) delete state.selection[field]
       }
       state.selection.page = 0
@@ -56,6 +56,15 @@ export function applySceneEvent(
     ['age', 'call', 'snr', 'distance', 'frequency', ...(cwSpeed ? ['wpm'] : [])].includes(value)
   ) {
     state.selection = { ...state.selection, sort: value as SceneSelection['sort'], page: 0 }
+  } else if (controlId === 'view' && action === 'view:cycle' && !state.selection.details) {
+    const views = ['both', 'map', 'list'] as const
+    const current = state.selection.view ?? state.config.view
+    state.selection = {
+      ...state.selection,
+      view: views[(views.indexOf(current) + 1) % views.length],
+      page: 0,
+    }
+    state.reportPage = 0
   } else if (controlId === 'direction' && action === 'direction:toggle') {
     state.selection = {
       ...state.selection,

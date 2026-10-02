@@ -94,3 +94,18 @@ describe('info navigation', () => {
     expect(state.selection.detailsTab).toBe('status')
   })
 })
+
+describe('view cycling', () => {
+  it('starts from the saved view and resets pagination without changing filters or sort', () => {
+    const state = createPanelStateStore()({ ...args, config: { view: 'map' } })
+    state.selection = { page: 4, band: '40m', sort: 'snr', direction: 'asc' }
+    for (const view of ['list', 'both', 'map']) {
+      applySceneEvent(state, 'view', 'view:cycle')
+      expect(state.selection).toEqual({ view, page: 0, band: '40m', sort: 'snr', direction: 'asc' })
+    }
+    applySceneEvent(state, 'details', 'details:toggle')
+    const original = { ...state.selection }
+    applySceneEvent(state, 'view', 'view:cycle')
+    expect(state.selection).toEqual(original)
+  })
+})

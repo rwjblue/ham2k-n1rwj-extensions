@@ -136,6 +136,43 @@ describe('RBN native scene', () => {
       assertSceneBounds(scene)
     },
   )
+  it.each([320, 390, 600, 1366])('fits the opt-in view cycle control at %ipx', (width) => {
+    for (const scale of [1, 1.5, 2]) {
+      const { scene } = renderReceptionScene(
+        {
+          ...model,
+          presentation: {
+            ...model.presentation,
+            source: model.presentation?.source ?? 'RBN',
+            viewCycle: true,
+          },
+        },
+        environment(width, 900, scale),
+        { view: 'map' },
+      )
+      const controls = ['view', 'band', 'refresh', 'details'].map((id) => {
+        const found = scene.controls?.find((control) => control.id === id)
+        if (!found) throw new Error(`Missing ${id}`)
+        return found
+      })
+      expect(controls[0].event).toBe('view:cycle')
+      expect(controls[0].label).toBe('View: Map; switch to Receivers')
+      for (const [index, first] of controls.entries()) {
+        for (const second of controls.slice(index + 1)) {
+          expect(
+            first.x + first.width <= second.x ||
+              second.x + second.width <= first.x ||
+              first.y + first.height <= second.y ||
+              second.y + second.height <= first.y,
+            `${first.id} overlaps ${second.id}`,
+          ).toBe(true)
+        }
+      }
+      const summary = layer(scene, 'summary')
+      expect(summary.x + summary.width).toBeLessThanOrEqual(controls[0].x)
+      assertSceneBounds(scene)
+    }
+  })
   it.each([390, 1366])('shows modes and CW-only WPM at width %i', (width) => {
     const source = {
       ...model,
