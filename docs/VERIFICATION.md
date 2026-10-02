@@ -1,5 +1,26 @@
 # Verification and compatibility
 
+## Release 0.7.6 publication — 2026-10-02
+
+Published [v0.7.6](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.7.6)
+from signed commit `02f6a921b75bc4db149a233dc0facdd589886453` at 17:23:03 UTC
+(13:23 US Eastern time). GitHub verifies the signature, and the release tag
+resolves to this tested commit. The
+[check workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/37040297643)
+and [release workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/37040336140)
+succeeded. All seven bundles and seven checksum files are present, and the
+published body matches `docs/releases/v0.7.6.md` exactly.
+
+`mise run release:catalog v0.7.6 --dry-run` downloaded and validated every
+published asset and selected RBN alone. The catalog job returned **approved**
+on `stable` for RBN at 17:23:54 UTC. CQ WW, CWT, MST, PSK Reporter, SST, and
+WRT were skipped as intended.
+
+The preparation checks below remain the runtime verification scope;
+publication does not establish native UI or on-air acceptance. These records
+are personal repository documentation, exempt from upstream CWT and CQ WW
+behavior synchronization.
+
 ## Release 0.7.6 preparation — 2026-10-02
 
 Prepared synchronized version 0.7.6 for optional RBN spot separation and

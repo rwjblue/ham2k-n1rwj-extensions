@@ -8,6 +8,24 @@ each submission before operators can install it from the catalog.
 
 ## Current release status
 
+[v0.7.6](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.7.6)
+was published from signed commit `02f6a921b75bc4db149a233dc0facdd589886453`
+on October 2, 2026 at 13:23 US Eastern time (17:23 UTC).
+All seven bundles and seven checksum files are available. The
+[release workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/37040336140)
+passed both upload and catalog jobs. Downloaded assets passed
+`mise run release:catalog v0.7.6 --dry-run`, and the published body matches
+`docs/releases/v0.7.6.md` exactly.
+
+RBN returned **approved** on `stable` at 17:23:54 UTC. CQ WW, CWT, MST,
+PSK Reporter, SST, and WRT were skipped because their behavior is unchanged.
+This release adds optional RBN spot separation and the compact My Signal
+view-cycle control. Native UI acceptance remains outstanding. See the
+[release notes](releases/v0.7.6.md) and
+[verification record](VERIFICATION.md#release-076-publication--2026-10-02).
+
+### Previous releases
+
 [v0.7.5](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.7.5)
 was published from signed commit `bc7613c6f5885414802a55ad6d110fe31fb8e6e7`
 on October 1, 2026 at 18:13 US Eastern time (22:13 UTC).
@@ -23,8 +41,6 @@ This release adds the optional RBN minimum SNR filter and reception time-window
 and band-menu improvements. Native acceptance for the new SNR option remains
 outstanding. See the [release notes](releases/v0.7.5.md) and
 [verification record](VERIFICATION.md#release-075-publication--2026-10-01).
-
-### Previous releases
 
 [v0.7.4](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.7.4)
 was published from signed commit `772dbd2f07bd44331c1de8efbe07dfc88ba3c3d9`
