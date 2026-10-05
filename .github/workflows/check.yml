@@ -13,7 +13,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: jdx/mise-action@v4
+      - uses: jdx/mise-action@v5
+        with:
+          auto_update: true
       - run: mise run check
       - uses: actions/upload-artifact@v7
         with:

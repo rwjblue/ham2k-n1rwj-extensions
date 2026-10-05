@@ -1,5 +1,45 @@
 # Verification and compatibility
 
+## Non-Ham2K dependency review — 2026-10-05
+
+Updated the independently committed development dependencies:
+
+| Dependency | Previous | Current |
+| --- | --- | --- |
+| Biome | 2.5.14 | 2.5.15 |
+| Node types (root and tasks) | 24.13.6 | 24.19.1 |
+| LiquidJS | 10.29.0 | 10.30.0 |
+| Vitest | 5.0.1 | 5.0.3 |
+| mise GitHub Action | v4 | v5 |
+
+Reviewed the primary [Biome](https://github.com/biomejs/biome/releases/tag/%40biomejs/biome%402.5.15),
+[LiquidJS](https://github.com/harttle/liquidjs/releases/tag/v10.30.0), and
+[Vitest](https://github.com/vitest-dev/vitest/releases/tag/v5.0.3) release
+notes. Updated Biome's schema alongside the package and refreshed compatible
+transitive dependencies, including Vite, Rolldown, Chai, and PostCSS.
+Ham2K dependency versions are unchanged in this commit.
+
+[mise-action v5.1.1](https://github.com/jdx/mise-action/releases/tag/v5.1.1)
+keeps its GitHub token within the action by default. Release and catalog
+steps already receive explicit `GH_TOKEN` values. `auto_update: true`
+retains automatic mise refreshes despite v5's new cache default. Workflow
+validation passed with actionlint 1.7.12; shell-script checking was disabled
+because the workflows' shell commands are unchanged.
+
+Node 24.21.0, TypeScript 7.0.2, esbuild 0.28.2, semver, D3, and the other
+direct dependencies are already current. `npm outdated` now reports only
+newer Node-type and i18next majors. Keep Node types on major 24 to match
+the runtime and i18next 23.16.8 to match the host. Both npm dependency
+trees audit with zero vulnerabilities.
+
+`mise run format` and `mise run check` passed with the updated toolchain:
+**1,053 tests across 77 files**, strict typechecks, lint, seven ES2020
+builds, and official packaging of every extension.
+
+These repository tooling changes are exempt from upstream CWT and CQ WW
+behavior synchronization. Include root dependency updates under
+**Shared changes** in the next authored release notes.
+
 ## Ham2K dependency review — 2026-10-05
 
 Updated the published [extension SDK](https://www.npmjs.com/package/@ham2k/extension-sdk)
