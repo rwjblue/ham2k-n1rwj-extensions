@@ -10,6 +10,16 @@ contacts.
 
 Part of the [N1RWJ extension family](../../../README.md).
 
+## Export an activation reception report
+
+Open the operation's **Exports** view for an offline HTML report with receiver
+maps and fifteen-minute UTC SNR timelines. Markdown, individual-observation
+CSV, collected-evidence JSON, SVG map, and contact-context CSV are also available.
+My Signal saves bounded reception evidence while visible; exporting queries
+available service history to recover additional observations. Gaps and limits
+remain explicit, and nearby receiver evidence is never described as a contact's SNR.
+See [collection behavior, limits, and generated examples](../../../docs/RBN-EXPORTS.md).
+
 ## Find stations in Spots
 
 Opening **Settings → RBN** checks the
