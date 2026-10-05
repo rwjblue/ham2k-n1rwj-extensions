@@ -188,6 +188,7 @@ export function createRbnPanel(
     now?: () => number
     settings?: () => Promise<Record<string, JSONValue>>
     enrichReports?: (reports: readonly RbnReport[]) => RbnReport[]
+    observeCollection?: (args: PanelRenderArgs, time: number) => void
   } = {},
 ): PanelHook {
   const client = dependencies.client ?? rbnClient
@@ -225,6 +226,7 @@ export function createRbnPanel(
       const suppliedTime = args.clock?.realNowMillis
       const realTime =
         typeof suppliedTime === 'number' && Number.isFinite(suppliedTime) ? suppliedTime : undefined
+      dependencies.observeCollection?.(args, realTime ?? now())
       const [snapshot, preferences] = await Promise.all([
         client.getSnapshot(
           { call, windowMinutes: config.windowMinutes },
@@ -280,6 +282,10 @@ export function createRbnPanel(
       if (action !== `${prefix}:${value}`) return { values: {} }
       if (controlId === 'refresh' && action === 'refresh:reports') {
         const suppliedTime = args.clock?.realNowMillis
+        dependencies.observeCollection?.(
+          args,
+          typeof suppliedTime === 'number' && Number.isFinite(suppliedTime) ? suppliedTime : now(),
+        )
         // Start a request without holding the event open. Its post-event render
         // reads the shared cache and polls the pending result through tick:1.
         await client.getSnapshot(

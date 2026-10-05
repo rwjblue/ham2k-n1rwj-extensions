@@ -1,7 +1,14 @@
 import { defineExtension, host } from '@ham2k/extension-sdk'
 import manifest from '../manifest.json'
-import { rbnClient, rbnFetch, setRbnSettings } from './data/host-client.ts'
+import {
+  rbnClient,
+  rbnEvidence,
+  rbnFetch,
+  rbnRecorder,
+  setRbnSettings,
+} from './data/host-client.ts'
 import { createReceiverData } from './data/receivers.ts'
+import { createRbnExportHook } from './export/hook.ts'
 import { createRbnPanel } from './panel.ts'
 import { createRbnSpots } from './spots/index.ts'
 
@@ -9,6 +16,7 @@ defineExtension({
   ...manifest,
   onHide() {
     rbnClient.pause?.()
+    rbnRecorder.pause()
   },
   onActivation({ registerHook }) {
     const receivers = createReceiverData()
@@ -26,9 +34,13 @@ defineExtension({
     registerHook('activity', { hook: activity })
     registerHook('settingsPanel', { hook: settings })
     registerHook('dataFile', { key: receivers.dataFile.key, hook: receivers.dataFile })
+    registerHook('export', { hook: createRbnExportHook(rbnEvidence, Date.now, receivers.lookup) })
     registerHook('panel', {
       key: manifest.key,
-      hook: createRbnPanel({ enrichReports: receivers.enrichReports }),
+      hook: createRbnPanel({
+        enrichReports: receivers.enrichReports,
+        observeCollection: rbnRecorder.observe,
+      }),
     })
   },
 })

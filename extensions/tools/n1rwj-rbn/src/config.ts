@@ -42,3 +42,13 @@ export const configFields: SettingsField[] = receptionConfigFields().flatMap((fi
       ]
     : []),
 ])
+
+configFields.push({
+  type: 'field',
+  fieldType: 'checkbox',
+  key: 'recordReception',
+  label: 'Save reception evidence',
+  value: true,
+  description:
+    'Keep individual spots collected while this panel is visible for activation exports. Storage is bounded; the report identifies limits and gaps. Turning this off stops new recording for this panel.',
+})

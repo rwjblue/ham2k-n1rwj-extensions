@@ -162,7 +162,7 @@ async function harness(saved: Record<string, JSONValue> = {}, contests = ['cwt',
   }
 }
 
-it('bundled RBN recognizes new and already-saved station refs offline without changing the log or export hooks', async () => {
+it('bundled RBN recognizes new and already-saved station refs offline without changing contacts', async () => {
   const runtime = await harness(
     { 'extension_n1rwj-rbn': { unrelated: 42, spotAllowMerging: false } },
     [],
@@ -172,7 +172,8 @@ it('bundled RBN recognizes new and already-saved station refs offline without ch
   expect(activity.operationControls).toBeUndefined()
   expect(activity.suggest).toBeUndefined()
   expect(activity.processQsoBeforeSave).toBeUndefined()
-  for (const category of ['export', 'adifFields', 'adifImport']) {
+  expect(runtime.registered.get('n1rwj-rbn')?.has('export')).toBe(true)
+  for (const category of ['adifFields', 'adifImport']) {
     expect(runtime.registered.get('n1rwj-rbn')?.has(category)).toBe(false)
   }
   const args: Parameters<NonNullable<ActivityHook['loggingControls']>>[0][] = [
