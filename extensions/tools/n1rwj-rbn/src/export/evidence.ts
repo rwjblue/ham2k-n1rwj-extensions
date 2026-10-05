@@ -163,13 +163,8 @@ export function appendEvidencePage(
   },
 ): { evidence: RbnEvidence; page: RbnRetrievalPage } {
   const request = evidence.request
-  const parsed = parseRbnPayload(
-    payload,
-    request.call,
-    Math.max(1, (request.endMs - request.startMs) / 60_000),
-    request.endMs,
-    evidenceLimits.pageSize,
-  )
+  const windowMinutes = Math.max(1, Math.ceil((request.endMs - request.startMs) / 60_000))
+  parseRbnPayload(payload, request.call, windowMinutes, request.endMs, evidenceLimits.pageSize)
   const data = record(payload)
   if (!data) throw new Error('Vail ReRBN returned an unsupported data format.')
   if (
@@ -179,7 +174,6 @@ export function appendEvidencePage(
   ) {
     throw new Error('Vail ReRBN returned inconsistent pagination metadata.')
   }
-  const parsedById = new Map(parsed.reports.map((report) => [report.id, report]))
   const reports = new Map(evidence.reports.map((report) => [report.id, report]))
   let reportCharacters = evidence.reports.reduce(
     (sum, report) => sum + JSON.stringify(report).length,
@@ -214,7 +208,21 @@ export function appendEvidencePage(
       page.filteredRows++
       continue
     }
-    const report = parsedById.get(String(row.id))
+    let report: RbnReport | undefined
+    try {
+      // A repeated ID may contain conflicting rows. Normalize each actual row
+      // so the normalized measurements always agree with its archived raw JSON.
+      report = parseRbnPayload(
+        { spots: [row], total: 1, offset: 0, limit: evidenceLimits.pageSize },
+        request.call,
+        windowMinutes,
+        request.endMs,
+        1,
+      ).reports[0]
+    } catch {
+      page.invalidRows++
+      continue
+    }
     if (!report) {
       page.invalidRows++
       continue
@@ -506,9 +514,10 @@ export function createEvidenceStore(storage?: PersistentStorage) {
           omittedReports++
           continue
         }
+        const latest = old && old.lastSeenMs > report.lastSeenMs ? old : report
         const candidate = old
           ? {
-              ...report,
+              ...latest,
               firstSeenMs: Math.min(old.firstSeenMs, report.firstSeenMs),
               retrievedAtMs: Math.min(old.retrievedAtMs, report.retrievedAtMs),
               lastSeenMs: Math.max(old.lastSeenMs, report.lastSeenMs),
@@ -541,6 +550,7 @@ export function createEvidenceStore(storage?: PersistentStorage) {
         warnings.add('Only the latest 512 retrieval attempts are retained in this archive.')
       const merged = {
         ...evidence,
+        retrievedAtMs: Math.max(previous?.retrievedAtMs ?? 0, evidence.retrievedAtMs),
         request: {
           ...evidence.request,
           startMs: Math.min(

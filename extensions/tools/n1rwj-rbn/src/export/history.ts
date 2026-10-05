@@ -121,7 +121,7 @@ export function createEvidenceRetriever(dependencies: EvidenceDependencies) {
         const accepted = parseRbnPayload(
           event.payload,
           scope.call,
-          Math.max(1, (scope.endMs - scope.startMs) / 60_000),
+          Math.max(1, Math.ceil((scope.endMs - scope.startMs) / 60_000)),
           attempt.completedAtMs,
           evidenceLimits.pageSize,
         ).reports

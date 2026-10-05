@@ -4,6 +4,7 @@ import type { PersistentStorage } from '../../../../../packages/reception/src/st
 import type { TimerDriver } from '../../../../../packages/reception/src/timers.ts'
 import {
   appendEvidencePage,
+  createEvidenceStore,
   type EvidenceRequest,
   emptyEvidence,
   evidenceStorageKey,
@@ -454,5 +455,67 @@ describe('operation reception evidence', () => {
       retrievalKind: 'live',
     })
     expect(second.warnings).toContainEqual(expect.stringContaining('observation ID changed fields'))
+  })
+
+  it('retains exact fractional-minute range boundaries and excludes the rounded query padding', () => {
+    const scope = { ...request, startMs: request.startMs + 123, endMs: request.endMs - 456 }
+    const rows = [scope.startMs, scope.endMs, scope.startMs - 1, scope.endMs + 1].map(
+      (time, index) => spotPayload({ id: index + 1, timestamp: new Date(time).toISOString() }),
+    )
+    const result = appendEvidencePage(emptyEvidence(scope, NOW), payload({ spots: rows }), {
+      kind: 'history',
+      startedAtMs: NOW,
+      retrievedAtMs: NOW,
+      offset: 0,
+      status: 200,
+    })
+    expect(result.evidence.reports.map((report) => report.id)).toEqual(['1', '2'])
+    expect(result.page.filteredRows).toBe(2)
+  })
+
+  it('does not let a slow history completion overwrite newer live measurements during a serialized merge', async () => {
+    const older = appendEvidencePage(emptyEvidence(request, NOW), payload(), {
+      kind: 'history',
+      startedAtMs: NOW,
+      retrievedAtMs: NOW,
+      offset: 0,
+      status: 200,
+    }).evidence
+    const newer = appendEvidencePage(
+      older,
+      payload({ spots: [spotPayload({ snr: 25, spotter_grid: 'FN42' })] }),
+      { kind: 'live', startedAtMs: NOW + 100, retrievedAtMs: NOW + 100, offset: 0, status: 200 },
+    ).evidence
+    const store = createEvidenceStore()
+    await store.update(newer)
+    await store.update(older)
+    const result = await store.read(request.operationId, request.call)
+    expect(result?.reports[0]).toMatchObject({
+      snrDb: 25,
+      receiverGrid: 'FN42',
+      lastSeenMs: NOW + 100,
+      firstSeenMs: NOW,
+      raw: { snr: 25, spotter_grid: 'FN42' },
+    })
+  })
+
+  it('keeps raw and normalized values together when an inconsistent page repeats an ID', () => {
+    const result = appendEvidencePage(
+      emptyEvidence(request, NOW),
+      payload({
+        spots: [
+          spotPayload({ id: 1, snr: 19, timestamp: new Date(NOW - 60_000).toISOString() }),
+          spotPayload({ id: 1, snr: 2, timestamp: new Date(NOW).toISOString() }),
+        ],
+      }),
+      { kind: 'history', startedAtMs: NOW, retrievedAtMs: NOW, offset: 0, status: 200 },
+    )
+    expect(result.evidence.reports).toHaveLength(1)
+    expect(result.evidence.reports[0]).toMatchObject({
+      snrDb: 2,
+      timeMs: NOW,
+      raw: { snr: 2, timestamp: new Date(NOW).toISOString() },
+    })
+    expect(result.page.duplicateRows).toBe(1)
   })
 })
