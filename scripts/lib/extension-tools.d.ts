@@ -1,4 +1,4 @@
-// @ham2k/extension-tools 0.3.0 publishes JavaScript without declarations.
+// @ham2k/extension-tools 0.8.0 publishes JavaScript without declarations.
 // These signatures cover the public functions used by our build tasks.
 declare module '@ham2k/extension-tools' {
   import type { build } from 'esbuild'

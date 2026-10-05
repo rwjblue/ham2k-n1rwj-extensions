@@ -4,6 +4,7 @@ import { wrapInfoText } from '../../src/ui/details.ts'
 import { renderReceptionScene } from '../../src/ui/scene.ts'
 import type { UiModel } from '../../src/ui/types.ts'
 import { environment } from '../environment.ts'
+import { assertFixedSceneRect } from './fixed-scene-rect.ts'
 
 const model: UiModel = {
   title: 'PSK Reporter',
@@ -44,8 +45,10 @@ describe('report info layout', () => {
     expect(identity.length).toBeGreaterThan(1)
     expect(identity.map((layer) => layer.text?.literal).join(' ')).toBe('PSK Reporter · N1RWJ')
     const tabs = scene.controls?.find((control) => control.id === 'details-status')
+    if (!tabs) throw new Error('Missing status tab')
+    assertFixedSceneRect(tabs)
     const lastLine = identity[identity.length - 1]
-    expect(tabs?.y).toBeGreaterThanOrEqual(lastLine.y + lastLine.height)
+    expect(tabs.y).toBeGreaterThanOrEqual(lastLine.y + lastLine.height)
   })
   it('shows scoped freshness rather than a newer report from a hidden band', () => {
     const { scene, pageCount } = renderReceptionScene(model, environment(390, 740), {
@@ -128,6 +131,7 @@ describe('report info layout', () => {
           expect(scene.layers.length).toBeLessThanOrEqual(128)
           const items = [...scene.layers, ...(scene.controls ?? [])]
           for (const item of items) {
+            assertFixedSceneRect(item)
             expect(item.x).toBeGreaterThanOrEqual(0)
             expect(item.y).toBeGreaterThanOrEqual(0)
             expect(item.x + item.width).toBeLessThanOrEqual(width)

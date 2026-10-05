@@ -1,5 +1,43 @@
 # Verification and compatibility
 
+## Ham2K dependency review — 2026-10-05
+
+Updated the published [extension SDK](https://www.npmjs.com/package/@ham2k/extension-sdk)
+from 0.9.0 to 0.12.0 and [extension tools](https://www.npmjs.com/package/@ham2k/extension-tools)
+from 0.7.0 to 0.8.0 after comparing their published code and contracts. The
+[HaLo Next feed](https://updates.ham2k.net/halo-next/latest.json) still lists
+26.9.0 build 177. All seven declared Ham2K shared libraries already match
+their latest publications. Keep i18next 23.16.8 and the existing manifest
+ranges, matching the host's shared-library contract.
+
+SDK 0.12 includes viewport lookup helpers, optional activation radii, and
+the API-5 panel scene contract with native controls and layouts. Our panels
+retain API 3 and `svgScene`, which the SDK preserves as a compatible alias;
+contest manifests retain API 1. Geometry tests now require concrete numeric
+bounds before checking our SVG hit targets against the viewport. New scene
+layout controls may omit those bounds, so the broader SDK types no longer
+guarantee them.
+
+The SDK's ADIF helper now forwards optional `operatorFallback`. Our CWT,
+CQ WW, and mini-contest callers omit it, preserving host defaults. Scorer
+helpers are unchanged; no contest runtime migration is required. Verified
+the source branches of [CWT PR #1](https://github.com/ham2k/extensions/pull/1)
+and [CQ WW PR #2](https://github.com/ham2k/extensions/pull/2). Repository
+toolchain updates and reception-only tests/documentation are exempt from
+their behavior synchronization requirements.
+
+`mise run format` and `mise run check` passed: **1,053 tests across 77
+files**, strict runtime/test/task typechecks, lint, seven ES2020 builds,
+and official packaging of every extension.
+
+`mise run verify-host` passed for all seven extensions against installed
+**Ham2K Next 26.9.0 build 177**, kernel SHA-256
+`c572080a83d2f6773bfa32ec814063d40578a8698a64e7dae89d82b89c3d9102`.
+This executes the installed JavaScript kernel under Node VM with simulated
+timer wakes; native UI, operating-system scheduling, and on-air behavior
+remain outside its scope. Put these universal root dependency changes in
+**Shared changes** when authoring the next release's notes.
+
 ## Release 0.7.6 publication — 2026-10-02
 
 Published [v0.7.6](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.7.6)

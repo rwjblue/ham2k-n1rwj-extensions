@@ -2,7 +2,7 @@
 
 Live PSK Reporter reception maps for Ham2K with **extension API 3** and native
 SVG panels. The regular package uses the published `@ham2k/extension-sdk`
-**0.8.1** and `@ham2k/extension-tools` **0.7.0**, with a WebSocket permission
+**0.12.0** and `@ham2k/extension-tools` **0.8.0**, with a WebSocket permission
 for `mqtt.pskreporter.info`, and HTTPS access to `retrieve.pskreporter.info`
 for recent history.
 
@@ -12,7 +12,7 @@ for recent history.
 mise run pack n1rwj-psk-reporter
 ```
 
-Install `dist/n1rwj-psk-reporter-0.6.1.h2kext` through Ham2K's extension installer,
+Install `dist/n1rwj-psk-reporter-0.7.6.h2kext` through Ham2K's extension installer,
 allow its declared network hosts, and add **PSK Reporter** to an operation's layout.
 It follows the operation's station callsign and location unless overridden.
 Choose **Who hears me** for outgoing reception or **Who I hear** for reports
@@ -31,7 +31,9 @@ validate native Ham2K UI, real HTTP access or operating-system lifecycle.
 The implementation first passed against upstream source commit
 [17b15fdcafdd](https://github.com/ham2k/halo/commit/17b15fdcafdd), then passed the
 same contract, build, packer and binary bridge checks against the published
-SDK 0.6.0/tools 0.5.0. Timer support is checked against SDK 0.8.1/tools 0.7.0.
+SDK 0.6.0/tools 0.5.0. Timer support is checked against SDK 0.12.0/tools 0.8.0.
+The panel keeps the compatible `svgScene` payload and API 3; SDK 0.12's
+`scene` payload and native layout controls require API 5.
 The code uses the SDK's socket and timer types and regular entry point; no SDK
 implementation is copied into this repository.
 

@@ -4,6 +4,7 @@ import type { SceneSelection } from '../../src/ui/scene.ts'
 import { renderReceptionScene, sortedSceneReports } from '../../src/ui/scene.ts'
 import type { UiModel, UiReport } from '../../src/ui/types.ts'
 import { environment } from '../environment.ts'
+import { assertFixedSceneRect } from './fixed-scene-rect.ts'
 
 const rows: UiReport[] = Array.from({ length: 24 }, (_, index) => ({
   call: `K${index % 10}RX${String(index).padStart(2, '0')}`,
@@ -74,6 +75,7 @@ function assertSceneBounds(scene: SvgScene): void {
   const ids = scene.layers.map((layer) => layer.id)
   expect(new Set(ids).size).toBe(ids.length)
   for (const item of [...scene.layers, ...(scene.controls ?? [])]) {
+    assertFixedSceneRect(item)
     expect(item.x, `${item.id} x`).toBeGreaterThanOrEqual(0)
     expect(item.y, `${item.id} y`).toBeGreaterThanOrEqual(0)
     expect(item.width, `${item.id} width`).toBeGreaterThan(0)
@@ -106,12 +108,15 @@ describe('RBN native scene', () => {
       const refresh = scene.controls?.find((control) => control.id === 'refresh')
       const details = scene.controls?.find((control) => control.id === 'details')
       if (!refresh || !details) throw new Error('Missing report actions')
+      assertFixedSceneRect(refresh)
+      assertFixedSceneRect(details)
       expect(refresh.event).toBe('refresh:reports')
       expect(refresh.label).toContain('Refresh receiver reports')
       expect(refresh.y).toBe(details.y)
       expect(refresh.x + refresh.width).toBeLessThan(details.x)
       const band = scene.controls?.find((control) => control.id === 'band')
       if (!band) throw new Error('Missing band menu')
+      assertFixedSceneRect(band)
       expect(band.y).toBe(refresh.y)
       expect(band.x + band.width).toBeLessThan(refresh.x)
       expect(band.y + band.height).toBeGreaterThanOrEqual(
@@ -153,6 +158,7 @@ describe('RBN native scene', () => {
       const controls = ['view', 'band', 'refresh', 'details'].map((id) => {
         const found = scene.controls?.find((control) => control.id === id)
         if (!found) throw new Error(`Missing ${id}`)
+        assertFixedSceneRect(found)
         return found
       })
       expect(controls[0].y).toBe(controls[2].y)
