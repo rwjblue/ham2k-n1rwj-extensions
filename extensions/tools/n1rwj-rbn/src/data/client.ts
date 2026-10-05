@@ -28,6 +28,19 @@ export interface RbnClientOptions {
   storage?: PersistentStorage
   timers?: TimerDriver
   observeTimeLowerBound?: (time: number) => void
+  /** Freeze operation ownership before crossing the asynchronous fetch bridge. */
+  prepareCollection?: (
+    query: RbnQuery,
+    startedAtMs: number,
+  ) => ((result: RbnCollectionResult) => void) | undefined
+}
+
+export interface RbnCollectionResult {
+  startedAtMs: number
+  retrievedAtMs: number
+  payload?: unknown
+  status?: number
+  error?: string
 }
 
 export interface RbnClient {
@@ -452,6 +465,7 @@ export function createRbnClient(options: RbnClientOptions): RbnClient {
       let fetchStartedAt: number | undefined
       let succeeded = false
       let requestSent = true
+      let collected: ((result: RbnCollectionResult) => void) | undefined
       try {
         // Persist the attempt before sending so restarting cannot reset the budget.
         // Keep the old attempt if the shared transport reports no request was sent.
@@ -465,6 +479,7 @@ export function createRbnClient(options: RbnClientOptions): RbnClient {
           return clip(current.snapshot, requestNow(), online ? 'cooldown' : 'offline')
         }
         fetchStartedAt = requestNow()
+        collected = options.prepareCollection?.(normalized, fetchStartedAt)
         const response = await getReports(
           normalized,
           requestOptions.scheduled ? () => isVisible(normalized) : undefined,
@@ -487,9 +502,21 @@ export function createRbnClient(options: RbnClientOptions): RbnClient {
           error: null,
         }
         succeeded = true
+        collected?.({
+          startedAtMs: fetchStartedAt,
+          retrievedAtMs: requestNow(),
+          payload: response.payload,
+          status: response.status,
+        })
       } catch (error) {
         const failure = requestFailure(error)
         requestSent = failure.requestSent
+        if (fetchStartedAt !== undefined && requestSent)
+          collected?.({
+            startedAtMs: fetchStartedAt,
+            retrievedAtMs: requestNow(),
+            error: failure.message,
+          })
         if (!requestSent && requestOptions.scheduled && !isVisible(normalized)) {
           current.snapshot = previousSnapshot
           return clip(current.snapshot, requestNow(), online ? 'cooldown' : 'offline')
