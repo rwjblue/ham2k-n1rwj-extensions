@@ -101,6 +101,7 @@ export function createActivity(
             : 'Your state / province / DX',
           uppercase: true,
           placeholder: config.locationInput?.placeholder ?? 'MA, ON or DX',
+          suggestions: config.setupLocationSuggestions,
         })
       elements.push(
         {

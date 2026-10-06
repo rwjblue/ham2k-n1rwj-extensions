@@ -1,10 +1,13 @@
-import { hooks } from '@ham2k/extension-sdk'
+import { type FormField, hooks } from '@ham2k/extension-sdk'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import mstManifest from '../../../extensions/contests/n1rwj-mst/manifest.json'
 import { config as mst } from '../../../extensions/contests/n1rwj-mst/src/config.ts'
 import sstManifest from '../../../extensions/contests/n1rwj-sst/manifest.json'
 import { config as sst } from '../../../extensions/contests/n1rwj-sst/src/config.ts'
+import wrtManifest from '../../../extensions/contests/n1rwj-wrt/manifest.json'
+import { config as wrt } from '../../../extensions/contests/n1rwj-wrt/src/config.ts'
 import { createActivity } from '../src/activity.ts'
+import { LOCATIONS } from '../src/exchange.ts'
 import { createExports } from '../src/exports.ts'
 import { parseHistory } from '../src/history.ts'
 import type { Qson } from '../src/model.ts'
@@ -30,6 +33,54 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 describe('native activity contracts', () => {
+  it('offers named SST setup locations without rejecting corrections or making a multi-location exchange', async () => {
+    const { activity, refHandler } = createActivity(sst, sstManifest)
+    const controls = await activity.operationControls({ operation: sstOperation }, ctx)
+    const input = controls[0]?.input
+    if (input?.kind !== 'form') throw new Error('Expected the SST setup form')
+    const field = input.form.elements.find(
+      (element): element is FormField => element.type === 'field' && element.key === 'ourLocation',
+    )
+    expect(field?.suggestions).toEqual(
+      expect.arrayContaining([
+        { code: 'MA', name: 'Massachusetts' },
+        { code: 'ON', name: 'Ontario' },
+        { code: 'NF', name: 'Newfoundland' },
+        { code: 'NL', name: 'Newfoundland (alias for NF)' },
+        { code: 'LB', name: 'Labrador' },
+        { code: 'DX', name: 'Other locations, including Alaska and Hawaii' },
+      ]),
+    )
+    expect(field?.suggestions?.map(({ code }) => code).sort()).toEqual([...LOCATIONS].sort())
+    expect(field).not.toHaveProperty('validate')
+    expect(field).not.toHaveProperty('transform')
+    expect(field).not.toHaveProperty('transforms')
+    expect(field).not.toHaveProperty('multiValue')
+    for (const ourLocation of ['', 'ZZ', 'NL']) {
+      const decorated = await refHandler.decorateRef(
+        { ref: { type: 'sst', ref: '2026-09-21-0000', ourLocation } },
+        ctx,
+      )
+      expect(decorated).toMatchObject({ ourLocation })
+    }
+  })
+  it('keeps WRT country prefixes freeform and MST serials out of setup location suggestions', async () => {
+    for (const [config, manifest] of [
+      [mst, mstManifest],
+      [wrt, wrtManifest],
+    ] as const) {
+      const { activity } = createActivity(config, manifest)
+      const controls = await activity.operationControls({ operation: {} }, ctx)
+      const input = controls[0]?.input
+      if (input?.kind !== 'form') throw new Error('Expected the contest setup form')
+      const location = input.form.elements.find(
+        (element): element is FormField =>
+          element.type === 'field' && element.key === 'ourLocation',
+      )
+      if (config.type === 'mst') expect(location).toBeUndefined()
+      else expect(location?.suggestions).toBeUndefined()
+    }
+  })
   it('registers host-allocated MST serial and never suggests a received serial', async () => {
     const file = parseHistory(mst, '# ICWC-MST\n!!Order!!,Call,Name,Misc\nK1ABC,BOB,123\n')
     const { activity } = createActivity(mst, mstManifest, () => file)

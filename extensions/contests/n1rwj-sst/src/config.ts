@@ -3,6 +3,7 @@ import {
   type DownloadedContestConfig,
   POWER_CLASSES,
 } from '../../../../packages/mini-contest/src/model.ts'
+import { setupLocationSuggestions } from './locations.ts'
 
 export const config: DownloadedContestConfig = {
   type: 'sst',
@@ -24,6 +25,7 @@ export const config: DownloadedContestConfig = {
   historyPrefix: 'k1usnsst-',
   historyAliases: ['K1USNSST', 'K1USN-SST', 'SST'],
   exchange: 'name-location',
+  setupLocationSuggestions,
   guidance:
     'Send your name and state or Canadian province; all other locations, including Alaska and Hawaii, send DX. Maximum speed: 20 WPM. Multipliers are states, provinces and DXCC entities once per band. Each session is separate; report your score on 3830 Scores.',
 }

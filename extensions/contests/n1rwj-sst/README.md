@@ -49,6 +49,9 @@ contact and reset any edits left in the controls.
 
 Open the operation title, then **Edit activity** beside SST to choose the
 UTC session, your sent name and state/province/`DX`, and power class.
+The location field offers names and codes, such as **Massachusetts → MA**.
+You can still save an unusual value or leave it blank; the suggestions do not
+replace what you enter. Older Ham2K versions show a plain text field.
 
 ![SST session and sent-exchange setup in Ham2K](../../../docs/images/contests/sst-setup.jpg)
 

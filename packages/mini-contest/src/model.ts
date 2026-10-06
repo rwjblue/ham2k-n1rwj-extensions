@@ -1,4 +1,4 @@
-import type { JSONValue } from '@ham2k/extension-sdk'
+import type { FormField, JSONValue } from '@ham2k/extension-sdk'
 
 export type Qson = Record<string, JSONValue>
 export interface ContestConfig {
@@ -15,6 +15,7 @@ export interface ContestConfig {
   bands: string[]
   powerClasses: typeof POWER_CLASSES
   multiplier: 'callsign' | 'sst-location'
+  setupLocationSuggestions?: FormField['suggestions']
   locationInput?: {
     label: string
     placeholder: string
