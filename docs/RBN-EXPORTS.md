@@ -92,6 +92,10 @@ eight offered datasets; reopen Exports if options expire. A frozen dataset is
 checked against operation and station identity before generation. Online and
 offline exports both use only saved evidence and cache.
 
+Changing export settings preserves the formats you checked. Refreshed options
+use a new saved-data snapshot; companion files from the same option list still
+share one frozen snapshot.
+
 Opening Exports waits for already-completed panel responses queued for archive
 storage, rather than for an unfinished network fetch. That recording queue is
 bounded to eight responses. A full queue rejects additional recording and marks

@@ -174,9 +174,9 @@ export function createRbnExportHook(
       }
       return formats.map((format, index) => ({
         exportType: `rbnReception-${format.extension}`,
-        // The host uses exportKey as the checkbox identity. Give every format
-        // its own identity while retaining one shared immutable dataset.
-        exportKey: `${datasetKey}:${format.extension}`,
+        // The host preserves checkbox choices across settings reloads by this
+        // stable option identity. The dataset token travels separately below.
+        exportKey: `rbn:${format.extension}`,
         format: format.extension,
         label: format.label,
         filename: filename(args, format.extension),
@@ -184,6 +184,7 @@ export function createRbnExportHook(
         priority: 10 + index,
         selectedByDefault: index === 0,
         templateData: {
+          rbnDatasetKey: datasetKey,
           activity: 'RBN',
           modifier:
             format.extension === 'json'
@@ -201,12 +202,14 @@ export function createRbnExportHook(
       if (!format) throw new Error('Unknown RBN export format.')
       let datasetKey: string | undefined
       if (args.exportKey) {
-        const suffix = `:${format.extension}`
-        datasetKey = args.exportKey.endsWith(suffix)
-          ? args.exportKey.slice(0, -suffix.length)
-          : undefined
-        if (!datasetKey || !/^rbn:\d+$/.test(datasetKey))
+        if (args.exportKey !== `rbn:${format.extension}`)
           throw new Error('RBN export option does not match the requested format.')
+        const token = args.exportData?.rbnDatasetKey
+        if (typeof token !== 'string' || !/^rbn:\d+$/.test(token))
+          throw new Error(
+            'RBN export dataset token is missing or invalid. Reopen Exports to use the available saved evidence.',
+          )
+        datasetKey = token
       }
       const selected = datasetKey ? offered.get(datasetKey) : await collectSaved(args)
       if (!selected) {
