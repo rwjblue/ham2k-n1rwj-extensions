@@ -8,6 +8,27 @@ each submission before operators can install it from the catalog.
 
 ## Current release status
 
+[v0.8.0](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.8.0)
+was published from signed commit `7416bfa326470cf933d7121ecee63009557dcfe5`
+on October 6, 2026 at 18:26 US Eastern time (22:26:22 UTC).
+All seven bundles and seven checksum files are available. The
+[release workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/37540583330)
+passed both upload and catalog jobs. Downloaded assets passed
+`mise run release:catalog v0.8.0 --dry-run`, and the published body matches
+`docs/releases/v0.8.0.md` exactly.
+
+CQ WW, CWT, MST, PSK Reporter, RBN, SST and WRT all returned **approved** on
+`stable` at 22:27 UTC. Universal SDK/tools and development dependency updates
+select every extension. The release includes native reception controls, the
+temporary report-window choice, six RBN reception exports with optional evidence
+collection, named SST location suggestions and dedicated contest export entries.
+RBN and PSK Reporter require extension API 5; contest extensions retain API 1.
+Native verification scope and remaining device checks are recorded in the
+[release notes](releases/v0.8.0.md) and
+[verification record](VERIFICATION.md#release-080-publication--2026-10-06).
+
+### Previous releases
+
 [v0.7.6](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.7.6)
 was published from signed commit `02f6a921b75bc4db149a233dc0facdd589886453`
 on October 2, 2026 at 13:23 US Eastern time (17:23 UTC).
@@ -23,8 +44,6 @@ This release adds optional RBN spot separation and the compact My Signal
 view-cycle control. Native UI acceptance remains outstanding. See the
 [release notes](releases/v0.7.6.md) and
 [verification record](VERIFICATION.md#release-076-publication--2026-10-02).
-
-### Previous releases
 
 [v0.7.5](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.7.5)
 was published from signed commit `bc7613c6f5885414802a55ad6d110fe31fb8e6e7`

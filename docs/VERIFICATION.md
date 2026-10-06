@@ -1,5 +1,32 @@
 # Verification and compatibility
 
+## Release 0.8.0 publication — 2026-10-06
+
+Published [v0.8.0](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.8.0)
+from signed commit `7416bfa326470cf933d7121ecee63009557dcfe5` at 22:26:22 UTC
+(18:26 US Eastern time). GitHub verifies the signature, and the release tag
+resolves to this tested commit. The
+[check workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/37540488208)
+and [release workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/37540583330)
+succeeded. All seven bundles and seven SHA-256 checksum files are present;
+the published body matches `docs/releases/v0.8.0.md` exactly.
+
+`mise run release:catalog v0.8.0 --dry-run` downloaded and validated every
+published asset and selected all seven entries. Catalog submissions for CQ WW,
+CWT, MST, PSK Reporter, RBN, SST and WRT each returned **approved** on `stable`
+between 22:27:22 and 22:27:29 UTC. There were no skipped extensions or retries.
+Universal root dependency changes select every extension; shared reception and
+mini-contest behavior is described under each affected consumer.
+
+The preparation and native pilot records below define verification scope.
+Publication does not establish mobile, accessibility, native export save/share,
+production network or lifecycle acceptance beyond those records. The release
+retains API 5 for reception tools and API 1 for contests, with existing
+shared-library ranges. CWT source is already synchronized to PR #1; CQ WW is
+unchanged. These publication records and personal release metadata are exempt
+from official contest synchronization. Previously preserved designs and unrelated
+contest work remain outside the release in their original Jujutsu change.
+
 ## Release 0.8.0 preparation — 2026-10-06
 
 Prepared synchronized version 0.8.0 for the completed SDK adoption, native
