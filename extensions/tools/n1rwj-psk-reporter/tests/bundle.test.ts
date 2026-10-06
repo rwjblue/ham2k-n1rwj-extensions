@@ -37,6 +37,7 @@ it('keeps initial and manual history requests outside rendering with only SDK ti
   let panel: PanelHook | undefined
   let saved: Record<string, JSONValue> = {}
   let requests = 0
+  const historyUrls: string[] = []
   let finish!: () => void
   let reject!: (error: Error) => void
   let pending: Promise<void>
@@ -81,6 +82,7 @@ it('keeps initial and manual history requests outside rendering with only SDK ti
       }
       if (method === 'fetch') {
         requests++
+        historyUrls.push(String(params.url))
         expect(params.timeout).toBeUndefined()
         await pending
         return {
@@ -145,9 +147,33 @@ it('keeps initial and manual history requests outside rendering with only SDK ti
   })
   expect(requests).toBe(1)
   expect(saved).not.toHaveProperty('band')
+  const window = required(completed.scene.controls?.find((control) => control.id === 'window'))
+  expect(window).toMatchObject({ kind: 'nativeDropdown', value: 'window' })
+  expect(
+    await hook.onEvent?.(
+      {
+        ...args(),
+        event: {
+          controlId: 'window',
+          action: required(window.event),
+          phase: 'commit',
+          sequence: 1,
+          text: '30',
+        },
+      },
+      { online: true },
+    ),
+  ).toEqual({ values: {}, strings: { window: '30' } })
+  const expandedWindow = await hook.render(args(), { online: true })
+  if (expandedWindow.kind !== 'scene') throw new Error('Expected native reception scene')
+  expect(expandedWindow.scene.strings?.window).toBe('30')
+  expect(JSON.stringify(expandedWindow)).toContain('US-E-015')
+  expect(JSON.stringify(expandedWindow)).toContain('Collection gap · history queued')
+  expect(requests).toBe(1)
+  expect(saved).not.toHaveProperty('windowMinutes')
 
   defer()
-  let current = completed
+  let current = expandedWindow
   let sequence = 1
   const reload = () =>
     hook.onEvent?.(
@@ -169,6 +195,7 @@ it('keeps initial and manual history requests outside rendering with only SDK ti
   const reloading = await hook.render(args(), { online: true })
   if (reloading.kind !== 'scene') throw new Error('Expected native reception scene')
   current = reloading
+  expect(historyUrls[1]).toContain('senderCallsign=N1RWJ&flowStartSeconds=-1800')
   expect(reloading.triggers).toEqual(['tick:1'])
   expect(JSON.stringify(reloading)).toContain('US-E-015')
   await reload()

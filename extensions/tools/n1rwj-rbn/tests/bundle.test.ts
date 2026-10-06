@@ -89,6 +89,7 @@ it('restores reports and shared server backoff through the actual SDK settings b
   let saved: Record<string, JSONValue> = { spotMode: 'CW' }
   let clock = NOW
   let requests = 0
+  const requestUrls: string[] = []
   let limited = false
   function restart() {
     const timers = createHostTimerHarness()
@@ -125,6 +126,7 @@ it('restores reports and shared server backoff through the actual SDK settings b
         }
         if (method === 'fetch') {
           requests++
+          requestUrls.push(String(params.url))
           return limited
             ? { status: 429, body: JSON.stringify({ error: { retryAfter: 120 } }) }
             : { status: 200, body: JSON.stringify(payload()) }
@@ -216,13 +218,43 @@ it('restores reports and shared server backoff through the actual SDK settings b
   const { panel: third, timers: thirdTimers } = restart()
   await refresh(third)
   expect(requests).toBe(2)
-  expect(JSON.stringify(await third.render(args(), { online: true }))).toContain('rate limited')
+  const rateLimited = await third.render(args(), { online: true })
+  expect(JSON.stringify(rateLimited)).toContain('rate limited')
+  if (rateLimited.kind !== 'scene') throw new Error('Expected API-5 reception scene')
+  const window = required(rateLimited.scene.controls?.find((control) => control.id === 'window'))
+  expect(window).toMatchObject({ kind: 'nativeDropdown', value: 'window' })
+  expect(
+    await third.onEvent?.(
+      {
+        ...args(),
+        event: {
+          controlId: 'window',
+          action: required(window.event),
+          phase: 'commit',
+          sequence: 2,
+          text: '30',
+        },
+      },
+      { online: true },
+    ),
+  ).toEqual({ values: {}, strings: { window: '30' } })
+  const selectedWindow = await third.render(args(), { online: true })
+  if (selectedWindow.kind !== 'scene') throw new Error('Expected API-5 reception scene')
+  expect(selectedWindow.scene.strings?.window).toBe('30')
+  expect(requests).toBe(2)
+  expect(saved).not.toHaveProperty('windowMinutes')
   clock += 120_000
   limited = false
   thirdTimers.advance(120_000)
   await settleHostCalls()
   await third.render(args(), { online: true })
   await settleHostCalls()
+  expect(requests).toBe(3)
+  expect(requestUrls[2]).toContain(`since=${Math.floor(clock / 1000) - 1800}`)
+  const { panel: fourth } = restart()
+  const restartedWindow = await fourth.render(args(), { online: false })
+  if (restartedWindow.kind !== 'scene') throw new Error('Expected API-5 reception scene')
+  expect(restartedWindow.scene.strings?.window).toBe('15')
   expect(requests).toBe(3)
   expect(saved.spotMode).toBe('CW')
 })

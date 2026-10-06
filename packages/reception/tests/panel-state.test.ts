@@ -50,6 +50,53 @@ describe('band selection', () => {
   })
 })
 
+describe('report window selection', () => {
+  it('keeps temporary windows independent and follows changed saved defaults', () => {
+    const stateFor = createPanelStateStore()
+    const initial = { ...args, config: { windowMinutes: 15 } }
+    const state = stateFor(initial)
+    state.selection = { band: '40m', sort: 'snr', page: 7 }
+    state.reportPage = 7
+    applySceneEvent(state, 'window', 'window:60')
+    expect(state.selection).toEqual({ band: '40m', sort: 'snr', page: 0, windowMinutes: 60 })
+    expect(state.reportPage).toBe(0)
+    expect(state.config.windowMinutes).toBe(15)
+    expect(stateFor(initial).selection.windowMinutes).toBe(60)
+    expect(stateFor({ ...initial, instanceId: 'two' }).selection.windowMinutes).toBeUndefined()
+
+    const unrelated = stateFor({ ...initial, config: { windowMinutes: 15, view: 'map' } })
+    expect(unrelated.selection.windowMinutes).toBe(60)
+    const changed = stateFor({ ...initial, config: { windowMinutes: 30, view: 'map' } })
+    expect(changed.selection.windowMinutes).toBeUndefined()
+    expect(changed.config.windowMinutes).toBe(30)
+    expect(changed.selection.band).toBe('40m')
+    applySceneEvent(changed, 'window', 'window:5')
+    expect(
+      stateFor({ ...initial, operation: { uuid: 'new', stationCall: 'N1RWJ' } }).selection,
+    ).toEqual({})
+  })
+
+  it('accepts only supported canonical window values with the matching control', () => {
+    const state = createPanelStateStore()(args)
+    for (const [control, action] of [
+      ['band', 'window:30'],
+      ['window', 'band:30'],
+      ['window', 'window:0'],
+      ['window', 'window:90'],
+      ['window', 'window:030'],
+      ['window', 'window:1.5'],
+      ['window', 'window:NaN'],
+      ['window', 'window:15:extra'],
+    ])
+      applySceneEvent(state, control, action)
+    expect(state.selection).toEqual({})
+    for (const windowMinutes of [1, 3, 5, 10, 15, 30, 45, 60]) {
+      applySceneEvent(state, 'window', `window:${windowMinutes}`)
+      expect(state.selection.windowMinutes).toBe(windowMinutes)
+    }
+  })
+})
+
 describe('info navigation', () => {
   it('returns to the original report page after navigating info tabs and pages', () => {
     const stateFor = createPanelStateStore()

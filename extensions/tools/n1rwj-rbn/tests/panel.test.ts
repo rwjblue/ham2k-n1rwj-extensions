@@ -185,6 +185,108 @@ function deferred<T>() {
 }
 
 describe('RBN native panel integration', () => {
+  it('uses a temporary Report window for queries, collection ownership, details, and refresh per placement', async () => {
+    const getSnapshot = vi.fn().mockResolvedValue(snapshot)
+    const observeCollection = vi.fn()
+    const panel = createRbnPanel({
+      client: { getSnapshot },
+      now: () => now,
+      settings: async () => ({}),
+      observeCollection,
+    })
+    const originalConfig = { ...args.config }
+    await panel.render(args, { online: true })
+    expect(sceneState(await panel.render(args, { online: true })).strings?.window).toBe('15')
+    const before = getSnapshot.mock.calls.length
+    expect(await panel.onEvent?.(event(panel, 'window', '30'), { online: true })).toEqual({
+      values: {},
+      strings: { window: '30' },
+    })
+    // Selection changes do not perform a forced request inside the event.
+    expect(getSnapshot).toHaveBeenCalledTimes(before)
+    const selected = await panel.render(args, { online: true })
+    expect(sceneState(selected).strings?.window).toBe('30')
+    expect(getSnapshot).toHaveBeenLastCalledWith(
+      { call: 'K8BTU', windowMinutes: 30 },
+      { instanceId: args.instanceId, online: true, waitForRequest: false },
+    )
+    expect(observeCollection).toHaveBeenLastCalledWith(
+      expect.objectContaining({ config: { ...args.config, windowMinutes: 30 } }),
+      now,
+    )
+    const other = { ...args, instanceId: 'another-placement' }
+    expect(sceneState(await panel.render(other, { online: true })).strings?.window).toBe('15')
+    expect(getSnapshot.mock.calls[getSnapshot.mock.calls.length - 1]?.[0]).toEqual({
+      call: 'K8BTU',
+      windowMinutes: 15,
+    })
+    await panel.onEvent?.(event(panel, 'refresh'), { online: true })
+    expect(getSnapshot).toHaveBeenLastCalledWith(
+      { call: 'K8BTU', windowMinutes: 30 },
+      { force: true, instanceId: args.instanceId, online: true, waitForRequest: false },
+    )
+    expect(
+      observeCollection.mock.calls[observeCollection.mock.calls.length - 1]?.[0].config
+        .windowMinutes,
+    ).toBe(30)
+    await panel.onEvent?.(event(panel, 'details'), { online: true })
+    expect(await detailsText(panel, args)).toContain('Last 30 minutes')
+    expect(args.config).toEqual(originalConfig)
+  })
+
+  it('preserves a Report window across unrelated settings and resets it when its saved default or operation changes', async () => {
+    const { panel, getSnapshot } = setup()
+    await panel.render(args, { online: true })
+    await panel.onEvent?.(event(panel, 'window', '60'), { online: true })
+    const unrelated = { ...args, config: { ...args.config, projection: 'azimuthal' } }
+    expect(sceneState(await panel.render(unrelated, { online: true })).strings?.window).toBe('60')
+    expect(getSnapshot.mock.calls[getSnapshot.mock.calls.length - 1]?.[0].windowMinutes).toBe(60)
+    const saved = { ...unrelated, config: { ...unrelated.config, windowMinutes: 5 } }
+    expect(sceneState(await panel.render(saved, { online: true })).strings?.window).toBe('5')
+    await panel.onEvent?.(event(panel, 'window', '30', saved), { online: true })
+    const nextOperation = { ...saved, operation: { ...saved.operation, uuid: 'new-operation' } }
+    expect(sceneState(await panel.render(nextOperation, { online: true })).strings?.window).toBe(
+      '5',
+    )
+    expect(getSnapshot.mock.calls[getSnapshot.mock.calls.length - 1]?.[0]).toEqual({
+      call: 'K8BTU',
+      windowMinutes: 5,
+    })
+    await panel.onEvent?.(event(panel, 'window', '30', nextOperation), { online: true })
+    const clearedOperation = { ...saved, operation: {} }
+    expect(sceneState(await panel.render(clearedOperation, { online: true })).strings?.window).toBe(
+      '5',
+    )
+    expect(sceneState(await setup().panel.render(args, { online: true })).strings?.window).toBe(
+      '15',
+    )
+  })
+
+  it('keeps Report window changes behind the existing server rate limit', async () => {
+    const fetch = vi
+      .fn()
+      .mockResolvedValueOnce({ status: 429, body: JSON.stringify({ error: { retryAfter: 120 } }) })
+      .mockResolvedValue({ status: 200, body: JSON.stringify(payload({ spots: [], total: 0 })) })
+    const client = createRbnClient({ fetch })
+    const panel = createRbnPanel({ client, settings: async () => ({}) })
+    const at = (elapsed: number) => ({
+      ...args,
+      clock: { nowMillis: now, realNowMillis: now + elapsed },
+    })
+    await panel.render(at(0), { online: true })
+    await client.getSnapshot({ call: 'K8BTU', windowMinutes: 15 }, { realNowMillis: now })
+    await panel.render(at(0), { online: true })
+    await panel.onEvent?.(event(panel, 'window', '30', at(0)), { online: true })
+    await panel.render(at(0), { online: true })
+    expect(fetch).toHaveBeenCalledTimes(1)
+    expect(sceneState(await panel.render(at(119_999), { online: true })).strings?.window).toBe('30')
+    expect(fetch).toHaveBeenCalledTimes(1)
+    await panel.render(at(120_000), { online: true })
+    await client.getSnapshot({ call: 'K8BTU', windowMinutes: 30 }, { realNowMillis: now + 120_000 })
+    expect(fetch).toHaveBeenCalledTimes(2)
+    expect(fetch.mock.calls[1]?.[0]).toContain(`since=${Math.floor((now + 120_000) / 1000) - 1800}`)
+  })
+
   it('separates snapshot freshness, report interpretation, and request diagnostics', () => {
     const model = panelModel(args, { ...snapshot, lastRequestDurationMs: 217 }, now)
     expect(model.details?.facts).toEqual([

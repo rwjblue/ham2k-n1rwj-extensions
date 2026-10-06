@@ -5,6 +5,7 @@ import type {
   PanelSceneLayer,
   PanelTypography,
 } from '@ham2k/extension-sdk'
+import { receptionWindowMinutes } from '../config.ts'
 import { layoutReceptionMap } from '../map/index.ts'
 import { receptionMapTheme } from '../map/theme.ts'
 import { type DetailsTab, layoutReceptionDetails, wrapInfoText } from './details.ts'
@@ -15,6 +16,7 @@ export interface SceneSelection {
   band: string
   sort: UiSort
   direction: UiDirection
+  windowMinutes: number
   /** Zero based; clamped whenever the data or available space changes. */
   page: number
   details?: boolean
@@ -145,6 +147,12 @@ export function renderReceptionScene(
     Math.ceil(Math.max(line(title), bodyLine) + 14 * textScale * 1.2 + 26 * textScale + 8),
   )
   const segmentHeight = Math.max(48, Math.ceil(Math.max(line(title), bodyLine) + 16 * textScale))
+  // Material text buttons use labelLarge rather than the panel's labelSmall.
+  // Reserve scaled bounds; the host still applies text scaling to the label.
+  const nativeButtonFont = Math.max(body.scaledFontSize, 14 * textScale)
+  const nativeButtonHeight = Math.max(48, bodyLine + 16)
+  const nativeButtonWidth = (caption: string): number =>
+    Math.max(64, Math.ceil(caption.length * nativeButtonFont * 0.55 + 24))
   const sortHeight = native ? choiceHeight : buttonHeight
   const layers: PanelSceneLayer[] = []
   const controls: PanelSceneControl[] = []
@@ -155,6 +163,11 @@ export function renderReceptionScene(
     band: requested.band ?? model.defaultBand ?? 'all',
     sort: requested.sort ?? model.defaultSort ?? 'age',
     direction: requested.direction ?? model.defaultDirection ?? 'desc',
+    windowMinutes: receptionWindowMinutes.includes(
+      requested.windowMinutes ?? model.defaultWindowMinutes ?? 15,
+    )
+      ? (requested.windowMinutes ?? model.defaultWindowMinutes ?? 15)
+      : 15,
     page: finite(requested.page) ? Math.max(0, Math.floor(requested.page)) : 0,
     details: requested.details === true,
     detailsTab: requested.detailsTab ?? 'status',
@@ -303,6 +316,28 @@ export function renderReceptionScene(
     })
   }
 
+  function nativeAction(
+    id: string,
+    caption: string,
+    event: string,
+    x: number,
+    y: number,
+    width: number,
+  ): void {
+    if (width < 64 || y + nativeButtonHeight > bottom) return
+    controls.push({
+      id,
+      label: caption,
+      kind: 'nativeButton',
+      event,
+      variant: 'text',
+      x,
+      y,
+      width,
+      height: nativeButtonHeight,
+    })
+  }
+
   art(
     'surface',
     0,
@@ -330,9 +365,23 @@ export function renderReceptionScene(
   const bandLabel = selection.band === 'all' ? 'All bands' : selection.band
   const summary = `${receivers} ${station}${receivers === 1 ? '' : 's'} · ${bands} band${bands === 1 ? '' : 's'}${farthest ? ` · ${Math.round(farthest).toLocaleString('en-US')} km max` : ''}`
   const cycleView = !native && model.presentation?.viewCycle === true && !selection.details
-  const headerTextWidth = w - (cycleView ? 168 : 112)
+  const actions = [
+    ...(model.presentation?.refreshLabel
+      ? [{ id: 'refresh', caption: 'Refresh', event: 'refresh:reports' }]
+      : []),
+    { id: 'details', caption: selection.details ? 'Back' : 'Details', event: 'details:toggle' },
+  ]
+  const actionWidth =
+    actions.reduce((sum, action) => sum + nativeButtonWidth(action.caption), 0) +
+    (actions.length - 1) * 8
+  const inlineActions = native && w >= actionWidth + 8 + Math.max(112, 8 * label.scaledFontSize)
+  const headerTextWidth = native
+    ? inlineActions
+      ? w - actionWidth - 8
+      : w
+    : w - (cycleView ? 168 : 112)
   const identityLines = selection.details
-    ? wrapInfoText(`${source} · ${model.watchCall || 'No callsign'}`, w - 112, label)
+    ? wrapInfoText(`${source} · ${model.watchCall || 'No callsign'}`, headerTextWidth, label)
     : []
   // The host tab already names the watched call. Keep status and the active
   // filter beside refresh/details instead of spending a row on a title.
@@ -354,7 +403,7 @@ export function renderReceptionScene(
         identity,
         left,
         y + (index + 1) * labelLine,
-        w - 112,
+        headerTextWidth,
       )
   } else {
     const countSummary = `▾ ${bandLabel} · ${receivers} ${station}${receivers === 1 ? '' : 's'}`
@@ -362,7 +411,7 @@ export function renderReceptionScene(
     const compactSummary = `▾ ${selection.band === 'all' ? 'All' : bandLabel} · ${receivers} ${station === 'receiver' ? 'RX' : station === 'transmitter' ? 'TX' : 'stns'}`
     text(
       'summary',
-      cycleView && countSummary.length * label.scaledFontSize * 0.55 > headerTextWidth
+      (native || cycleView) && countSummary.length * label.scaledFontSize * 0.55 > headerTextWidth
         ? compactSummary
         : w >= 600 * (label.scaledFontSize / label.fontSize)
           ? `▾ ${bandLabel} · ${summary}`
@@ -399,25 +448,49 @@ export function renderReceptionScene(
       label: `View: ${names[selection.view]}; switch to ${names[next[selection.view]]}`,
     })
   }
-  if (model.presentation?.refreshLabel)
-    button('refresh', '↻', right - 104, y, 48, {
-      event: 'refresh:reports',
-      label: model.presentation.refreshLabel,
-    })
-  button(
-    'details',
-    selection.details ? '×' : model.warnings?.length ? '!' : 'ⓘ',
-    right - 48,
-    y,
-    48,
-    {
-      event: 'details:toggle',
-      label: selection.details
-        ? 'Close report info and return to reports'
-        : `Report info${model.warnings?.length ? `, ${model.warnings.length} warnings` : ''}`,
-    },
-  )
-  y += Math.max(labelLine * Math.max(2, 1 + identityLines.length), buttonHeight) + 6
+  if (native) {
+    const metadataHeight = labelLine * Math.max(2, 1 + identityLines.length)
+    let actionY = inlineActions ? y : y + metadataHeight + 6
+    if (actionWidth <= w) {
+      let actionX = right - actionWidth
+      for (const action of actions) {
+        const width = nativeButtonWidth(action.caption)
+        nativeAction(action.id, action.caption, action.event, actionX, actionY, width)
+        actionX += width + 8
+      }
+    } else {
+      // Large text may require one full-width action per row. Keep the captions
+      // visible instead of reverting to small drawn glyph targets.
+      for (const action of actions) {
+        nativeAction(action.id, action.caption, action.event, left, actionY, w)
+        actionY += nativeButtonHeight + 8
+      }
+      actionY -= nativeButtonHeight + 8
+    }
+    y = inlineActions
+      ? y + Math.max(metadataHeight, nativeButtonHeight) + 6
+      : actionY + nativeButtonHeight + 6
+  } else {
+    if (model.presentation?.refreshLabel)
+      button('refresh', '↻', right - 104, y, 48, {
+        event: 'refresh:reports',
+        label: model.presentation.refreshLabel,
+      })
+    button(
+      'details',
+      selection.details ? '×' : model.warnings?.length ? '!' : 'ⓘ',
+      right - 48,
+      y,
+      48,
+      {
+        event: 'details:toggle',
+        label: selection.details
+          ? 'Close report info and return to reports'
+          : `Report info${model.warnings?.length ? `, ${model.warnings.length} warnings` : ''}`,
+      },
+    )
+    y += Math.max(labelLine * Math.max(2, 1 + identityLines.length), buttonHeight) + 6
+  }
 
   if (native && !selection.details) {
     const viewOptions = [
@@ -429,9 +502,13 @@ export function renderReceptionScene(
       (sum, option) => sum + option.label.length * label.scaledFontSize * 0.7 + 48,
       0,
     )
-    const bandWidth = Math.max(160, 11 * label.scaledFontSize * 0.7 + 48)
+    const choiceFont = Math.max(body.scaledFontSize, 16 * textScale)
+    const bandWidth = Math.max(152, Math.ceil(9 * choiceFont * 0.55 + 48))
+    const windowWidth = Math.max(112, Math.ceil(6 * choiceFont * 0.55 + 48))
     const includeView = model.presentation?.viewCycle === true
-    const oneRow = includeView && w >= bandWidth + viewWidth + 8
+    const oneRow = includeView && w >= bandWidth + windowWidth + viewWidth + 16
+    const fieldsInRow = w >= bandWidth + windowWidth + 8
+    const renderedBandWidth = oneRow ? bandWidth : fieldsInRow ? w - windowWidth - 8 : w
     choice(
       'band',
       'Band',
@@ -439,7 +516,20 @@ export function renderReceptionScene(
       availableBands.map((band) => ({ value: band, label: band === 'all' ? 'All bands' : band })),
       left,
       y,
-      oneRow ? bandWidth : w,
+      renderedBandWidth,
+    )
+    if (!fieldsInRow) y += choiceHeight + 8
+    choice(
+      'window',
+      'Window',
+      String(selection.windowMinutes),
+      receptionWindowMinutes.map((minutes) => ({
+        value: String(minutes),
+        label: `${minutes} min`,
+      })),
+      fieldsInRow ? left + renderedBandWidth + 8 : left,
+      y,
+      fieldsInRow ? windowWidth : w,
     )
     let toolbarHeight = choiceHeight
     if (includeView) {
@@ -449,9 +539,9 @@ export function renderReceptionScene(
         'View',
         selection.view,
         viewOptions,
-        oneRow ? left + bandWidth + 8 : left,
+        oneRow ? left + bandWidth + windowWidth + 16 : left,
         y,
-        oneRow ? w - bandWidth - 8 : w,
+        oneRow ? w - bandWidth - windowWidth - 16 : w,
         true,
       )
       if (!oneRow && w >= viewWidth) toolbarHeight = segmentHeight
@@ -687,7 +777,9 @@ export function renderReceptionScene(
     } else if (!sideBySide) {
       text(
         'map-compact',
-        'Choose Map in panel settings for a larger map.',
+        native && model.presentation?.viewCycle
+          ? 'Choose Map above for a larger map.'
+          : 'Choose Map in panel settings for a larger map.',
         left,
         y,
         w,

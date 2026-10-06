@@ -11,13 +11,13 @@ const args: PanelRenderArgs = {
   qsoCount: 0,
   reason: 'render',
 }
-function scene(): PanelScene {
+function scene(refreshKind: 'button' | 'nativeButton' = 'button'): PanelScene {
   return {
     version: 1,
     width: 640,
     height: 640,
     values: {},
-    strings: { band: 'all' },
+    strings: { band: 'all', window: '15' },
     layers: [],
     controls: [
       {
@@ -38,18 +38,85 @@ function scene(): PanelScene {
       {
         id: 'refresh',
         label: 'Refresh reports',
-        kind: 'button',
+        kind: refreshKind,
         event: 'refresh:reports',
         x: 210,
         y: 0,
         width: 44,
         height: 44,
       },
+      {
+        id: 'window',
+        label: 'Window',
+        kind: 'nativeDropdown',
+        value: 'window',
+        event: 'window:set',
+        x: 0,
+        y: 70,
+        width: 140,
+        height: 64,
+        options: [
+          { value: '15', label: '15 min' },
+          { value: '30', label: '30 min' },
+        ],
+      },
     ],
   }
 }
 
 describe('placement scene events', () => {
+  it('routes committed window strings to numeric placement state and rejects obsolete choices', () => {
+    const stateFor = createPanelStateStore()
+    const state = stateFor(args)
+    const current = scene()
+    bindPanelEvents(state, current)
+    const event: PanelSceneEvent = {
+      controlId: 'window',
+      action: current.controls?.[2].event ?? '',
+      phase: 'commit',
+      sequence: 1,
+      text: '30',
+    }
+    const read = readPanelEvent(state, event)
+    expect(read).toEqual({ controlId: 'window', action: 'window:30', strings: { window: '30' } })
+    if (!read) throw new Error('Missing window event')
+    applySceneEvent(state, read.controlId, read.action)
+    expect(state.selection.windowMinutes).toBe(30)
+    for (const extra of [
+      { phase: 'change' },
+      { phase: 'activate' },
+      { text: '90' },
+      { text: '030' },
+      { text: undefined },
+    ])
+      expect(readPanelEvent(state, { ...event, ...extra } as PanelSceneEvent)).toBeUndefined()
+    const changed = stateFor({ ...args, config: { windowMinutes: 5 } })
+    bindPanelEvents(changed, scene())
+    expect(readPanelEvent(changed, event)).toBeUndefined()
+    expect(changed.selection.windowMinutes).toBeUndefined()
+  })
+
+  it.each(['button', 'nativeButton'] as const)(
+    'accepts activate actions for %s without confusing them with commits',
+    (kind) => {
+      const state = createPanelStateStore()(args)
+      const current = scene(kind)
+      bindPanelEvents(state, current)
+      const event: PanelSceneEvent = {
+        controlId: 'refresh',
+        action: current.controls?.[1].event ?? '',
+        phase: 'activate',
+        sequence: 1,
+      }
+      expect(readPanelEvent(state, event)).toEqual({
+        controlId: 'refresh',
+        action: 'refresh:reports',
+      })
+      expect(readPanelEvent(state, { ...event, phase: 'commit' })).toBeUndefined()
+      expect(readPanelEvent(state, { ...event, phase: 'change' })).toBeUndefined()
+    },
+  )
+
   it('commits a rendered string choice through authoritative placement state', () => {
     const state = createPanelStateStore()(args)
     const current = scene()

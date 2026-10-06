@@ -194,6 +194,7 @@ export function pskPanelModel(
     defaultView: config.view,
     defaultSort: config.sort === 'wpm' ? 'age' : config.sort,
     defaultDirection: config.direction,
+    defaultWindowMinutes: config.windowMinutes,
   }
 }
 
@@ -224,6 +225,8 @@ export function createPskPanel(live: LiveReception): PanelHook {
       const epoch = state.epoch
       const renderVersion = ++state.renderVersion
       const config = readConfig(args.config)
+      const windowMinutes = state.selection.windowMinutes ?? config.windowMinutes
+      const effectiveArgs = { ...args, config: { ...args.config, windowMinutes } }
       const realTime = realNowMillis(args)
       const now = realTime ?? Date.now()
       const restored = await live.restore(realTime)
@@ -238,11 +241,14 @@ export function createPskPanel(live: LiveReception): PanelHook {
         args.instanceId,
         watchedCall(args.operation, config.watchCall),
         args.config.receptionDirection === 'incoming' ? 'incoming' : 'outgoing',
-        config.windowMinutes,
+        windowMinutes,
         ctx.online !== false,
         realTime,
       )
-      const model = pskPanelModel(args, snapshot.reports, now, snapshot)
+      const model = {
+        ...pskPanelModel(effectiveArgs, snapshot.reports, now, snapshot),
+        defaultWindowMinutes: config.windowMinutes,
+      }
       const rendered = renderReceptionScene(
         model,
         args.environment,
@@ -250,6 +256,7 @@ export function createPskPanel(live: LiveReception): PanelHook {
           ...state.selection,
           view: config.view,
           band: state.selection.band ?? config.band,
+          windowMinutes,
         },
         { nativeControls: true },
       )
@@ -273,7 +280,7 @@ export function createPskPanel(live: LiveReception): PanelHook {
           live.forceHistory(
             watchedCall(args.operation, config.watchCall),
             args.config.receptionDirection === 'incoming' ? 'incoming' : 'outgoing',
-            config.windowMinutes,
+            state.selection.windowMinutes ?? config.windowMinutes,
             ctx.online !== false,
             realNowMillis(args),
           )

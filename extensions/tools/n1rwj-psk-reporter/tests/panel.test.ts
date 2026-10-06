@@ -141,6 +141,7 @@ function backgroundPanel(fetch: HistoryHost['fetch']) {
   })
   return {
     panel,
+    live,
     socket,
     args: currentArgs,
     stop: () => live.stop(),
@@ -175,6 +176,113 @@ function historyResponse(receiver = 'W1AW'): FetchResponse {
     body: `<pskreporter><receptionReport senderCallsign="N1RWJ" receiverCallsign="${receiver}" receiverLocator="FN31" frequency="14074000" mode="FT8" flowStartSeconds="${now / 1000}"/></pskreporter>`,
   }
 }
+
+it('uses a temporary Report window for cached filtering, snapshot requests, details, and reload per placement', async () => {
+  const live = createLiveReception(
+    () => fakeSocket().socket,
+    () => now,
+  )
+  const base = live.snapshot('fixture', 'N1RWJ', 'outgoing', 15, false, now)
+  const snapshot = vi.spyOn(live, 'snapshot').mockReturnValue({
+    ...base,
+    reports: [
+      report,
+      {
+        ...report,
+        id: 'older',
+        receiver: { ...report.receiver, call: 'K1OLD' },
+        timeMs: now - 20 * 60_000,
+      },
+    ],
+  })
+  const forceHistory = vi.spyOn(live, 'forceHistory')
+  const panel = createPskPanel(live)
+  const list = { ...args, config: { view: 'list' } }
+  const originalConfig = { ...list.config }
+  expect(sceneText(await panel.render(list, { online: false }))).not.toContain('K1OLD')
+  const before = snapshot.mock.calls.length
+  expect(
+    await panel.onEvent?.(renderedEvent(panel, list, 'window', '30'), { online: false }),
+  ).toEqual({
+    values: {},
+    strings: { window: '30' },
+  })
+  expect(snapshot).toHaveBeenCalledTimes(before)
+  expect(forceHistory).not.toHaveBeenCalled()
+  const selected = await panel.render(list, { online: false })
+  expect(sceneState(selected).strings?.window).toBe('30')
+  expect(sceneText(selected)).toContain('K1OLD')
+  expect(snapshot).toHaveBeenLastCalledWith('one', 'N1RWJ', 'outgoing', 30, false, now)
+  const second = { ...list, instanceId: 'two' }
+  const other = await panel.render(second, { online: false })
+  expect(sceneState(other).strings?.window).toBe('15')
+  expect(sceneText(other)).not.toContain('K1OLD')
+  await panel.onEvent?.(renderedEvent(panel, list, 'refresh'), { online: false })
+  expect(forceHistory).toHaveBeenLastCalledWith('N1RWJ', 'outgoing', 30, false, now)
+  await panel.onEvent?.(renderedEvent(panel, list, 'details'), { online: false })
+  expect(sceneText(await panel.render(list, { online: false }))).toContain('Last 30 minutes')
+  expect(list.config).toEqual(originalConfig)
+  live.stop()
+})
+
+it('preserves a Report window across unrelated settings and resets it for a saved default or new operation', async () => {
+  const s = backgroundPanel(async () => historyResponse())
+  await s.render('one', false)
+  await s.event('window', '60', false)
+  const unrelated = { ...s.args(), config: { ...s.args().config, projection: 'azimuthal' } }
+  expect(sceneState(await s.panel.render(unrelated, { online: false })).strings?.window).toBe('60')
+  const saved = { ...unrelated, config: { ...unrelated.config, windowMinutes: 5 } }
+  expect(sceneState(await s.panel.render(saved, { online: false })).strings?.window).toBe('5')
+  await s.panel.onEvent?.(renderedEvent(s.panel, saved, 'window', '30'), { online: false })
+  const nextOperation = { ...saved, operation: { ...saved.operation, uuid: 'new-operation' } }
+  expect(sceneState(await s.panel.render(nextOperation, { online: false })).strings?.window).toBe(
+    '5',
+  )
+  await s.panel.onEvent?.(renderedEvent(s.panel, nextOperation, 'window', '30'), { online: false })
+  const clearedOperation = { ...saved, operation: {} }
+  expect(
+    sceneState(await s.panel.render(clearedOperation, { online: false })).strings?.window,
+  ).toBe('5')
+  const restarted = createPskPanel(s.live)
+  expect(sceneState(await restarted.render(s.args(), { online: false })).strings?.window).toBe('15')
+  s.stop()
+})
+
+it('keeps a larger Report window on the exact MQTT topic and normal pending-history cooldown', async () => {
+  const request = deferred<FetchResponse>()
+  const fetch = vi.fn<HistoryHost['fetch']>(() => request.promise)
+  const s = backgroundPanel(fetch)
+  const forceHistory = vi.spyOn(s.live, 'forceHistory')
+  await s.render()
+  await settle()
+  s.socket.socket.onopen?.()
+  s.socket.receive([0x20, 2, 0, 0])
+  s.socket.receive([0x90, 3, 0, 1, 0])
+  const sent = s.socket.sent.map((packet) => [...packet])
+  expect(sent.map((packet) => new TextDecoder().decode(new Uint8Array(packet))).join('')).toContain(
+    'pskr/filter/v2/+/+/N1RWJ/#',
+  )
+  expect(fetch.mock.calls[0]?.[0]).toContain('senderCallsign=N1RWJ&flowStartSeconds=-900')
+  await s.event('window', '30')
+  const pending = await s.render()
+  expect(sceneState(pending).strings?.window).toBe('30')
+  expect(sceneText(pending)).toContain('K1ABC')
+  expect(pending.triggers).toEqual(['tick:1'])
+  expect(fetch).toHaveBeenCalledTimes(1)
+  expect(s.socket.sent).toEqual(sent)
+  expect(forceHistory).not.toHaveBeenCalled()
+  request.resolve(historyResponse())
+  await settle()
+  expect(sceneText(await s.render())).toContain('Collection gap · history queued')
+  expect(fetch).toHaveBeenCalledTimes(1)
+  s.advance(5 * 60_000)
+  await s.render()
+  await settle()
+  expect(fetch).toHaveBeenCalledTimes(2)
+  expect(fetch.mock.calls[1]?.[0]).toContain('senderCallsign=N1RWJ&flowStartSeconds=-1800')
+  expect(forceHistory).not.toHaveBeenCalled()
+  s.stop()
+})
 
 it('uses the same renderer for both directions without RBN branding or invented CW speed', () => {
   for (const incoming of [false, true]) {

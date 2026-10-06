@@ -179,6 +179,7 @@ export function panelModel(
     defaultSort: config.sort,
     defaultDirection: config.direction,
     defaultView: config.view,
+    defaultWindowMinutes: config.windowMinutes,
     theme: { brightness, ...args.environment?.colors },
   }
 }
@@ -225,15 +226,17 @@ export function createRbnPanel(
       const config = readConfig(args.config)
       const call = watchedCall(args.operation, config.watchCall)
       const state = stateFor(args)
+      const windowMinutes = state.selection.windowMinutes ?? config.windowMinutes
+      const effectiveArgs = { ...args, config: { ...args.config, windowMinutes } }
       const epoch = state.epoch
       const renderVersion = ++state.renderVersion
       const suppliedTime = args.clock?.realNowMillis
       const realTime =
         typeof suppliedTime === 'number' && Number.isFinite(suppliedTime) ? suppliedTime : undefined
-      dependencies.observeCollection?.(args, realTime ?? now())
+      dependencies.observeCollection?.(effectiveArgs, realTime ?? now())
       const [snapshot, preferences] = await Promise.all([
         client.getSnapshot(
-          { call, windowMinutes: config.windowMinutes },
+          { call, windowMinutes },
           {
             instanceId: args.instanceId,
             online: ctx.online,
@@ -252,20 +255,24 @@ export function createRbnPanel(
           ? (snapshot.lastSuccessMs ?? realTime ?? now())
           : Math.max(snapshot.lastSuccessMs ?? 0, Math.floor((realTime ?? now()) / 60_000) * 60_000)
       const rendered = renderReceptionScene(
-        panelModel(
-          args,
-          {
-            ...snapshot,
-            reports: dependencies.enrichReports?.(snapshot.reports) ?? snapshot.reports,
-          },
-          ageReference,
-          preferences,
-        ),
+        {
+          ...panelModel(
+            effectiveArgs,
+            {
+              ...snapshot,
+              reports: dependencies.enrichReports?.(snapshot.reports) ?? snapshot.reports,
+            },
+            ageReference,
+            preferences,
+          ),
+          defaultWindowMinutes: config.windowMinutes,
+        },
         args.environment,
         {
           ...state.selection,
           view: state.selection.view ?? config.view,
           band: state.selection.band ?? config.band,
+          windowMinutes,
         },
         { nativeControls: true },
       )
@@ -285,11 +292,12 @@ export function createRbnPanel(
       const event = readPanelEvent(state, args.event)
       if (!event) return { values: {} }
       const config = readConfig(args.config)
+      const windowMinutes = state.selection.windowMinutes ?? config.windowMinutes
       const { controlId, action } = event
       if (controlId === 'refresh' && action === 'refresh:reports') {
         const suppliedTime = args.clock?.realNowMillis
         dependencies.observeCollection?.(
-          args,
+          { ...args, config: { ...args.config, windowMinutes } },
           typeof suppliedTime === 'number' && Number.isFinite(suppliedTime) ? suppliedTime : now(),
         )
         // Start a request without holding the event open. Its post-event render
@@ -297,7 +305,7 @@ export function createRbnPanel(
         await client.getSnapshot(
           {
             call: watchedCall(args.operation, config.watchCall),
-            windowMinutes: config.windowMinutes,
+            windowMinutes,
           },
           {
             instanceId: args.instanceId,

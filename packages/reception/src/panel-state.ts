@@ -1,5 +1,5 @@
 import type { PanelRenderArgs, PanelSceneControl } from '@ham2k/extension-sdk'
-import { type PanelConfig, readConfig, receptionBands } from './config.ts'
+import { type PanelConfig, readConfig, receptionBands, receptionWindowMinutes } from './config.ts'
 import type { SceneSelection } from './ui/scene.ts'
 
 export interface PanelState {
@@ -35,7 +35,7 @@ export function createPanelStateStore() {
         selections.delete(oldest)
       }
     } else if (JSON.stringify(state.config) !== JSON.stringify(config)) {
-      for (const field of ['view', 'band', 'sort', 'direction'] as const) {
+      for (const field of ['view', 'band', 'sort', 'direction', 'windowMinutes'] as const) {
         if (state.config[field] !== config[field]) delete state.selection[field]
       }
       state.selection.page = 0
@@ -62,6 +62,14 @@ export function applySceneEvent(
     (state.bands ?? receptionBands).includes(value)
   ) {
     state.selection = { ...state.selection, band: value, page: 0 }
+    state.reportPage = 0
+  } else if (
+    controlId === 'window' &&
+    prefix === 'window' &&
+    String(Number(value)) === value &&
+    receptionWindowMinutes.includes(Number(value))
+  ) {
+    state.selection = { ...state.selection, windowMinutes: Number(value), page: 0 }
     state.reportPage = 0
   } else if (
     controlId === 'sort' &&

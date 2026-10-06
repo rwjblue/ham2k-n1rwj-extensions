@@ -55,6 +55,7 @@ export interface UiModel {
   defaultDirection?: UiDirection
   defaultView?: UiView
   defaultBand?: string
+  defaultWindowMinutes?: number
   theme?: {
     brightness?: 'light' | 'dark'
     surface?: string

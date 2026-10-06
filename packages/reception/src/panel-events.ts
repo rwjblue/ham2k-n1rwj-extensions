@@ -12,7 +12,7 @@ export function bindPanelEvents(state: PanelState, scene: PanelScene): void {
   state.controls = new Map(controls.map((control) => [control.id, control]))
 }
 
-/** Native choices commit strings; drawn actions activate without a value. */
+/** Native choices commit strings; drawn and native buttons activate actions. */
 export function readPanelEvent(
   state: PanelState,
   event: PanelSceneEvent,
@@ -39,7 +39,7 @@ export function readPanelEvent(
     )
       return
     if (
-      !['band', 'sort', 'view', 'detailsTab'].includes(control.id) ||
+      !['band', 'sort', 'view', 'window', 'detailsTab'].includes(control.id) ||
       action !== `${control.id}:set`
     )
       return
