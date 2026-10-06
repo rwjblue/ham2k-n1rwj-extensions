@@ -1,5 +1,33 @@
 # Verification and compatibility
 
+## Release 0.8.0 preparation — 2026-10-06
+
+Prepared synchronized version 0.8.0 for the completed SDK adoption, native
+reception controls, RBN reception exports, named SST setup suggestions and
+dedicated CWT/MST/SST/WRT export preferences. The authored release notes in
+`docs/releases/v0.8.0.md` include every extension and select all seven catalog
+entries because root SDK/tools and development dependency updates are universal.
+RBN and PSK Reporter require API 5; contests retain API 1. Shared-library ranges
+are unchanged. Preparation changes only versions and release documentation.
+
+`mise run release:notes v0.8.0`, `mise run format` and
+`mise run release v0.8.0 --dry-run` passed, including **1,174 tests across 87
+files**, lint, strict runtime/test/task typechecks, seven ES2020 builds, official
+packaging and all seven bundle/checksum pairs. `mise run verify-host` passed all
+seven 0.8.0 bundles against installed **Ham2K Next 26.9.0 build 177**, kernel
+SHA-256 `c572080a83d2f6773bfa32ec814063d40578a8698a64e7dae89d82b89c3d9102`.
+The kernel probe simulates timer wakes under Node VM; native acceptance and
+its remaining limits are recorded in the reception sections below.
+
+Live CWT PR #1 source `codex/cwt-call-history` was verified at
+`a63546d341ee66c08a3aef37c1614e0f0703072e`; the clean upstream checkout contains
+synchronized export registration, tests and documentation. CQ WW PR #2 remains
+on `codex/cqww-rtty` at `03208ac5aff80a114add8c97a2b492119deff5c5`, with no
+CQ WW behavior changes in this release. Mini-contest-only, reception-only,
+personal release metadata and tooling changes are exempt from official contest
+synchronization. Previously preserved designs and unrelated contest work remain
+outside this release in their original Jujutsu change.
+
 ## Native reception actions and report window — 2026-10-06
 
 RBN and PSK Reporter now use native Refresh and Details/Back buttons and a
