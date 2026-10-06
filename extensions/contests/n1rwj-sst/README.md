@@ -152,6 +152,10 @@ cannot. Correct flagged contacts before reporting your score.
 
 ## Export and report your score
 
+SST ADIF and Cabrillo have separate entries in Ham2K's export preferences.
+They inherit common defaults until customized; filename templates include the
+selected session.
+
 Use Ham2K's **Exports** menu for ADIF or Cabrillo. Both retain your sent and
 received name/location exchanges. ADIF identifies the contest as
 `K1USN-SST`; Cabrillo uses `K1USNSST` and omits signal reports, following the

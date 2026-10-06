@@ -2,7 +2,12 @@
 // SPDX-License-Identifier: MPL-2.0
 // Export delegation and filename handling adapted from Ham2K CWT.
 import type { AdifFieldsHook, ExportHook, ExportRequest, HookContext } from '@ham2k/extension-sdk'
-import { adifForExport, exportFilename, startMillisOf } from '@ham2k/extension-sdk'
+import {
+  adifForExport,
+  exportFilename,
+  exportTypeDefinition,
+  startMillisOf,
+} from '@ham2k/extension-sdk'
 import { qsonToCabrillo } from '@ham2k/lib-qson-cabrillo'
 import { exchangeText, received, sent, validSerial } from './exchange.ts'
 import {
@@ -36,22 +41,29 @@ export function createExports(config: ContestConfig, manifest: ContestManifest) 
       return fields
     },
   } satisfies AdifFieldsHook
+  const filenameActivity = (operation: Qson) =>
+    [config.shortName, text(refOf(operation, config.type)?.ref)].filter(Boolean).join('-')
   const filename = (operation: Qson, qsos: Qson[], extension: string, compact?: boolean) =>
     exportFilename({
       stationCall: operation.stationCall,
-      activity: [config.shortName, text(refOf(operation, config.type)?.ref)]
-        .filter(Boolean)
-        .join('-'),
+      activity: filenameActivity(operation),
       startAtMillis: startMillisOf(operation, qsos),
       extension,
       compact,
     })
   const exports = {
+    async getExportTypes() {
+      return [
+        exportTypeDefinition(config.type, 'adif', config.shortName),
+        exportTypeDefinition(config.type, 'cabrillo', config.shortName),
+      ]
+    },
     async suggestExportOptions({ operation, qsos, compactFilenames }, _ctx: HookContext) {
       if (!refOf(operation, config.type)) return []
       return [
         {
-          exportType: 'contest-adif',
+          exportType: `${config.type}-adif`,
+          templateData: { activity: filenameActivity(operation) },
           format: 'adif',
           label: `${config.shortName} ADIF`,
           filename: filename(operation, qsos ?? [], 'adi', compactFilenames),
@@ -59,7 +71,8 @@ export function createExports(config: ContestConfig, manifest: ContestManifest) 
           selectedByDefault: true,
         },
         {
-          exportType: 'cabrillo',
+          exportType: `${config.type}-cabrillo`,
+          templateData: { activity: filenameActivity(operation) },
           format: 'cabrillo',
           label: `${config.shortName} Cabrillo`,
           filename: filename(operation, qsos ?? [], 'log', compactFilenames),
@@ -69,13 +82,14 @@ export function createExports(config: ContestConfig, manifest: ContestManifest) 
       ]
     },
     async generateExport(args: ExportRequest, _ctx: HookContext) {
-      if (
-        !refOf(args.operation, config.type) ||
-        (args.exportType !== 'cabrillo' && args.exportType !== 'contest-adif')
-      )
+      // Keep older generic requests working without accepting the core ADIF type.
+      const cabrillo =
+        args.exportType === `${config.type}-cabrillo` || args.exportType === 'cabrillo'
+      const adif = args.exportType === `${config.type}-adif` || args.exportType === 'contest-adif'
+      if (!refOf(args.operation, config.type) || (!cabrillo && !adif))
         return { filename: '', mimeType: '', content: '' }
       const op = refOf(args.operation, config.type)
-      if (args.exportType === 'cabrillo') {
+      if (cabrillo) {
         const call = text(args.operation.stationCall)
         const power = config.powerClasses.find((entry) => entry.value === text(op?.power))
         // The shared writer emits digital contacts as DG. Only RTTY rows

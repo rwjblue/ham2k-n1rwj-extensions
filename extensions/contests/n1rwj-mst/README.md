@@ -139,6 +139,10 @@ your score; the displayed total does not certify a complete exchange.
 
 ## Export and report your score
 
+MST ADIF and Cabrillo have separate entries in Ham2K's export preferences.
+They inherit common defaults until customized; filename templates include the
+selected session.
+
 Use Ham2K's **Exports** menu for ADIF or Cabrillo. Both identify the contest
 as `ICWC-MST`. ADIF includes sent/received serials and full exchange strings;
 Cabrillo places the name before the serial, following the

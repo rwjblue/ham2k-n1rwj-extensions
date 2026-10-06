@@ -63,6 +63,10 @@ Missing or invalid received exchanges show alerts but retain provisional
 points and callsign multipliers. Correct these before reporting. Imported
 contacts without usable session/time information cannot be time-filtered.
 
+WRT ADIF and Cabrillo have separate entries in Ham2K's export preferences.
+They inherit common defaults until customized; filename templates include the
+selected session.
+
 ADIF preserves `STX_STRING` and `SRX_STRING`, uses `CONTEST_ID: WRT`, and
 normalizes recognized RTTY mode aliases to `MODE: RTTY`. WRT is an unlisted
 ADIF contest identifier, using the sponsor's name in ADIF's string field.
