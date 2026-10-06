@@ -21,19 +21,20 @@ export function receptionScope(
 ): { request: EvidenceRequest; warnings: string[] } | null {
   const call = watchedCall(operation, '')
   if (!isValidCall(call)) return null
-  const times = qsos
-    .filter((qso) => !qso.deleted)
-    .flatMap((qso) => {
-      const own = record(qso.our)?.call
-      if (typeof own === 'string' && own.trim().toUpperCase() !== call) return []
-      const start = millis(qso.startAtMillis) ?? millis(qso.startAt)
-      const end = millis(qso.endAtMillis) ?? millis(qso.endAt) ?? start
-      return start !== undefined && end !== undefined && start <= now && end >= start
-        ? [start, end]
-        : []
-    })
-  const starts = times.length ? [Math.max(0, Math.min(...times) - marginMs)] : []
-  const ends = times.length ? [Math.min(now, Math.max(...times) + marginMs)] : []
+  let first = Number.POSITIVE_INFINITY
+  let last = Number.NEGATIVE_INFINITY
+  for (const qso of qsos) {
+    if (qso.deleted) continue
+    const own = record(qso.our)?.call
+    if (typeof own === 'string' && own.trim().toUpperCase() !== call) continue
+    const start = millis(qso.startAtMillis) ?? millis(qso.startAt)
+    const end = millis(qso.endAtMillis) ?? millis(qso.endAt) ?? start
+    if (start === undefined || end === undefined || start > now || end < start) continue
+    first = Math.min(first, start)
+    last = Math.max(last, end)
+  }
+  const starts = Number.isFinite(first) ? [Math.max(0, first - marginMs)] : []
+  const ends = Number.isFinite(last) ? [Math.min(now, last + marginMs)] : []
   if (saved?.request.call === call) {
     starts.push(saved.request.startMs)
     ends.push(Math.min(now, saved.request.endMs))

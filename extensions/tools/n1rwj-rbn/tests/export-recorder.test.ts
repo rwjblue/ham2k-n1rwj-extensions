@@ -3,17 +3,26 @@ import { describe, expect, it, vi } from 'vitest'
 import { createReceptionRecorder } from '../src/export/recorder.ts'
 
 const time = Date.UTC(2026, 9, 4, 14)
-function args(operationId = 'first', config = {}): PanelRenderArgs {
+function args(operationId = 'first', config: Record<string, boolean | string | number> = {}): PanelRenderArgs {
   return {
     panelKey: 'my-signal',
     instanceId: 'panel',
     operation: { uuid: operationId, stationCall: 'N1RWJ', grid: 'FN41aa' },
-    config,
+    config: { recordReception: true, ...config },
     reason: 'tick',
     qsoCount: 0,
   }
 }
 describe('visible reception evidence ownership', () => {
+  it('requires an explicit opt-in before recording a visible panel', () => {
+    const recorder = createReceptionRecorder(vi.fn())
+    for (const config of [{}, { recordReception: false }, { recordReception: 'true' }]) {
+      recorder.observe({ ...args(), config }, time)
+      expect(recorder.prepare({ call: 'N1RWJ', windowMinutes: 15 }, time)).toBeUndefined()
+    }
+    recorder.observe(args(), time)
+    expect(recorder.prepare({ call: 'N1RWJ', windowMinutes: 15 }, time)).toBeTypeOf('function')
+  })
   it('freezes the operation before an in-flight response and keeps receiver data before display filters', async () => {
     const append = vi.fn().mockResolvedValue(undefined)
     const recorder = createReceptionRecorder(append)

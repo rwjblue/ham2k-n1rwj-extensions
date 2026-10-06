@@ -48,7 +48,7 @@ configFields.push({
   fieldType: 'checkbox',
   key: 'recordReception',
   label: 'Save reception evidence',
-  value: true,
+  value: false,
   description:
-    'Keep individual spots collected while this panel is visible for activation exports. Storage is bounded; the report identifies limits and gaps. Turning this off stops new recording for this panel.',
+    'Opt in to keep individual spots collected while this panel is visible for activation exports. Storage is bounded; the report identifies limits and gaps. Turning this off stops new recording for this panel without deleting saved evidence.',
 })

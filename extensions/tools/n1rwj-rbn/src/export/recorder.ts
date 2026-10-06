@@ -17,7 +17,7 @@ export function createReceptionRecorder(
     observe(args: PanelRenderArgs, time: number) {
       if (!args.instanceId) return
       placements.delete(args.instanceId)
-      if (!args.operation?.uuid || args.config?.recordReception === false) return
+      if (!args.operation?.uuid || args.config?.recordReception !== true) return
       const config = readConfig(args.config)
       const call = watchedCall(args.operation, config.watchCall)
       if (!isValidCall(call)) return

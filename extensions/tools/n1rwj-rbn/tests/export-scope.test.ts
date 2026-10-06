@@ -30,6 +30,13 @@ describe('reception export interval', () => {
       receptionScope({ ...operation, stationCall: '' }, [{ startAtMillis: time }], time),
     ).toBeNull()
   })
+  it('finds bounds in a large operation without spreading contact timestamps into arguments', () => {
+    const contacts = Array.from({ length: 100_000 }, (_, index) => ({
+      startAtMillis: time + index,
+    }))
+    const scope = receptionScope(operation, contacts, time + 3600_000)
+    expect(scope?.request).toMatchObject({ startMs: time - 300_000, endMs: time + 399_999 })
+  })
   it('omits one misleading transmitter position when operation segments moved', () => {
     const scope = receptionScope(operation, [{ startAtMillis: time }], time + 600_000, null, [
       { fromMillis: time, operation: { ...operation, grid: 'EM12' } },
