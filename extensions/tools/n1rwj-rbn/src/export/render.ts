@@ -88,7 +88,7 @@ function number(value: number | null, suffix = ''): string {
 }
 
 function title(evidence: RbnEvidence, options: EvidenceRenderOptions): string {
-  return options.title ?? `${evidence.request.call} reception report`
+  return options.title?.trim() || `${evidence.request.call} reception report`
 }
 
 function isSynthetic(options: EvidenceRenderOptions): boolean {

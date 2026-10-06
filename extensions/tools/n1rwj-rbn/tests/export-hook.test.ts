@@ -57,6 +57,47 @@ async function preparedOptions(
 }
 
 describe('RBN export workflow', () => {
+  it('uses a station title for blank SDK-prepared titles and preserves explicit titles in all formats', async () => {
+    const archive = createEvidenceArchive()
+    await archive.appendLive(
+      { operationId: 'operation', call: 'N1RWJ', startMs: NOW - 900_000, endMs: NOW },
+      { startedAtMs: NOW, retrievedAtMs: NOW, payload: payload() },
+    )
+    const hook = createRbnExportHook(archive, () => NOW)
+    const options = await preparedOptions(hook)
+    expect(options.map((option) => option.format)).toEqual([
+      'html',
+      'md',
+      'csv',
+      'json',
+      'svg',
+      'qso.csv',
+    ])
+    for (const option of options) {
+      // The published SDK currently strips title templates from non-ADIF types.
+      expect(option.exportTitle).toBe('')
+      for (const requested of [option.exportTitle, ' \t\n ', ' Summit reception evidence ']) {
+        const title = requested.trim() || 'N1RWJ reception report'
+        const result = await hook.generateExport(
+          { ...args, ...option, exportTitle: requested },
+          { online: true },
+        )
+        if (option.format === 'html') {
+          expect(result.content).toContain(`<title>${title}</title>`)
+          expect(result.content).toContain(`<h1>${title}</h1>`)
+        } else if (option.format === 'md') {
+          expect(result.content.split('\n')[0]).toBe(`# ${title}`)
+        } else if (option.format === 'json') {
+          expect(JSON.parse(result.content).exportMetadata.title).toBe(title)
+        } else if (option.format === 'svg') {
+          expect(result.content).toContain(`<title>${title}</title>`)
+        } else {
+          // Both CSV formats include the report title in each retained data row.
+          expect(result.content.split('\r\n')[1]).toMatch(new RegExp(`^"${title}"`))
+        }
+      }
+    }
+  })
   it('freezes saved evidence for all formats without retrieving history', async () => {
     let now = NOW
     const fetch = vi.fn().mockResolvedValue({ status: 200, body: JSON.stringify(payload()) })
