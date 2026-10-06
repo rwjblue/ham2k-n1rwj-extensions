@@ -23,10 +23,13 @@ RBN text exports cover HTML, Markdown, observations CSV, JSON, SVG and contact
 context CSV. Exports use a frozen saved/cache dataset without starting network
 requests. Archive collection defaults to off, its response queue is bounded,
 raw archive rows win duplicates, and missing coverage is explicit. Format
-selection keys are independent while companion observations and receiver
-metadata share one dataset. PNG/ZIP and custom transport/email remain absent.
+selection keys are independent and stable across export-settings reloads, while
+companion observations and receiver metadata share one dataset. Frozen dataset
+tokens round-trip through the published SDK's option preparation. Empty host
+titles fall back to a station reception title in every format. PNG/ZIP and
+custom transport/email remain absent.
 
-`mise run format` and `mise run check` passed: **1,143 tests across 87 files**,
+`mise run format` and `mise run check` passed: **1,150 tests across 87 files**,
 strict runtime/test/task typechecks, lint, seven ES2020 builds and official
 packaging. The independent geometry review checked 3,240 combinations of pane
 size, text scaling, view and details state without out-of-bounds items.
@@ -40,15 +43,35 @@ widget screenshots. The RBN export examples remain explicitly synthetic.
 Timer wakes are simulated under Node VM; this does not establish Flutter UI,
 accessibility, native exports or background/resume behavior.
 
-The actual installed macOS app accepted a temporary API-5 official SDK sample
-and rendered native dropdown, segmented and switch controls. Their values
-reached extension logic, and an edited text field committed before a following
-simulated action. No real spot, radio action, upload or email occurred. The Mac
-then locked, preventing final reception-panel acceptance and temporary pilot
-cleanup. The production renderer still needs narrow/short pane, large OS text,
-theme, keyboard and screen-reader acceptance. Native save/share of RBN exports
-and lifecycle behavior remain separate acceptance work. The temporary SDK Pilot
-and its Home tab must be removed when the Mac is unlocked.
+The installed macOS app accepted a temporary API-5 official SDK sample with
+native dropdown, segmented and switch controls. Values reached extension logic,
+and a pending text edit committed before a following simulated action. After
+unlocking the Mac, SDK Pilot 0.1.1 imported the shared reception renderer, state
+and event adapter from `fa170453`, with synthetic reports and no source network
+adapters. RBN Band selection reduced 18 receivers to six, View removed the map,
+and Sort changed receiver ordering. PSK Band and Sort dropdown commits and
+Status/About tabs worked; PSK had no temporary View control.
+
+Narrow panes wrapped RBN's toolbar and switched View to a dropdown. Approximate
+widths of 324 and 239 logical pixels were estimated from screenshots, rather
+than instrumented host arguments. The map was deliberately omitted at the
+narrowest width; its misleading location prompt was corrected with size/location
+regression tests for both renderer paths. Narrow details wrapped prose without
+overlap, and closing details restored receiver page two. The PSK fixture remained
+readable with the app's largest font scale and
+dark panel theme, with information pages repaginating. Dropdown keyboard choice
+worked after pointer focus; full focus order and screen-reader behavior were not
+tested. Flutter accessibility snapshots stopped updating after extension reload;
+these observations rely on visible UI behavior. The pilot predates the small
+map-guidance correction.
+
+All three temporary Home placements and SDK Pilot were removed. The original
+Operation List/Current Version Home layout was restored, with no global theme
+or font change. No QSO, radio action, upload or email occurred. Remaining native
+acceptance includes short panes, actual OS text scaling, full keyboard/screen
+reader navigation, high contrast, reduced motion, production saved-config forms,
+operation/lifecycle changes and native reception-export save/share. Synthetic
+fixtures do not establish production network or background/resume behavior.
 
 SDK 0.12.0, tools 0.8.0, shared-library ranges and synchronized version **0.7.6**
 remain unchanged. These are implementation commits, not a release or catalog

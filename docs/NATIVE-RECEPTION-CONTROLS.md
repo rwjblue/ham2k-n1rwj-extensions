@@ -48,10 +48,16 @@ Older apps must use the previously published compatible package until updated.
 There is no invented runtime fallback or new shared-library requirement.
 
 On October 6, 2026, installed macOS Next 26.9.0 build 177 accepted a temporary
-API-5 SDK sample and rendered native controls. Dropdown, segmented and switch
-values reached extension logic; a pending native text edit reached a following
-action. These sample checks do not certify the final reception renderer or all
-platforms. See `VERIFICATION.md` for final checks and remaining native acceptance.
+API-5 pilot importing this shared renderer, placement state and event adapter.
+Synthetic RBN/PSK reports verified Band and Sort commits, RBN view selection,
+Status/About tabs, narrow toolbar wrapping and the narrow-view dropdown fallback.
+The PSK fixture also remained readable at the app's largest font scale in its
+dark panel theme. Dropdown keyboard selection worked after pointer focus.
+Earlier SDK sample
+checks also exercised switches and pending text edits before an action.
+These checks cover native rendering with synthetic data, rather than production
+network adapters, saved-config forms or every platform. See `VERIFICATION.md`
+for the acceptance scope and remaining checks.
 
 ## Verification and acceptance
 
