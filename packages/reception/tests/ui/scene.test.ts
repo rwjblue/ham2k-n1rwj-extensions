@@ -501,6 +501,46 @@ describe('RBN native scene', () => {
     }
   })
 
+  it.each([false, true])(
+    'asks to enlarge an undersized map pane with native controls %s',
+    (nativeControls) => {
+      for (const [width, height] of [
+        [239, 900],
+        [390, 240],
+      ]) {
+        const { scene } = renderReceptionScene(
+          model,
+          environment(width, height),
+          { view: 'map' },
+          { nativeControls },
+        )
+        expect(scene.layers.some((item) => item.id.startsWith('reception-map-'))).toBe(false)
+        expect(layer(scene, 'map-unavailable').text?.literal).toBe(
+          'Enlarge this panel to display the map.',
+        )
+        expect(text(scene)).not.toContain('Set your operation location')
+        assertSceneBounds(scene)
+      }
+    },
+  )
+
+  it.each([false, true])(
+    'preserves location guidance in an adequately sized map pane with native controls %s',
+    (nativeControls) => {
+      const { scene } = renderReceptionScene(
+        { ...model, mapOptions: undefined },
+        environment(390, 900),
+        { view: 'map' },
+        { nativeControls },
+      )
+      expect(scene.layers.some((item) => item.id.startsWith('reception-map-'))).toBe(false)
+      expect(layer(scene, 'map-unavailable').text?.literal).toBe(
+        'Set your operation location to show the map.',
+      )
+      assertSceneBounds(scene)
+    },
+  )
+
   it('caps tall details pages below the native layer limit without losing later warnings', () => {
     const source = {
       ...model,

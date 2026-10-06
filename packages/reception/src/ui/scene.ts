@@ -676,7 +676,7 @@ export function renderReceptionScene(
     } else if (selection.view === 'map') {
       text(
         'map-unavailable',
-        mapHeight < 180
+        mapHeight < 180 || mapWidth < 220
           ? 'Enlarge this panel to display the map.'
           : 'Set your operation location to show the map.',
         left,
