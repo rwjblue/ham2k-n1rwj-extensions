@@ -7,7 +7,6 @@ export interface PanelState {
   epoch: number
   renderVersion: number
   controls?: Map<string, PanelSceneControl>
-  lastSequence?: number
   signature: string
   config: PanelConfig
   selection: Partial<SceneSelection>
@@ -44,7 +43,6 @@ export function createPanelStateStore() {
       state.config = config
       state.epoch = ++epoch
       state.controls = undefined
-      state.lastSequence = undefined
     }
     return state
   }

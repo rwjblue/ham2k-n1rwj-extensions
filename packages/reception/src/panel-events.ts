@@ -24,7 +24,6 @@ export function readPanelEvent(
     }
   | undefined {
   if (!state.active || !Number.isInteger(event.sequence) || event.sequence < 0) return
-  if (state.lastSequence !== undefined && event.sequence <= state.lastSequence) return
   const control = state.controls?.get(event.controlId)
   if (!control || control.disabled || control.opacity === 0) return
   const prefix = `epoch:${state.epoch}:`
@@ -57,6 +56,5 @@ export function readPanelEvent(
       return
     result = { controlId: control.id, action }
   }
-  state.lastSequence = event.sequence
   return result
 }

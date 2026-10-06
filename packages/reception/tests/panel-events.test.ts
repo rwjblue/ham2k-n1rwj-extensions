@@ -67,7 +67,7 @@ describe('placement scene events', () => {
     expect(state.selection).toEqual({ band: '40m', page: 0 })
   })
 
-  it('rejects malformed phases, choices, action pairs, and duplicate sequences', () => {
+  it('rejects malformed phases, choices, action pairs, and invalid sequences', () => {
     const state = createPanelStateStore()(args)
     const current = scene()
     bindPanelEvents(state, current)
@@ -92,8 +92,9 @@ describe('placement scene events', () => {
     ])
       expect(readPanelEvent(state, { ...valid, ...extra } as PanelSceneEvent)).toBeUndefined()
     expect(readPanelEvent(state, valid)).toBeDefined()
-    expect(readPanelEvent(state, valid)).toBeUndefined()
-    expect(readPanelEvent(state, { ...valid, sequence: 3 })).toBeUndefined()
+    // The host counter belongs to a mounted Flutter widget, not the persistent
+    // placement. A remounted pane may restart at one with the same context.
+    expect(readPanelEvent(state, { ...valid, sequence: 1 })).toBeDefined()
     expect(readPanelEvent(state, { ...valid, sequence: 5 })).toBeDefined()
     expect(
       readPanelEvent(state, {
