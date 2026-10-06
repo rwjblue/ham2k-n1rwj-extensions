@@ -1,8 +1,13 @@
-import type { PanelRenderArgs } from '@ham2k/extension-sdk'
+import type { PanelRenderArgs, PanelSceneControl } from '@ham2k/extension-sdk'
 import { type PanelConfig, readConfig, receptionBands } from './config.ts'
 import type { SceneSelection } from './ui/scene.ts'
 
 export interface PanelState {
+  active: boolean
+  epoch: number
+  renderVersion: number
+  controls?: Map<string, PanelSceneControl>
+  lastSequence?: number
   signature: string
   config: PanelConfig
   selection: Partial<SceneSelection>
@@ -13,16 +18,23 @@ export interface PanelState {
 /** One store per extension; placements may disappear without a teardown hook. */
 export function createPanelStateStore() {
   const selections = new Map<string, PanelState>()
+  let epoch = 0
   return (args: PanelRenderArgs, identity = ''): PanelState => {
     const config = readConfig(args.config)
     const signature = JSON.stringify([args.operation?.uuid, args.operation?.stationCall, identity])
     const key = args.instanceId ?? ''
     let state = selections.get(key)
     if (!state || state.signature !== signature) {
-      state = { signature, config, selection: {} }
+      if (state) state.active = false
+      state = { active: true, epoch: ++epoch, renderVersion: 0, signature, config, selection: {} }
       selections.delete(key)
       selections.set(key, state)
-      if (selections.size > 32) selections.delete(selections.keys().next().value as string)
+      if (selections.size > 32) {
+        const oldest = selections.keys().next().value as string
+        const evicted = selections.get(oldest)
+        if (evicted) evicted.active = false
+        selections.delete(oldest)
+      }
     } else if (JSON.stringify(state.config) !== JSON.stringify(config)) {
       for (const field of ['view', 'band', 'sort', 'direction'] as const) {
         if (state.config[field] !== config[field]) delete state.selection[field]
@@ -30,6 +42,9 @@ export function createPanelStateStore() {
       state.selection.page = 0
       state.reportPage = 0
       state.config = config
+      state.epoch = ++epoch
+      state.controls = undefined
+      state.lastSequence = undefined
     }
     return state
   }
@@ -64,6 +79,14 @@ export function applySceneEvent(
       view: views[(views.indexOf(current) + 1) % views.length],
       page: 0,
     }
+    state.reportPage = 0
+  } else if (
+    controlId === 'view' &&
+    prefix === 'view' &&
+    ['both', 'map', 'list'].includes(value) &&
+    !state.selection.details
+  ) {
+    state.selection = { ...state.selection, view: value as SceneSelection['view'], page: 0 }
     state.reportPage = 0
   } else if (controlId === 'direction' && action === 'direction:toggle') {
     state.selection = {
