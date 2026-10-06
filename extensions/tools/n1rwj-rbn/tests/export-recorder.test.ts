@@ -1,9 +1,12 @@
-import type { PanelRenderArgs } from '@ham2k/extension-sdk'
+import type { JSONValue, PanelRenderArgs } from '@ham2k/extension-sdk'
 import { describe, expect, it, vi } from 'vitest'
 import { createReceptionRecorder } from '../src/export/recorder.ts'
 
 const time = Date.UTC(2026, 9, 4, 14)
-function args(operationId = 'first', config: Record<string, boolean | string | number> = {}): PanelRenderArgs {
+function args(
+  operationId = 'first',
+  config: Record<string, boolean | string | number> = {},
+): PanelRenderArgs {
   return {
     panelKey: 'my-signal',
     instanceId: 'panel',
@@ -16,7 +19,10 @@ function args(operationId = 'first', config: Record<string, boolean | string | n
 describe('visible reception evidence ownership', () => {
   it('requires an explicit opt-in before recording a visible panel', () => {
     const recorder = createReceptionRecorder(vi.fn())
-    for (const config of [{}, { recordReception: false }, { recordReception: 'true' }]) {
+    for (const config of [{}, { recordReception: false }, { recordReception: 'true' }] as Record<
+      string,
+      JSONValue
+    >[]) {
       recorder.observe({ ...args(), config }, time)
       expect(recorder.prepare({ call: 'N1RWJ', windowMinutes: 15 }, time)).toBeUndefined()
     }

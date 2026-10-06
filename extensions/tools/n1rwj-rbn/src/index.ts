@@ -34,7 +34,9 @@ defineExtension({
     registerHook('activity', { hook: activity })
     registerHook('settingsPanel', { hook: settings })
     registerHook('dataFile', { key: receivers.dataFile.key, hook: receivers.dataFile })
-    registerHook('export', { hook: createRbnExportHook(rbnEvidence, Date.now, receivers.lookup) })
+    registerHook('export', {
+      hook: createRbnExportHook(rbnEvidence, Date.now, receivers.lookup, rbnClient.readSnapshots),
+    })
     registerHook('panel', {
       key: manifest.key,
       hook: createRbnPanel({

@@ -37,3 +37,27 @@ it('records failed requests without creating observations from old cached report
   expect(finish.mock.calls[0][0].error).toContain('timeout')
   expect(finish.mock.calls[0][0].payload).toBeUndefined()
 })
+
+it('reads exact-call snapshots without fetching, changing visibility, or exposing mutable cache rows', async () => {
+  let now = NOW
+  const fetch = vi.fn().mockResolvedValue({ status: 200, body: JSON.stringify(payload()) })
+  const setTimeout = vi.fn(() => 1)
+  const client = createRbnClient({
+    now: () => now,
+    fetch,
+    timers: { setTimeout, clearTimeout: vi.fn() },
+  })
+  await client.getSnapshot({ call: 'N1RWJ', windowMinutes: 15 })
+  fetch.mockClear()
+  setTimeout.mockClear()
+  const snapshots = await client.readSnapshots?.('n1rwj')
+  expect(snapshots).toHaveLength(1)
+  if (!snapshots?.[0].reports[0]) throw new Error('Missing cached observation')
+  snapshots[0].reports[0].snrDb = 999
+  expect((await client.readSnapshots?.('N1RWJ'))?.[0].reports[0].snrDb).not.toBe(999)
+  expect(await client.readSnapshots?.('N1RWJ/P')).toEqual([])
+  now += 20 * 60_000
+  expect((await client.readSnapshots?.('N1RWJ'))?.[0].reports).toEqual([])
+  expect(fetch).not.toHaveBeenCalled()
+  expect(setTimeout).not.toHaveBeenCalled()
+})

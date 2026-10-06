@@ -45,6 +45,8 @@ export interface RbnCollectionResult {
 
 export interface RbnClient {
   getSnapshot(query: RbnQuery, options?: RbnRequestOptions): Promise<RbnSnapshot>
+  /** Read exact-call cached reports without fetching or renewing a visible placement. */
+  readSnapshots?(call: string): Promise<RbnSnapshot[]>
   pause?(): void
 }
 
@@ -572,5 +574,18 @@ export function createRbnClient(options: RbnClientOptions): RbnClient {
     placements.clear()
   }
 
-  return { getSnapshot, pause }
+  async function readSnapshots(call: string): Promise<RbnSnapshot[]> {
+    const normalized = normalizeCall(call)
+    if (!isValidCall(normalized)) return []
+    await restore(requestNow())
+    // Clone the source snapshots. Export filters and privacy must never mutate
+    // the cache or the pending panel request that owns these observations.
+    return [...cache.values()]
+      .filter(
+        (entry) => entry.snapshot.call === normalized && entry.snapshot.lastSuccessMs !== null,
+      )
+      .map((entry) => JSON.parse(JSON.stringify(clip(entry.snapshot, requestNow()))) as RbnSnapshot)
+  }
+
+  return { getSnapshot, readSnapshots, pause }
 }

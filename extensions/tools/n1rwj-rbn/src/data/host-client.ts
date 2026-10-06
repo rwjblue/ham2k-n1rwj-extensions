@@ -1,7 +1,7 @@
 import { host } from '@ham2k/extension-sdk'
 import { createPersistentStorage } from '../../../../../packages/reception/src/storage.ts'
 import manifest from '../../manifest.json'
-import { createEvidenceRetriever } from '../export/history.ts'
+import { createEvidenceArchive } from '../export/archive.ts'
 import { createReceptionRecorder } from '../export/recorder.ts'
 import { createRbnClient } from './client.ts'
 import { createRbnTransport } from './transport.ts'
@@ -25,7 +25,7 @@ export const rbnFetch = createRbnTransport(
   storage,
   host,
 )
-export const rbnEvidence = createEvidenceRetriever({ fetch: rbnFetch, storage, now: Date.now })
+export const rbnEvidence = createEvidenceArchive(storage)
 export const rbnRecorder = createReceptionRecorder(
   (request, result) => rbnEvidence.appendLive(request, result),
   () => host.log('RBN reception evidence could not be saved.'),

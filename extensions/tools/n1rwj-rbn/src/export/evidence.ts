@@ -25,7 +25,7 @@ export interface EvidenceRequest {
   origin?: { latitude: number; longitude: number; label?: string }
 }
 
-export type RetrievalKind = 'history' | 'live'
+export type RetrievalKind = 'history' | 'live' | 'snapshot'
 export interface RbnEvidenceReport extends RbnReport {
   raw: Record<string, JSONValue>
   retrievedAtMs: number
@@ -33,7 +33,7 @@ export interface RbnEvidenceReport extends RbnReport {
   lastSeenMs: number
   retrievalKind: RetrievalKind
   receiverGrid: string | null
-  receiverLocationSource: 'provider-grid' | 'rbn-directory' | null
+  receiverLocationSource: 'provider-grid' | 'rbn-directory' | 'cached-coordinates' | null
 }
 
 export interface RbnRetrievalPage {
@@ -65,6 +65,7 @@ export interface RbnRetrievalAttempt {
 export interface RbnEvidence {
   schemaVersion: 1
   provider: 'vail-rerbn'
+  collectionSource?: 'archive' | 'snapshot' | 'archive-and-snapshot'
   request: EvidenceRequest
   retrievedAtMs: number
   reports: RbnEvidenceReport[]
@@ -129,7 +130,8 @@ export function evidenceForRange(evidence: RbnEvidence, request: EvidenceRequest
   const omitted = evidence.warnings.some(
     (warning) =>
       warning.includes('observation archive limit') ||
-      warning.includes('4,000-observation archive limit'),
+      warning.includes('4,000-observation archive limit') ||
+      warning.includes('recording queue was full'),
   )
   const complete =
     !omitted &&
@@ -490,6 +492,9 @@ export function createEvidenceStore(storage?: PersistentStorage) {
   }
   async function read(operationId: string, call: string) {
     await restore()
+    // A completed panel fetch can be followed immediately by Exports while its
+    // captured rows are still queued. Return the completed archive revision.
+    await writing
     const evidence = archives.get(
       archiveId({ operationId, call: normalizeCall(call), startMs: 1, endMs: 1 }),
     )

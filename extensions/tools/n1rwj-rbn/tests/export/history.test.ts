@@ -2,6 +2,7 @@ import type { FetchOptions, FetchResponse, JSONValue } from '@ham2k/extension-sd
 import { describe, expect, it, vi } from 'vitest'
 import type { PersistentStorage } from '../../../../../packages/reception/src/storage.ts'
 import type { TimerDriver } from '../../../../../packages/reception/src/timers.ts'
+import { createEvidenceArchive } from '../../src/export/archive.ts'
 import {
   appendEvidencePage,
   createEvidenceStore,
@@ -311,6 +312,94 @@ describe('operation reception evidence', () => {
     expect(evidence.complete).toBe(true)
     expect(evidence.warnings).toContainEqual(expect.stringContaining('Offline'))
     expect(evidence.attempts[evidence.attempts.length - 1]?.stopReason).toBe('offline')
+  })
+
+  it('reads the queued archive revision before offering an export', async () => {
+    let finishWrite!: () => void
+    const storage: PersistentStorage = {
+      read: async () => null,
+      write: vi.fn(
+        () =>
+          new Promise<void>((resolve) => {
+            finishWrite = resolve
+          }),
+      ),
+    }
+    const store = createEvidenceStore(storage)
+    const evidence = appendEvidencePage(emptyEvidence(request, NOW), payload(), {
+      kind: 'live',
+      startedAtMs: NOW,
+      retrievedAtMs: NOW,
+      offset: 0,
+      status: 200,
+    }).evidence
+    const update = store.update(evidence)
+    const read = store.read(request.operationId, request.call)
+    let completed = false
+    void read.then(() => {
+      completed = true
+    })
+    for (let count = 0; count < 8; count++) await Promise.resolve()
+    expect(storage.write).toHaveBeenCalledTimes(1)
+    expect(completed).toBe(false)
+    finishWrite()
+    await update
+    expect((await read)?.reports.map((report) => report.id)).toEqual(['123'])
+  })
+
+  it('awaits completed-response appends through restore and bounds the recording queue', async () => {
+    let finishRestore!: (value: JSONValue) => void
+    const archive = createEvidenceArchive({
+      read: () =>
+        new Promise<JSONValue>((resolve) => {
+          finishRestore = resolve
+        }),
+      write: async () => {},
+    })
+    const appends = Array.from({ length: 8 }, (_, index) =>
+      archive.appendLive(request, {
+        startedAtMs: NOW + index,
+        retrievedAtMs: NOW + index,
+        payload: payload({ spots: [spotPayload({ id: index + 1 })] }),
+      }),
+    )
+    await expect(
+      archive.appendLive(request, {
+        startedAtMs: NOW,
+        retrievedAtMs: NOW,
+        payload: payload(),
+      }),
+    ).rejects.toThrow('queue was full')
+    const read = archive.readEvidence(request.operationId, request.call)
+    let completed = false
+    void read.then(() => {
+      completed = true
+    })
+    for (let count = 0; count < 8; count++) await Promise.resolve()
+    expect(completed).toBe(false)
+    finishRestore(null)
+    await Promise.all(appends)
+    const evidence = await read
+    expect(evidence?.reports.map((report) => report.id)).toEqual([
+      '1',
+      '2',
+      '3',
+      '4',
+      '5',
+      '6',
+      '7',
+      '8',
+    ])
+    expect(evidence?.warnings.join(' ')).toContain('queue was full')
+    expect(evidence?.complete).toBe(false)
+    // Finishing the queued writes releases capacity for the next response.
+    await expect(
+      archive.appendLive(request, {
+        startedAtMs: NOW + 10,
+        retrievedAtMs: NOW + 10,
+        payload: payload(),
+      }),
+    ).resolves.toBeDefined()
   })
 
   it('evicts old operation archives explicitly and keeps save failure warnings visible on read', async () => {

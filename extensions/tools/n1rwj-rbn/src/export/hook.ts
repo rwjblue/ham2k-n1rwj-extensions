@@ -1,10 +1,10 @@
 import type { ExportHook, ExportOptionsRequest, ExportRequest } from '@ham2k/extension-sdk'
 import { exportFilename, exportQso, startMillisOf } from '@ham2k/extension-sdk'
 import { watchedCall } from '../config.ts'
+import type { RbnClient } from '../data/client.ts'
 import { receiverLocation } from '../data/parser.ts'
 import type { ReceiverMetadata } from '../data/receivers.ts'
-import type { RbnEvidence } from './evidence.ts'
-import type { createEvidenceRetriever } from './history.ts'
+import { emptyEvidence, evidenceForRange, type RbnEvidence } from './evidence.ts'
 import { publicReceptionEvidence } from './privacy.ts'
 import {
   renderEvidenceCsv,
@@ -15,6 +15,7 @@ import {
   renderEvidenceQsoCsv,
 } from './render.ts'
 import { receptionScope } from './scope.ts'
+import { evidenceFromSnapshots, mergeEvidenceSnapshot } from './snapshot.ts'
 
 const formats = [
   {
@@ -54,7 +55,9 @@ const formats = [
     render: renderEvidenceQsoCsv,
   },
 ] as const
-type Retriever = ReturnType<typeof createEvidenceRetriever>
+interface EvidenceReader {
+  readEvidence(operationId: string, call: string): Promise<RbnEvidence | null>
+}
 
 function filename(args: ExportOptionsRequest, extension: string) {
   return exportFilename({
@@ -69,22 +72,84 @@ function filename(args: ExportOptionsRequest, extension: string) {
 }
 
 export function createRbnExportHook(
-  retriever: Retriever,
+  archive: EvidenceReader,
   now: () => number = Date.now,
   lookup?: (receiver: string) => ReceiverMetadata | undefined,
+  readSnapshots?: NonNullable<RbnClient['readSnapshots']>,
 ): ExportHook {
-  async function scope(args: ExportOptionsRequest | ExportRequest) {
+  const offered = new Map<string, RbnEvidence>()
+  let sequence = 0
+  function withDirectory(evidence: RbnEvidence): RbnEvidence {
+    let directoryUsed = false
+    const reports = evidence.reports.map((report) => {
+      const node = lookup?.(report.receiver)
+      const [latitude, longitude] = receiverLocation(node?.grid)
+      if (!node || latitude === null || longitude === null) return report
+      directoryUsed = true
+      return {
+        ...report,
+        receiverGrid: node.grid,
+        receiverLatitude: latitude,
+        receiverLongitude: longitude,
+        receiverLocationSource: 'rbn-directory' as const,
+        country: node.country ?? report.country,
+      }
+    })
+    return {
+      ...evidence,
+      reports,
+      warnings: [
+        ...new Set([
+          ...evidence.warnings,
+          ...(directoryUsed
+            ? [
+                'Receiver locations use the cached RBN directory when these export options were offered. They are grid centers, not verified historical receiver positions. Original provider grids remain in raw rows when those rows were archived.',
+              ]
+            : []),
+        ]),
+      ],
+    }
+  }
+  async function collectSaved(
+    args: ExportOptionsRequest | ExportRequest,
+  ): Promise<RbnEvidence | null> {
     const call = watchedCall(args.operation, '')
-    const saved = args.operation.uuid
-      ? await retriever.readEvidence(String(args.operation.uuid), call)
+    const archived = args.operation.uuid
+      ? await archive.readEvidence(String(args.operation.uuid), call)
       : null
-    return receptionScope(
+    const cached = evidenceFromSnapshots(
+      args.operation,
+      call,
+      (await readSnapshots?.(call)) ?? [],
+      now(),
+    )
+    const saved = mergeEvidenceSnapshot(archived, cached)
+    const selected = receptionScope(
       args.operation,
       args.qsos,
       now(),
       saved,
       'segments' in args ? args.segments : undefined,
     )
+    if (!selected) return null
+    const evidence = saved
+      ? evidenceForRange(saved, selected.request)
+      : emptyEvidence(selected.request, now())
+    return withDirectory({
+      ...evidence,
+      warnings: [
+        ...new Set([
+          ...evidence.warnings,
+          ...selected.warnings,
+          'This export reads saved reception evidence and cached reports only. No network request or new recording was started.',
+          ...(!archived && !saved
+            ? [
+                'No saved reception observations are available for this station. Open My Signal to obtain a rolling snapshot, or enable Save reception evidence in panel settings to opt in to bounded recording during future visible-panel requests.',
+              ]
+            : []),
+        ]),
+      ],
+    })
   }
   return {
     async getExportTypes() {
@@ -97,11 +162,21 @@ export function createRbnExportHook(
       }))
     },
     async suggestExportOptions(args) {
-      const selected = await scope(args)
+      const selected = await collectSaved(args)
       if (!selected) return []
+      // All companion files use one immutable dataset, even if a visible panel
+      // updates its cache between the files. Keep at most eight offered datasets.
+      const datasetKey = `rbn:${++sequence}`
+      offered.set(datasetKey, selected)
+      while (offered.size > 8) {
+        const oldest = offered.keys().next().value
+        if (oldest !== undefined) offered.delete(oldest)
+      }
       return formats.map((format, index) => ({
         exportType: `rbnReception-${format.extension}`,
-        exportKey: `rbn:${selected.request.call}:${selected.request.startMs}:${selected.request.endMs}`,
+        // The host uses exportKey as the checkbox identity. Give every format
+        // its own identity while retaining one shared immutable dataset.
+        exportKey: `${datasetKey}:${format.extension}`,
         format: format.extension,
         label: format.label,
         filename: filename(args, format.extension),
@@ -124,57 +199,56 @@ export function createRbnExportHook(
         (candidate) => args.exportType === `rbnReception-${candidate.extension}`,
       )
       if (!format) throw new Error('Unknown RBN export format.')
-      const selected = await scope(args)
-      if (!selected)
-        throw new Error(
-          'RBN exports need dated contacts or saved reception evidence for this station.',
-        )
-      const fixed = args.exportKey?.match(/^rbn:([^:]+):(\d+):(\d+)$/)
-      if (args.exportKey && (!fixed || fixed[1] !== selected.request.call))
-        throw new Error('Invalid RBN export interval.')
-      if (fixed) {
-        const startMs = Number(fixed[2]),
-          endMs = Number(fixed[3])
-        if (
-          !Number.isSafeInteger(startMs) ||
-          !Number.isSafeInteger(endMs) ||
-          startMs <= 0 ||
-          endMs <= startMs ||
-          endMs > now()
-        )
-          throw new Error('Invalid RBN export interval.')
-        selected.request = { ...selected.request, startMs, endMs }
+      let datasetKey: string | undefined
+      if (args.exportKey) {
+        const suffix = `:${format.extension}`
+        datasetKey = args.exportKey.endsWith(suffix)
+          ? args.exportKey.slice(0, -suffix.length)
+          : undefined
+        if (!datasetKey || !/^rbn:\d+$/.test(datasetKey))
+          throw new Error('RBN export option does not match the requested format.')
       }
-      const gathered = await retriever.retrieveEvidence(selected.request, { online: ctx.online })
+      const selected = datasetKey ? offered.get(datasetKey) : await collectSaved(args)
+      if (!selected) {
+        throw new Error(
+          args.exportKey
+            ? 'RBN export options expired. Reopen Exports to use the available saved evidence.'
+            : 'RBN exports need dated contacts, a cached My Signal snapshot, or saved reception evidence for this station.',
+        )
+      }
+      const call = watchedCall(args.operation, '')
+      const operationId = String(args.operation.uuid ?? `${call}:${selected.request.startMs}`)
+      if (selected.request.call !== call || selected.request.operationId !== operationId)
+        throw new Error('RBN export options belong to another operation or station.')
+      const effectiveScope = receptionScope(
+        args.operation,
+        args.qsos,
+        now(),
+        selected,
+        args.segments,
+      )
+      const moving = effectiveScope?.warnings.some((warning) =>
+        warning.includes('different locations'),
+      )
+      const requestWithoutOrigin = { ...selected.request }
+      delete requestWithoutOrigin.origin
+      const gathered: RbnEvidence = moving
+        ? {
+            ...selected,
+            request: requestWithoutOrigin,
+            warnings: [...selected.warnings, ...(effectiveScope?.warnings ?? [])],
+          }
+        : selected
       const includePrivateData =
         args.includePrivateData ?? args.exportSettings?.includePrivateData ?? false
-      let directoryUsed = false
-      const reports = gathered.reports.map((report) => {
-        const node = lookup?.(report.receiver)
-        const [latitude, longitude] = receiverLocation(node?.grid)
-        if (!node || latitude === null || longitude === null) return report
-        directoryUsed = true
-        return {
-          ...report,
-          receiverGrid: node.grid,
-          receiverLatitude: latitude,
-          receiverLongitude: longitude,
-          receiverLocationSource: 'rbn-directory' as const,
-          country: node.country ?? report.country,
-        }
-      })
       const evidence: RbnEvidence = publicReceptionEvidence(
         {
           ...gathered,
-          reports,
           warnings: [
             ...new Set([
               ...gathered.warnings,
-              ...selected.warnings,
-              ...(directoryUsed
-                ? [
-                    'Receiver locations use the current cached RBN directory where available. They are grid centers at export time, not verified historical receiver positions; original provider grids remain in raw rows.',
-                  ]
+              ...(ctx.online === false
+                ? ['Exported offline from saved reception evidence and cache.']
                 : []),
             ]),
           ],

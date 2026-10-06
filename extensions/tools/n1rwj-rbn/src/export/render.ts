@@ -458,6 +458,8 @@ export function renderEvidenceCsv(
       'reported_snr_db',
       'cw_wpm',
       'first_retrieved_utc',
+      'retrieval_kind',
+      'raw_provider_row_available',
       'collection_complete',
     ],
     ...analysis.reports.map((report) => [
@@ -480,6 +482,8 @@ export function renderEvidenceCsv(
       report.snrDb,
       report.wpm,
       iso(report.retrievedAtMs),
+      report.retrievalKind,
+      Object.keys(report.raw).length > 0,
       evidence.complete,
     ]),
   ])
