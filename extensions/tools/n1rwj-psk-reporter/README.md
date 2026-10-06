@@ -32,8 +32,9 @@ The implementation first passed against upstream source commit
 [17b15fdcafdd](https://github.com/ham2k/halo/commit/17b15fdcafdd), then passed the
 same contract, build, packer and binary bridge checks against the published
 SDK 0.6.0/tools 0.5.0. Timer support is checked against SDK 0.12.0/tools 0.8.0.
-The panel uses the API-5 `scene` payload with native Band, Sort, and Status/About
-choices. Cartography and paginated report/details text stay in the shared renderer.
+The panel uses the API-5 `scene` payload with native Band, Window, Sort and
+Status/About choices and Refresh/Details/Back buttons. Cartography and paginated
+report/details text stay in the shared renderer.
 The code uses the SDK's socket and timer types and regular entry point; no SDK
 implementation is copied into this repository.
 
@@ -64,11 +65,11 @@ an API-5-capable app remain separate from these checks.
 
 ## Reception behavior
 
-The info button beside reload opens **Status** for the watched callsign,
+The native **Details** button beside **Refresh** opens **Status** for the watched callsign,
 direction, window, live-feed/history state, and latest report on the selected
 band. **About** explains the source, measurements, map origin, and reload
 behavior. Warnings and next steps appear before general reference material.
-Closing info returns to the report page you were viewing. See the
+**Back** returns to the report page you were viewing. See the
 [design review and rendered mockups](../../../docs/RECEPTION-INFO-DESIGN.md).
 
 Use the native **Band** dropdown above the map. The map, report list, and latest-report details follow the chosen band;
@@ -76,6 +77,13 @@ Use the native **Band** dropdown above the map. The map, report list, and latest
 through refreshes and unrelated settings changes, and resets when switching
 operations or restarting the extension. Changing the saved **Band** in tune
 settings replaces the current choice and keeps that default across restarts.
+
+The native **Window** dropdown changes the displayed report interval for this
+placement. It offers 1/3/5/10/15/30/45/60 minutes and starts from the saved Report
+window. Changing that saved default replaces the temporary choice; operation
+changes and extension restarts reset it. A larger window can request recent
+history subject to the existing cooldown, without changing the MQTT subscription
+or using the manual Refresh bypass. Smaller windows reuse cached reports.
 
 - The shared [reception workspace](../../../packages/reception/README.md)
   supplies RBN's map, SVG renderer, settings, and panel state. Settings offer
@@ -117,7 +125,7 @@ settings replaces the current choice and keeps that default across restarts.
   is not presented as live reception. No per-report render or whole-log query occurs.
 - Recent history uses PSK Reporter's documented XML query API on startup,
   after a collection gap, and when a larger report window needs older data.
-  It requests the configured 1/3/5/10/15/30/45/60-minute window across all bands, with a
+  It requests the selected 1/3/5/10/15/30/45/60-minute window across all bands, with a
   1,000-record limit. History and MQTT reports share the same bounded cache;
   newer observations win. Exact callsign and direction filtering also applies
   to history. Unlocated stations remain in the list.

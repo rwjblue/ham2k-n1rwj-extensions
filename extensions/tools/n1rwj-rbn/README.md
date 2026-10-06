@@ -195,10 +195,10 @@ source controls in the native Spots panel further narrow these results.
 
 No build tools, map accounts, or custom Ham2K build are required.
 
-The info button beside refresh opens **Status** for the watched callsign,
+The native **Details** button beside **Refresh** opens **Status** for the watched callsign,
 window, latest report on the selected band, and last successful service check.
 Warnings include refresh/retry guidance; **About** explains the observations,
-sources, map origin, and refresh behavior. Closing info returns to the report
+sources, map origin, and refresh behavior. **Back** returns to the report
 page you were viewing. See the
 [design review and rendered mockups](../../../docs/RECEPTION-INFO-DESIGN.md).
 
@@ -233,9 +233,9 @@ Physical phone and Linux runtime checks remain outstanding.
 
 The operation provides the defaults. Open the tune button beside the panel title
 to change its settings; they are also available in **Edit Layout**.
-**View** and the saved **Band** default live here. The small view button beside
-refresh and info cycles **Map and receivers → Map → Receivers**. Tap **All bands** or the active
-band in the panel summary to choose a band without opening settings.
+Saved **View**, **Band** and **Report window** defaults live here. The native
+choices above the map change the current view, band and window without opening
+settings. View uses a dropdown when its segmented choices would crowd the pane.
 
 ![RBN view and band settings in Ham2K's tune dialog](../../../docs/images/rbn/rbn-settings.jpg)
 
@@ -274,12 +274,12 @@ for an operation location or grid override, and distance and bearing remain
 unavailable. The extension never substitutes a callsign-prefix location guess.
 If no valid callsign is available, it prompts for one without requesting reports.
 
-View and band are saved per panel placement through the tune settings and survive
+View, band and report window are saved per panel placement through tune settings and survive
 refreshes, operation changes, and restarts. Saving a different band keeps the
-selected view. In-panel view, band, and sort choices survive refreshes and unrelated
+selected view. In-panel view, band, window and sort choices survive refreshes and unrelated
 settings changes, and reset when switching operations or restarting the extension.
-Saving a different View, Band, or sort default applies to that control only. Choose the
-Band in tune settings to keep it across restarts. Changing settings returns to
+Saving a different View, Band, Report window or sort default applies to that control only.
+Use tune settings to keep a default across restarts. Changing settings returns to
 the first page.
 
 ## Map and receiver list
@@ -302,7 +302,7 @@ Use the native **View** choice above the map, or **View** in the panel's tune se
 or **Receivers**, and **Band** to select a supported band or **All bands**, even
 before reports arrive. On narrow panes the choices wrap and View uses a dropdown.
 **All bands** restores the full view. Both the map and receiver
-list follow this filter, and **Details** (ⓘ or !) shows timing for the selected
+list follow this filter, and **Details** shows timing for the selected
 band along with map origin and provenance.
 The list
 contains the latest report from each receiver on each band and mode: mode,
@@ -317,11 +317,12 @@ shown below the reports.
 Narrow panels show receiver cards; sufficiently wide panels put the map and
 table side by side. Page size follows the available height and text size.
 In a short pane, choose **Map** or **List** to give that view more room. The
-information button opens **Report details** with native **Status/About** choices,
+**Details** button opens **Report details** with native **Status/About** choices,
 timestamps, origin, source attribution and warnings. Long details remain paginated
-text; refresh, info, direction and pagination keep compact drawn buttons with full
-accessible labels. The toolbar reserves real map space without shrinking or
-double-scaling the artwork. Band, sort and RBN view choices are temporary per
+text; **Refresh** and **Details/Back** are native buttons, while direction and
+pagination keep compact drawn controls with full accessible labels. The toolbar
+reserves real map space without shrinking or double-scaling the artwork.
+Band, window, sort and RBN view choices are temporary per
 placement; tune settings remain the defaults across restarts.
 
 ## Refreshes and interpreting reports

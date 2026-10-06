@@ -7,12 +7,12 @@ No dependency ranges or synchronized release versions changed for this work.
 
 ## Rendering and state
 
-`packages/reception/src/ui/scene.ts` remains pure. Native Band and Sort dropdowns
-and Status/About choices surround the existing map, cards, text and pagination.
-RBN has a direct Map/Receivers/Both choice. PSK retains its saved View behavior.
-Refresh, info, sort direction and pagination retain compact drawn controls with
-full accessible descriptions. Native buttons display their whole accessible
-label, which is unsuitable for those compact actions without a separate design.
+`packages/reception/src/ui/scene.ts` remains pure. Native Band, Window and Sort
+dropdowns and Status/About choices surround the existing map, cards, text and
+pagination. RBN has a direct Map/Receivers/Both choice. PSK retains its saved View
+behavior. Refresh and Details/Back use native buttons with short visible labels.
+Sort direction and pagination retain compact drawn controls with full accessible
+descriptions.
 Long information pages retain wrapped, paginated text layers; host `nativeText`
 is a single-line display and does not solve long diagnostic text layout.
 
@@ -23,17 +23,33 @@ old full-size map into a smaller `layout.scene` viewport. Scene units equal host
 logical pixels; `scaledFontSize` reserves space while text layers keep `fontSize`.
 No layout-only controls or unbounded intrinsic-width rows are emitted.
 
+At normal text sizes, 320/390/430-pixel fixtures keep Band and Window on the same
+row and actions in the existing header. The map loses four logical pixels of
+height compared with the preceding renderer, matching the change from 44-pixel
+drawn actions to 48-pixel native targets. Larger text can move actions below the
+metadata and split field rows to keep captions readable. For example, a 320 by
+900 fixture at twice-normal text retains a 296 by 238 map; a 390 by 844 fixture
+at 1.6 times normal retains a 366 by 416 map. These are deterministic renderer
+bounds, rather than measurements from a phone's native UI.
+
 `panel-events.ts` binds each visible control to a bounded placement context.
-Native choices require `commit` and a valid `event.text`; drawn actions require
+Native choices require `commit` and a valid `event.text`; button actions require
 `activate`. Responses include `values: {}` plus the committed string patch.
 The adapters apply those choices to `panel-state.ts`, then render authoritative
 state. No filtering choice is local-only, and no new extension-wide preference
 is written. Saved defaults, temporary selections and persisted source settings
 remain separate.
 
+Window choices use the existing 1/3/5/10/15/30/45/60-minute values and are temporary
+for each placement. A changed saved Report window replaces that override; another
+saved setting does not. Operation/station-callsign changes and extension restarts reset
+it. RBN uses the selected window for its query and collection context. PSK keeps
+its exact MQTT subscription and respects history cooldowns when a larger window
+needs older data. Choosing a window never requests the manual Refresh bypass.
+
 Operation changes reset placement state. Saved default changes reconcile only
-the corresponding choices. Any saved configuration change invalidates queued
-actions; only the latest rendered visible controls may act. Context epochs and
+the corresponding choices. Changes to shared saved panel configuration invalidate
+queued actions; only the latest rendered visible controls may act. Context epochs and
 render versions reject stale work. The host serializes/coalesces events and
 supersedes old responses. Its event sequence restarts when a widget remounts, so
 the extension validates sequence shape without rejecting restarted counters.
@@ -49,12 +65,15 @@ There is no invented runtime fallback or new shared-library requirement.
 
 On October 6, 2026, installed macOS Next 26.9.0 build 177 accepted a temporary
 API-5 pilot importing this shared renderer, placement state and event adapter.
-Synthetic RBN/PSK reports verified Band and Sort commits, RBN view selection,
-Status/About tabs, narrow toolbar wrapping and the narrow-view dropdown fallback.
-The PSK fixture also remained readable at the app's largest font scale in its
-dark panel theme. Dropdown keyboard selection worked after pointer focus.
-Earlier SDK sample
-checks also exercised switches and pending text edits before an action.
+SDK Pilot 0.1.2 used instrumented host widths of 320 and 390 logical pixels to
+verify readable Band/Window values and Refresh/Details/Back captions. Window
+commits filtered synthetic RBN/PSK reports, asynchronous Refresh retained the
+window, and Details/Back restored the report page and selections. PSK retained
+its saved View with no direct temporary View control. Previous pilot checks
+covered Sort, RBN View, Status/About and large app text in a dark panel theme.
+Dropdown keyboard selection worked after pointer focus; full Tab traversal and
+screen-reader operation remain unverified. Earlier SDK sample checks also
+exercised switches and pending text edits before an action.
 These checks cover native rendering with synthetic data, rather than production
 network adapters, saved-config forms or every platform. See `VERIFICATION.md`
 for the acceptance scope and remaining checks.

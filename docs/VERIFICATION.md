@@ -1,5 +1,66 @@
 # Verification and compatibility
 
+## Native reception actions and report window — 2026-10-06
+
+RBN and PSK Reporter now use native Refresh and Details/Back buttons and a
+temporary per-placement Window dropdown. Window uses the existing
+1/3/5/10/15/30/45/60-minute choices. Saved Report window changes replace its
+temporary override; unrelated saved settings preserve it. Operation or station
+callsign changes and extension restarts reset it. RBN query/collection context
+and PSK cached/history filtering use the selected window. Window commits do not
+request a forced refresh, change exact MQTT subscriptions or bypass cooldowns.
+
+At normal text size, deterministic 320/390/430-pixel-wide fixtures keep Band
+and Window on one row and actions in the existing header. The map loses four
+logical pixels of height from the change to 48-pixel native action targets.
+Large text wraps controls as needed; at 320 by 900 and twice-normal text the
+remaining map is 296 by 238, and at 390 by 844 with 1.6-times text it is 366 by
+416. These are renderer bounds, not measurements from mobile Flutter hosts.
+
+`mise run format` and `mise run check` passed: **1,174 tests across 87 files**,
+strict runtime/test/task typechecks, lint, seven ES2020 builds and official
+packaging. Tests cover native commit/action phases, invalid and stale events,
+independent placements, saved defaults, operation clearing, effective source
+queries, collection context and existing pending/backoff/history behavior.
+`mise run reception:preview` regenerated nine scenarios and 51 pages; native
+controls remain schematic SVG approximations.
+
+`mise run verify-host` passed all seven bundles against installed **Ham2K Next
+26.9.0 build 177**, kernel SHA-256
+`c572080a83d2f6773bfa32ec814063d40578a8698a64e7dae89d82b89c3d9102`.
+This runs the JavaScript kernel under Node VM with simulated timer wakes,
+rather than verifying native UI or background/resume scheduling.
+
+SDK Pilot 0.1.2 imported the working-copy renderer and production placement/event
+modules with synthetic reports and a 1.5-second synthetic refresh. Instrumented
+macOS host arguments confirmed 320- and 390-pixel panes. Band/Window selections
+and native Refresh/Details/Back captions remained readable without overlap.
+RBN Window 1 to 60 minutes changed one receiver to 18; Band 20m reduced that to
+six. Details/About/Back restored page two with Band 20m and Window 60. PSK Window
+15/5/30 commits worked, and Window remained usable during asynchronous Refresh.
+PSK retained its saved Both view with no direct temporary View control.
+Dropdown keyboard selection after pointer focus worked. Native accessibility
+snapshots exposed the action labels, but full keyboard traversal and screen
+reader operation remain unverified. The pilot predates the small RBN-only
+compact-map guidance correction, covered separately by regression tests.
+
+Both temporary Home placements and SDK Pilot 0.1.2 were removed. The original
+Operation List/Current Version Home layout and divider were restored, with no
+pilot tabs, global preference changes or replacement of existing extensions.
+No QSO, radio action, upload or email occurred. Large app text and dark-theme
+checks for the earlier choices/prose are recorded below; they were not repeated
+for these new action captions. Actual mobile hosts, large OS text, short panes,
+full keyboard/screen-reader navigation, high contrast, reduced motion,
+production source/configuration behavior and real lifecycle scheduling remain
+separate acceptance work before publishing.
+
+SDK 0.12.0, tools 0.8.0, API-5 reception manifests, shared-library ranges and
+synchronized version **0.7.6** remain unchanged. No release or catalog
+publication is part of these commits. Reception-only code and documentation
+are exempt from CWT/CQ WW synchronization; neither contest implementation was
+changed. Previously preserved uncommitted designs and contest work remain in
+their original Jujutsu change.
+
 ## SDK capability adoption — 2026-10-06
 
 Implemented SST setup suggestions with state/province names while retaining
