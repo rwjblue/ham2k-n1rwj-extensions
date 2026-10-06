@@ -12,7 +12,12 @@ import type {
   HookContext,
   JSONValue,
 } from '@ham2k/extension-sdk'
-import { adifForExport, exportFilename, startMillisOf } from '@ham2k/extension-sdk'
+import {
+  adifForExport,
+  exportFilename,
+  exportTypeDefinition,
+  startMillisOf,
+} from '@ham2k/extension-sdk'
 import { qsonToCabrillo } from '@ham2k/lib-qson-cabrillo'
 import manifest from '../../manifest.json'
 import { firstName, normalizeNumber, ourExchange } from './exchange.ts'
@@ -69,6 +74,12 @@ function filenameFor(
 }
 
 export const ExportHook = {
+  async getExportTypes() {
+    return [
+      exportTypeDefinition(TYPE, 'adif', manifest.shortName),
+      exportTypeDefinition(TYPE, 'cabrillo', manifest.shortName),
+    ]
+  },
   async suggestExportOptions(
     args: ExportOptionsRequest,
     ctx: HookContext,
@@ -79,7 +90,8 @@ export const ExportHook = {
       filenameFor(args.operation, args.qsos ?? [], extension, args.compactFilenames)
     return [
       {
-        exportType: 'contest-adif',
+        exportType: `${TYPE}-adif`,
+        templateData: { activity: filenameActivity(args.operation) },
         format: 'adif',
         label: t('adifExport', { contest: manifest.shortName }),
         filename: named('adi'),
@@ -87,7 +99,8 @@ export const ExportHook = {
         refType: TYPE,
       },
       {
-        exportType: 'cabrillo',
+        exportType: `${TYPE}-cabrillo`,
+        templateData: { activity: filenameActivity(args.operation) },
         format: 'cabrillo',
         label: t('cabrilloExport', { contest: manifest.shortName }),
         filename: named('log'),
@@ -98,10 +111,11 @@ export const ExportHook = {
   },
 
   async generateExport(args: ExportRequest, _ctx: HookContext): Promise<ExportResult> {
-    // Only the two exportTypes offered above. Belt and braces alongside the
-    // keyed delegation in `adifForExport`: a hook answering for an exportType it never
-    // offered makes the ADIF delegation recurse into itself.
-    if (args.exportType !== 'cabrillo' && args.exportType !== 'contest-adif') {
+    // Accept this contest's registered types and older generic requests only.
+    // The core ADIF type must never delegate back into this hook.
+    const cabrillo = args.exportType === `${TYPE}-cabrillo` || args.exportType === 'cabrillo'
+    const adif = args.exportType === `${TYPE}-adif` || args.exportType === 'contest-adif'
+    if (!refOfType(args.operation, TYPE) || (!cabrillo && !adif)) {
       return { filename: '', mimeType: '', content: '' }
     }
 
@@ -110,7 +124,7 @@ export const ExportHook = {
     const ourCall = str(operation.stationCall)
     const ours = ourExchange(opRef)
 
-    if (args.exportType === 'cabrillo') {
+    if (cabrillo) {
       const power = POWER_CLASSES.find((entry) => entry.value === str(opRef?.power))
       const content = qsonToCabrillo(args.qsos, {
         headers: [

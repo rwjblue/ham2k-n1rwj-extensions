@@ -156,6 +156,10 @@ before reporting your score; a displayed score is not a completed-log check.
 
 ## Export and report your score
 
+CWT ADIF and Cabrillo have their own entries in Ham2K's export preferences.
+They inherit common export defaults until you customize them; filename templates
+receive the selected CWT session. Older generic export requests remain supported.
+
 Use Ham2K's **Exports** menu for ADIF or Cabrillo. CWT exports use the
 `CWOPS-CWT` contest identifier and retain your sent and received exchanges.
 Report your session total at [3830 Scores](https://www.3830scores.com/), as

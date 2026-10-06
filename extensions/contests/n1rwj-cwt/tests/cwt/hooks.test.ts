@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import type { JSONValue } from '@ham2k/extension-sdk'
-import { hooks } from '@ham2k/extension-sdk'
+import { hooks, prepareExportOption, resolveExportSettings } from '@ham2k/extension-sdk'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import manifest from '../../manifest.json'
 import { ActivityHook } from '../../src/cwt/activity.ts'
@@ -154,12 +154,83 @@ describe('CWT exports', () => {
       { operation, qsos: [qso], exportType: 'cabrillo' },
       ctx,
     )
-    expect(options.find((option) => option.exportType === 'cabrillo')?.filename).toBe(
+    expect(options.find((option) => option.exportType === 'cwt-cabrillo')?.filename).toBe(
       generated.filename,
     )
     expect(
       await ExportHook.generateExport({ operation, qsos: [qso], exportType: 'unknown' }, ctx),
     ).toEqual({ filename: '', mimeType: '', content: '' })
+  })
+
+  it('registers shared CWT export preferences and keeps the session in filename templates', async () => {
+    const definitions = await ExportHook.getExportTypes()
+    expect(definitions).toMatchObject([
+      { exportType: 'cwt-adif', activationType: 'cwt', format: 'adif' },
+      { exportType: 'cwt-cabrillo', activationType: 'cwt', format: 'cabrillo' },
+    ])
+    for (const compact of [false, true]) {
+      const options = await ExportHook.suggestExportOptions(
+        { operation, qsos: [qso], compactFilenames: compact },
+        ctx,
+      )
+      expect(options.map(({ exportType }) => exportType)).toEqual(
+        definitions.map(({ exportType }) => exportType),
+      )
+      for (const [index, option] of options.entries()) {
+        const definition = definitions[index]
+        if (!definition) throw new Error('Expected a registered CWT export type')
+        expect(option.templateData).toEqual({ activity: 'CWT-2026-08-26-1300' })
+        const prepared = prepareExportOption(
+          {
+            ...option,
+            exportSettings: resolveExportSettings(
+              definition,
+              {},
+              {
+                customTemplates: true,
+                filenameTemplate: '{{ log.activity }} {{ log.station }}',
+                compactFilenameTemplate: '{{ log.station }}-{{ log.activity }}',
+              },
+            ),
+          },
+          operation,
+          [qso],
+          compact,
+        )
+        expect(prepared.filename).toBe(
+          `${compact ? 'N1RWJ-CWT-2026-08-26-1300' : 'CWT-2026-08-26-1300 N1RWJ'}.${index ? 'log' : 'adi'}`,
+        )
+      }
+    }
+  })
+
+  it('keeps legacy CWT exports equivalent and declines unrelated types before delegating', async () => {
+    const invoke = vi
+      .spyOn(hooks, 'invokeOne')
+      .mockResolvedValue([{ key: 'adif', ok: true, value: { content: '<eoh>\n<eor>' } }])
+    for (const [registered, legacy] of [
+      ['cwt-cabrillo', 'cabrillo'],
+      ['cwt-adif', 'contest-adif'],
+    ]) {
+      expect(
+        await ExportHook.generateExport({ operation, qsos: [qso], exportType: registered }, ctx),
+      ).toEqual(
+        await ExportHook.generateExport({ operation, qsos: [qso], exportType: legacy }, ctx),
+      )
+    }
+    expect(invoke).toHaveBeenCalledTimes(2)
+    for (const args of [
+      { operation, qsos: [qso], exportType: 'adif' },
+      { operation, qsos: [qso], exportType: 'cqww-adif' },
+      { operation: {}, qsos: [qso], exportType: 'contest-adif' },
+    ]) {
+      expect(await ExportHook.generateExport(args, ctx)).toEqual({
+        filename: '',
+        mimeType: '',
+        content: '',
+      })
+    }
+    expect(invoke).toHaveBeenCalledTimes(2)
   })
 
   it('delegates ADIF to the host with this extension key and all export context', async () => {
