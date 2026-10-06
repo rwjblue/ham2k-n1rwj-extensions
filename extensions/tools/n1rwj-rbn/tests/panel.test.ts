@@ -8,7 +8,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { createRbnClient } from '../src/data/client.ts'
 import { createReceiverData } from '../src/data/receivers.ts'
 import type { RbnSnapshot } from '../src/model.ts'
-import { createRbnPanel, panelModel } from '../src/panel.ts'
+import { createRbnPanel as createPanel, panelModel } from '../src/panel.ts'
 import { payload, spotPayload } from './data/fixtures.ts'
 
 const typography = {
@@ -103,9 +103,31 @@ const snapshot: RbnSnapshot = {
   ],
 }
 
+const renderedPanels = new WeakMap<
+  ReturnType<typeof createPanel>,
+  { scenes: Map<string, PanelContent>; sequence: number }
+>()
+
+function createRbnPanel(...parameters: Parameters<typeof createPanel>) {
+  const panel = createPanel(...parameters)
+  const state = { scenes: new Map<string, PanelContent>(), sequence: 0 }
+  renderedPanels.set(panel, state)
+  const render = panel.render
+  panel.render = async (renderArgs, ctx) => {
+    const content = await render(renderArgs, ctx)
+    state.scenes.set(renderArgs.instanceId ?? '', content)
+    return content
+  }
+  return panel
+}
+
 function sceneText(content: PanelContent): string {
-  if (content.kind !== 'svgScene') throw new Error('Expected native scene')
+  if (content.kind !== 'scene') throw new Error('Expected native scene')
   return content.scene.layers.map((layer) => layer.text?.literal ?? '').join('\n')
+}
+function sceneState(content: PanelContent) {
+  if (content.kind !== 'scene') throw new Error('Expected native scene')
+  return content.scene
 }
 function setup(current = snapshot) {
   const getSnapshot = vi.fn().mockResolvedValue(current)
@@ -114,11 +136,27 @@ function setup(current = snapshot) {
     panel: createRbnPanel({ client: { getSnapshot }, now: () => now, settings: async () => ({}) }),
   }
 }
-function event(controlId: string, action: string, extra: Partial<PanelRenderArgs> = {}) {
+function event(
+  panel: ReturnType<typeof createRbnPanel>,
+  controlId: string,
+  text?: string,
+  extra: Partial<PanelRenderArgs> = {},
+) {
+  const renderArgs = { ...args, ...extra }
+  const state = renderedPanels.get(panel)
+  const content = state?.scenes.get(renderArgs.instanceId ?? '')
+  const control = content && sceneState(content).controls?.find((entry) => entry.id === controlId)
+  if (!state || !control?.event) throw new Error(`Missing rendered control ${controlId}`)
+  const native = control.kind === 'nativeDropdown' || control.kind === 'nativeSegmented'
   return {
-    ...args,
-    ...extra,
-    event: { controlId, action, phase: 'activate' as const, sequence: 1 },
+    ...renderArgs,
+    event: {
+      controlId,
+      action: control.event,
+      phase: native ? ('commit' as const) : ('activate' as const),
+      sequence: ++state.sequence,
+      ...(native ? { text } : {}),
+    },
   }
 }
 async function detailsText(panel: ReturnType<typeof createRbnPanel>, renderArgs: PanelRenderArgs) {
@@ -127,13 +165,11 @@ async function detailsText(panel: ReturnType<typeof createRbnPanel>, renderArgs:
     const content = await panel.render(renderArgs, { online: true })
     pages.push(sceneText(content))
     if (
-      content.kind !== 'svgScene' ||
-      !content.scene.controls?.some(
-        (control) => control.id === 'next' && control.event === 'page:next',
-      )
+      content.kind !== 'scene' ||
+      !content.scene.controls?.some((control) => control.id === 'next')
     )
       return pages.join('\n')
-    await panel.onEvent?.(event('next', 'page:next', renderArgs), { online: true })
+    await panel.onEvent?.(event(panel, 'next', undefined, renderArgs), { online: true })
   }
   throw new Error('Status details did not reach their final page')
 }
@@ -212,7 +248,7 @@ describe('RBN native panel integration', () => {
       clock: { nowMillis: now, realNowMillis: now },
     }
     await panel.render(phoneArgs, { online: true })
-    await panel.onEvent?.(event('details', 'details:toggle', phoneArgs), { online: true })
+    await panel.onEvent?.(event(panel, 'details', undefined, phoneArgs), { online: true })
     // Observe completion before checking the following render's cooldown details.
     await panel.render(phoneArgs, { online: true })
     const result = (await detailsText(panel, phoneArgs)).replace(/\s+/g, ' ')
@@ -343,7 +379,7 @@ describe('RBN native panel integration', () => {
     expect(sceneText(ready)).toContain('Recent reports')
     expect(sceneText(ready)).toContain('W3LPL')
     expect(fetch).toHaveBeenCalledTimes(1)
-    await panel.onEvent?.(event('details', 'details:toggle'), { online: true })
+    await panel.onEvent?.(event(panel, 'details', undefined), { online: true })
     expect(await detailsText(panel, args)).toContain('Last request duration: 6250 ms.')
   })
   it('shows a pending refresh and request duration without presenting pending work as a failure', () => {
@@ -454,12 +490,14 @@ describe('RBN native panel integration', () => {
       vi.useRealTimers()
     }
   })
-  it('explains older-host incompatibility before any network or settings work', async () => {
+  it('explains missing panel context before any network or settings work', async () => {
     const { panel, getSnapshot } = setup()
     for (const extra of [{ environment: undefined }, { instanceId: undefined }]) {
       const result = await panel.render({ ...args, ...extra }, { online: true })
       expect(result.kind).toBe('markdown')
-      expect('content' in result && result.content).toContain('SVG scene support')
+      expect('content' in result && result.content).toContain(
+        'extension API 5 and native panel controls',
+      )
     }
     expect(getSnapshot).not.toHaveBeenCalled()
   })
@@ -475,8 +513,8 @@ describe('RBN native panel integration', () => {
     })
     await panel.render({ ...args, clock: clockAt(0) }, { online: true })
     await Promise.all([
-      panel.onEvent?.(event('refresh', 'refresh:reports', { clock: clockAt(1) }), { online: true }),
-      panel.onEvent?.(event('refresh', 'refresh:reports', { clock: clockAt(1) }), { online: true }),
+      panel.onEvent?.(event(panel, 'refresh', undefined, { clock: clockAt(1) }), { online: true }),
+      panel.onEvent?.(event(panel, 'refresh', undefined, { clock: clockAt(1) }), { online: true }),
     ])
     expect(fetch).toHaveBeenCalledTimes(2)
     const refreshed = await panel.render(
@@ -516,9 +554,9 @@ describe('RBN native panel integration', () => {
     const panel = createRbnPanel({ client, now: () => clock, settings: async () => ({}) })
     const configured = { ...args, config: { ...args.config, view: 'list', band: '40m' } }
     await panel.render(configured, { online: true })
-    await panel.onEvent?.(event('sort', 'sort:call', configured), { online: true })
+    await panel.onEvent?.(event(panel, 'sort', 'call', configured), { online: true })
     clock += 1
-    await panel.onEvent?.(event('refresh', 'refresh:reports', configured), { online: true })
+    await panel.onEvent?.(event(panel, 'refresh', undefined, configured), { online: true })
     expect(getSnapshot).toHaveBeenLastCalledWith(
       { call: 'K8BTU', windowMinutes: 15 },
       { instanceId: 'test-panel', force: true, online: true, waitForRequest: false },
@@ -527,8 +565,8 @@ describe('RBN native panel integration', () => {
     expect(pending.triggers).toEqual(['tick:1'])
     expect(sceneText(pending)).toContain('Cached · refreshing')
     expect(sceneText(pending)).toContain('W3LPL')
-    expect(sceneText(pending)).toContain('Sort: Receiver ▾')
-    await panel.onEvent?.(event('refresh', 'refresh:reports', configured), { online: true })
+    expect(sceneState(pending).strings?.sort).toBe('call')
+    await panel.onEvent?.(event(panel, 'refresh', undefined, configured), { online: true })
     await panel.render(configured, { online: true })
     expect(fetch).toHaveBeenCalledTimes(2)
 
@@ -540,9 +578,9 @@ describe('RBN native panel integration', () => {
     expect(failed.triggers).toBeUndefined()
     expect(sceneText(failed)).toContain('Cached · request timed out')
     expect(sceneText(failed)).toContain('W3LPL')
-    expect(sceneText(failed)).toContain('Sort: Receiver ▾')
+    expect(sceneState(failed).strings?.sort).toBe('call')
     expect(fetch).toHaveBeenCalledTimes(2)
-    await panel.onEvent?.(event('details', 'details:toggle', configured), { online: true })
+    await panel.onEvent?.(event(panel, 'details', undefined, configured), { online: true })
     const details = await detailsText(panel, configured)
     expect(details).toContain('Last request duration: 15000 ms.')
     expect(details).toContain('Host detail: TimeoutException')
@@ -554,14 +592,15 @@ describe('RBN native panel integration', () => {
       .mockResolvedValue({ status: 200, body: JSON.stringify(payload({ spots: [], total: 0 })) })
     const client = createRbnClient({ fetch })
     const panel = createRbnPanel({ client, settings: async () => ({}) })
-    const refreshAt = (elapsed: number, online = true) =>
-      panel.onEvent?.(
-        event('refresh', 'refresh:reports', {
-          config: { watchCall: elapsed === 0 ? 'K8BTU' : 'N1RWJ', windowMinutes: 30 },
-          clock: { nowMillis: now - 86_400_000, realNowMillis: now + elapsed },
-        }),
-        { online },
-      )
+    const refreshAt = async (elapsed: number, online = true) => {
+      const extra = {
+        config: { watchCall: elapsed === 0 ? 'K8BTU' : 'N1RWJ', windowMinutes: 30 },
+        clock: { nowMillis: now - 86_400_000, realNowMillis: now + elapsed },
+      }
+      // Establish the actual visible control without starting an automatic request.
+      await panel.render({ ...args, ...extra }, { online: false })
+      return panel.onEvent?.(event(panel, 'refresh', undefined, extra), { online })
+    }
     await refreshAt(0, false)
     expect(fetch).not.toHaveBeenCalled()
     await refreshAt(0)
@@ -670,7 +709,7 @@ describe('RBN native panel integration', () => {
     expect(sceneText(filtered)).toContain('≥ 1 dB')
     expect(sceneText(filtered)).toContain('0 receivers')
     expect(sceneText(filtered)).not.toContain('W1NT')
-    await panel.onEvent?.(event('refresh', 'refresh:reports', configured), { online: true })
+    await panel.onEvent?.(event(panel, 'refresh', undefined, configured), { online: true })
     expect(await panel.render(configured, { online: true })).toEqual(filtered)
     expect(await setup().panel.render(configured, { online: true })).toEqual(filtered)
     expect(
@@ -739,7 +778,7 @@ describe('RBN native panel integration', () => {
     expect(model.warnings?.join(' ')).toContain('503')
     expect(model.warnings?.join(' ')).toContain('500-report limit')
     const { panel, getSnapshot } = setup()
-    expect((await panel.render(home, { online: true })).kind).toBe('svgScene')
+    expect((await panel.render(home, { online: true })).kind).toBe('scene')
     expect(getSnapshot).toHaveBeenCalledWith(
       { call: 'K8BTU', windowMinutes: 15 },
       { instanceId: 'test-panel', online: true, waitForRequest: false },
@@ -762,7 +801,7 @@ describe('RBN native panel integration', () => {
     const filtered = await panel.render(changed, { online: true })
     expect(sceneText(filtered)).toContain('15m · 0 receivers')
     expect(sceneText(filtered)).not.toContain('W1NT')
-    expect(sceneText(filtered)).not.toContain('Sort:')
+    expect(sceneState(filtered).controls?.some((control) => control.id === 'sort')).toBe(false)
     expect(await panel.render({ ...changed, reason: 'tick' }, { online: true })).toEqual(filtered)
     expect(
       sceneText(await panel.render({ ...args, instanceId: 'other' }, { online: true })),
@@ -772,71 +811,74 @@ describe('RBN native panel integration', () => {
       { online: true },
     )
     expect(sceneText(list)).toContain('No 15m reports in this time window.')
-    expect(sceneText(list)).toContain('Sort:')
+    expect(sceneState(list).controls?.find((control) => control.id === 'sort')).toMatchObject({
+      kind: 'nativeDropdown',
+      value: 'sort',
+    })
     // Saved preferences are also authoritative after an extension restart.
-    expect(await setup().panel.render(changed, { online: true })).toEqual(filtered)
+    const restarted = await setup().panel.render(changed, { online: true })
+    expect(sceneState(restarted).strings).toEqual(sceneState(filtered).strings)
+    expect(sceneState(restarted).layers).toEqual(sceneState(filtered).layers)
   })
-  it('cycles views per placement and preserves the choice until its saved default changes', async () => {
+  it('selects native views per placement until the saved default changes', async () => {
     const { panel } = setup()
-    const viewLabel = (result: Awaited<ReturnType<typeof panel.render>>) => {
-      if (result.kind !== 'svgScene') throw new Error('Expected native scene')
-      return result.scene.controls?.find((control) => control.id === 'view')?.label
-    }
-    expect(viewLabel(await panel.render(args, { online: true }))).toContain(
-      'View: Map and receivers;',
-    )
-    await panel.onEvent?.(event('band', 'band:40m'), { online: true })
-    await panel.onEvent?.(event('sort', 'sort:snr'), { online: true })
-    for (const name of ['Map', 'Receivers', 'Map and receivers']) {
-      await panel.onEvent?.(event('view', 'view:cycle'), { online: true })
+    expect(sceneState(await panel.render(args, { online: true })).strings?.view).toBe('both')
+    await panel.onEvent?.(event(panel, 'band', '40m'), { online: true })
+    await panel.onEvent?.(event(panel, 'sort', 'snr'), { online: true })
+    for (const view of ['map', 'list', 'both']) {
+      expect(await panel.onEvent?.(event(panel, 'view', view), { online: true })).toEqual({
+        values: {},
+        strings: { view },
+      })
       const rendered = await panel.render(args, { online: true })
-      expect(viewLabel(rendered)).toContain(`View: ${name};`)
+      expect(sceneState(rendered).strings?.view).toBe(view)
       expect(sceneText(rendered)).toContain('40m · 2 receivers')
       expect(
-        viewLabel(await panel.render({ ...args, reason: 'tick' }, { online: true })),
-      ).toContain(`View: ${name};`)
+        sceneState(await panel.render({ ...args, reason: 'tick' }, { online: true })).strings?.view,
+      ).toBe(view)
     }
-    await panel.onEvent?.(event('view', 'view:cycle'), { online: true })
+    await panel.onEvent?.(event(panel, 'view', 'map'), { online: true })
     expect(
-      viewLabel(await panel.render({ ...args, instanceId: 'other' }, { online: true })),
-    ).toContain('View: Map and receivers;')
+      sceneState(await panel.render({ ...args, instanceId: 'other' }, { online: true })).strings
+        ?.view,
+    ).toBe('both')
     const unrelated = { ...args, config: { ...args.config, projection: 'azimuthal' } }
-    expect(viewLabel(await panel.render(unrelated, { online: true }))).toContain('View: Map;')
+    expect(sceneState(await panel.render(unrelated, { online: true })).strings?.view).toBe('map')
     const saved = { ...unrelated, config: { ...unrelated.config, view: 'list' } }
     const list = await panel.render(saved, { online: true })
-    expect(viewLabel(list)).toContain('View: Receivers;')
-    expect(sceneText(list)).toContain('Sort: SNR')
+    expect(sceneState(list).strings).toMatchObject({ view: 'list', sort: 'snr', band: '40m' })
     expect(sceneText(list)).toContain('40m · 2 receivers')
-    await panel.onEvent?.(event('view', 'view:cycle', saved), { online: true })
-    expect(viewLabel(await setup().panel.render(saved, { online: true }))).toContain(
-      'View: Receivers;',
+    await panel.onEvent?.(event(panel, 'view', 'both', saved), { online: true })
+    expect(sceneState(await setup().panel.render(saved, { online: true })).strings?.view).toBe(
+      'list',
     )
     expect(
-      viewLabel(
+      sceneState(
         await panel.render(
           { ...saved, operation: { ...saved.operation, uuid: 'other' } },
           { online: true },
         ),
-      ),
-    ).toContain('View: Receivers;')
+      ).strings?.view,
+    ).toBe('list')
   })
-  it('filters from the header band menu until the saved Band changes', async () => {
+  it('filters from the native Band choice until the saved Band changes', async () => {
     const { panel } = setup()
     await panel.render(args, { online: true })
-    await panel.onEvent?.(event('band', 'band:20m'), { online: true })
+    await panel.onEvent?.(event(panel, 'band', '20m'), { online: true })
     const filtered = await panel.render(args, { online: true })
     expect(sceneText(filtered)).toContain('20m · 0 receivers')
     expect(sceneText(filtered)).not.toContain('W1NT')
-    if (filtered.kind !== 'svgScene') throw new Error('Expected native scene')
+    if (filtered.kind !== 'scene') throw new Error('Expected native scene')
     expect(
       sceneText(await panel.render({ ...args, instanceId: 'other' }, { online: true })),
     ).toContain('W1NT')
-    await panel.onEvent?.(event('details', 'details:toggle'), { online: true })
+    await panel.onEvent?.(event(panel, 'details', undefined), { online: true })
     expect(await detailsText(panel, args)).toContain('Latest report · 20m')
-    await panel.onEvent?.(event('details', 'details:toggle'), { online: true })
-    await panel.onEvent?.(event('band', 'band:all'), { online: true })
+    await panel.onEvent?.(event(panel, 'details', undefined), { online: true })
+    await panel.render(args, { online: true })
+    await panel.onEvent?.(event(panel, 'band', 'all'), { online: true })
     expect(sceneText(await panel.render(args, { online: true }))).toContain('W1NT')
-    await panel.onEvent?.(event('band', 'band:20m'), { online: true })
+    await panel.onEvent?.(event(panel, 'band', '20m'), { online: true })
     const unrelated = { ...args, config: { ...args.config, view: 'list' } }
     expect(sceneText(await panel.render(unrelated, { online: true }))).toContain(
       'No 20m reports in this time window.',
@@ -856,59 +898,58 @@ describe('RBN native panel integration', () => {
   ])('preserves sort choices after saving %j', async (config) => {
     const { panel } = setup()
     await panel.render(args, { online: true })
-    for (const [control, action] of [
-      ['sort', 'sort:call'],
-      ['direction', 'direction:toggle'],
-    ])
-      await panel.onEvent?.(event(control, action), { online: true })
-    const result = sceneText(
-      await panel.render(
-        { ...args, config: { ...args.config, ...config }, reason: 'config' },
-        { online: true },
-      ),
+    await panel.onEvent?.(event(panel, 'sort', 'call'), { online: true })
+    await panel.onEvent?.(event(panel, 'direction'), { online: true })
+    const result = await panel.render(
+      { ...args, config: { ...args.config, ...config }, reason: 'config' },
+      { online: true },
     )
-    expect(result).toContain('Sort: Receiver ▾')
-    expect(result).toContain('↑')
+    expect(sceneState(result).strings?.sort).toBe('call')
+    expect(sceneText(result)).toContain('↑')
   })
   it('applies changed sort defaults without clearing the saved view or band', async () => {
     const { panel } = setup()
     const configured = { ...args, config: { ...args.config, view: 'list', band: '40m' } }
     await panel.render(configured, { online: true })
-    await panel.onEvent?.(event('sort', 'sort:call', configured), { online: true })
-    const result = sceneText(
-      await panel.render(
-        { ...configured, config: { ...configured.config, sort: 'snr', direction: 'asc' } },
-        { online: true },
-      ),
+    await panel.onEvent?.(event(panel, 'sort', 'call', configured), { online: true })
+    const result = await panel.render(
+      { ...configured, config: { ...configured.config, sort: 'snr', direction: 'asc' } },
+      { online: true },
     )
-    expect(result).toContain('40m · 2 receivers')
-    expect(result).toContain('Sort: SNR ▾')
-    expect(result).toContain('↑')
+    expect(sceneState(result).strings).toMatchObject({ view: 'list', band: '40m', sort: 'snr' })
+    expect(sceneText(result)).toContain('40m · 2 receivers')
+    expect(sceneText(result)).toContain('↑')
   })
   it('resets session sort choices when switching operations', async () => {
     const { panel } = setup()
     await panel.render(args, { online: true })
-    await panel.onEvent?.(event('sort', 'sort:call'), { online: true })
-    const result = sceneText(
-      await panel.render(
-        { ...args, operation: { ...args.operation, uuid: 'another-operation' } },
-        { online: true },
-      ),
+    await panel.onEvent?.(event(panel, 'sort', 'call'), { online: true })
+    const result = await panel.render(
+      { ...args, operation: { ...args.operation, uuid: 'another-operation' } },
+      { online: true },
     )
-    expect(result).toContain('Sort: Heard ▾')
+    expect(sceneState(result).strings?.sort).toBe('age')
   })
   it.each([snapshot, { ...snapshot, status: 'empty' as const, reports: [] }])(
     'offers view and all supported bands through the host settings form ($status)',
     async (current) => {
       const { panel } = setup(current)
       const result = await panel.render(args, { online: true })
-      if (result.kind !== 'svgScene') throw new Error('Expected native scene')
-      expect(result.scene.controls?.find((control) => control.id === 'view')?.event).toBe(
-        'view:cycle',
-      )
-      expect(result.scene.controls?.find((control) => control.id === 'band')?.menu).toContainEqual({
-        label: 'All bands',
-        event: 'band:all',
+      if (result.kind !== 'scene') throw new Error('Expected native scene')
+      expect(result.scene.controls?.find((control) => control.id === 'view')).toMatchObject({
+        kind: 'nativeSegmented',
+        value: 'view',
+        label: 'View',
+        options: [
+          { value: 'map', label: 'Map' },
+          { value: 'list', label: 'Receivers' },
+          { value: 'both', label: 'Both' },
+        ],
+      })
+      expect(result.scene.controls?.find((control) => control.id === 'band')).toMatchObject({
+        kind: 'nativeDropdown',
+        value: 'band',
+        options: expect.arrayContaining([{ label: 'All bands', value: 'all' }]),
       })
       const fields = (await panel.getPanels({}, { online: true }))[0].form
       for (const [key, label, values] of [
@@ -927,42 +968,155 @@ describe('RBN native panel integration', () => {
       }
     },
   )
-  it('validates action/control pairs and ignores malformed or non-activation events', async () => {
+  it('ignores malformed native commits and drawn actions without starting requests', async () => {
     const { panel, getSnapshot } = setup()
     const initial = await panel.render(args, { online: true })
-    for (const [controlId, action] of [
-      ['sort', 'band:20m'],
-      ['band', 'band:bogus'],
-      ['band', 'band:20m:extra'],
-      ['view', 'view:map'],
-      ['view', 'view:list:extra'],
-      ['unknown', 'view:list'],
-      ['refresh', 'refresh:invalid'],
-      ['refresh', 'refresh:reports:extra'],
-      ['sort', 'refresh:reports'],
-    ]) {
-      await panel.onEvent?.(event(controlId, action), { online: true })
-    }
-    await panel.onEvent?.(
-      {
-        ...event('band', 'band:20m'),
-        event: { ...event('band', 'band:20m').event, phase: 'change' },
-      },
-      { online: true },
-    )
-    for (const extra of [{ environment: undefined }, { instanceId: undefined }]) {
-      await panel.onEvent?.(event('refresh', 'refresh:reports', extra), { online: true })
-    }
-    await panel.onEvent?.(
-      {
-        ...event('refresh', 'refresh:reports'),
-        event: { ...event('refresh', 'refresh:reports').event, phase: 'change' },
-      },
-      { online: true },
-    )
+    const band = event(panel, 'band', '20m')
+    const refresh = event(panel, 'refresh')
+    for (const invalid of [
+      { ...band.event, controlId: 'sort' },
+      { ...band.event, controlId: 'unknown' },
+      { ...band.event, action: `${band.event.action}:extra` },
+      { ...band.event, text: 'bogus' },
+      { ...band.event, text: undefined, value: 20 },
+      { ...band.event, phase: 'change' as const },
+      { ...band.event, phase: 'activate' as const },
+      { ...band.event, sequence: -1 },
+      { ...band.event, sequence: 1.5 },
+      { ...band.event, sequence: Number.NaN },
+      { ...refresh.event, phase: 'commit' as const },
+      { ...refresh.event, action: `${refresh.event.action}:extra` },
+    ])
+      expect(await panel.onEvent?.({ ...args, event: invalid }, { online: true })).toEqual({
+        values: {},
+      })
+    for (const extra of [{ environment: undefined }, { instanceId: undefined }])
+      expect(await panel.onEvent?.({ ...refresh, ...extra }, { online: true })).toEqual({
+        values: {},
+      })
     expect(getSnapshot).toHaveBeenCalledTimes(1)
     expect(await panel.render(args, { online: true })).toEqual(initial)
+    expect(await panel.onEvent?.(band, { online: true })).toEqual({
+      values: {},
+      strings: { band: '20m' },
+    })
+    const filtered = await panel.render(args, { online: true })
+    expect(sceneState(filtered).strings?.band).toBe('20m')
+    expect(await panel.onEvent?.(band, { online: true })).toEqual({
+      values: {},
+      strings: { band: '20m' },
+    })
+    expect(await panel.render(args, { online: true })).toEqual(filtered)
   })
+  it('rejects commits from an old operation, callsign, configuration, or placement', async () => {
+    const { panel } = setup()
+    await panel.render(args, { online: true })
+    let obsolete = event(panel, 'band', '20m')
+    for (const current of [
+      { ...args, operation: { ...args.operation, uuid: 'another' } },
+      { ...args, config: { ...args.config, watchCall: 'N1RWJ' } },
+      { ...args, config: { ...args.config, band: '40m' } },
+      { ...args, instanceId: 'another-placement' },
+    ]) {
+      const before = await panel.render(current, { online: true })
+      expect(
+        await panel.onEvent?.({ ...current, event: obsolete.event }, { online: true }),
+      ).toEqual({ values: {} })
+      expect(await panel.render(current, { online: true })).toEqual(before)
+      obsolete = event(panel, 'band', '20m', current)
+    }
+  })
+  it('commits details tabs and rejects controls hidden by the details page', async () => {
+    const { panel } = setup()
+    await panel.render(args, { online: true })
+    const hidden = event(panel, 'band', '20m')
+    await panel.onEvent?.(event(panel, 'details'), { online: true })
+    const status = await panel.render(args, { online: true })
+    expect(sceneState(status).strings?.detailsTab).toBe('status')
+    expect(await panel.onEvent?.(hidden, { online: true })).toEqual({ values: {} })
+    expect(await panel.onEvent?.(event(panel, 'detailsTab', 'about'), { online: true })).toEqual({
+      values: {},
+      strings: { detailsTab: 'about' },
+    })
+    const about = await panel.render(args, { online: true })
+    expect(sceneState(about).strings?.detailsTab).toBe('about')
+    expect(sceneText(about)).toContain('Vail')
+    expect(await panel.onEvent?.(event(panel, 'detailsTab', 'status'), { online: true })).toEqual({
+      values: {},
+      strings: { detailsTab: 'status' },
+    })
+    expect(sceneState(await panel.render(args, { online: true })).strings?.detailsTab).toBe(
+      'status',
+    )
+    await panel.onEvent?.(event(panel, 'details'), { online: true })
+    expect(sceneState(await panel.render(args, { online: true })).strings?.band).toBe('all')
+  })
+  it('retains placement choices across host sequence resets without saving them', async () => {
+    const { panel } = setup()
+    const other = { ...args, instanceId: 'other-placement' }
+    await panel.render(args, { online: true })
+    await panel.render(other, { online: true })
+    await panel.onEvent?.(event(panel, 'sort', 'call'), { online: true })
+    const first = event(panel, 'band', '20m')
+    first.event.sequence = 100
+    expect(await panel.onEvent?.(first, { online: true })).toEqual({
+      values: {},
+      strings: { band: '20m' },
+    })
+    const second = event(panel, 'band', '40m', other)
+    second.event.sequence = 1
+    expect(await panel.onEvent?.(second, { online: true })).toEqual({
+      values: {},
+      strings: { band: '40m' },
+    })
+    expect(sceneState(await panel.render(args, { online: true })).strings?.band).toBe('20m')
+    expect(sceneState(await panel.render(other, { online: true })).strings?.band).toBe('40m')
+    // A widget remount restarts the host counter while retaining the placement.
+    const remounted = event(panel, 'band', 'all')
+    remounted.event.sequence = 1
+    expect(await panel.onEvent?.(remounted, { online: true })).toEqual({
+      values: {},
+      strings: { band: 'all' },
+    })
+    expect(sceneState(await panel.render(args, { online: true })).strings).toMatchObject({
+      band: 'all',
+      sort: 'call',
+    })
+    expect(sceneState(await panel.render(other, { online: true })).strings?.band).toBe('40m')
+    expect(sceneState(await setup().panel.render(args, { online: true })).strings?.band).toBe('all')
+  })
+  it.each(['operation', 'config', 'rerender'] as const)(
+    'discards a slow render superseded by %s and retains the latest event registry',
+    async (change) => {
+      const pending = deferred<RbnSnapshot>()
+      const getSnapshot = vi
+        .fn()
+        .mockImplementationOnce(() => pending.promise)
+        .mockResolvedValue(snapshot)
+      const panel = createRbnPanel({
+        client: { getSnapshot },
+        now: () => now,
+        settings: async () => ({}),
+      })
+      const obsolete = panel.render(args, { online: false })
+      const current: PanelRenderArgs =
+        change === 'operation'
+          ? { ...args, operation: { ...args.operation, uuid: 'new-operation' } }
+          : change === 'config'
+            ? { ...args, config: { ...args.config, band: '40m' } }
+            : args
+      const latest = await panel.render(current, { online: false })
+      expect(latest.kind).toBe('scene')
+      const choice = event(panel, 'band', '20m', current)
+      pending.resolve(snapshot)
+      expect(await obsolete).toEqual({ kind: 'markdown', content: '' })
+      expect(await panel.onEvent?.(choice, { online: false })).toEqual({
+        values: {},
+        strings: { band: '20m' },
+      })
+      expect(sceneState(await panel.render(current, { online: false })).strings?.band).toBe('20m')
+    },
+  )
   it('sorts both ways through native actions and exposes full test/error details', async () => {
     const { panel } = setup({
       ...snapshot,
@@ -972,13 +1126,13 @@ describe('RBN native panel integration', () => {
     })
     const listArgs = { ...args, config: { ...args.config, view: 'list' } }
     await panel.render(listArgs, { online: true })
-    await panel.onEvent?.(event('sort', 'sort:call', listArgs), { online: true })
+    await panel.onEvent?.(event(panel, 'sort', 'call', listArgs), { online: true })
     const descending = sceneText(await panel.render(listArgs, { online: true }))
     expect(descending.indexOf('W1NT')).toBeLessThan(descending.indexOf('UNKNOWN'))
-    await panel.onEvent?.(event('direction', 'direction:toggle', listArgs), { online: true })
+    await panel.onEvent?.(event(panel, 'direction', undefined, listArgs), { online: true })
     const ascending = sceneText(await panel.render(listArgs, { online: true }))
     expect(ascending.indexOf('UNKNOWN')).toBeLessThan(ascending.indexOf('W1NT'))
-    await panel.onEvent?.(event('details', 'details:toggle', listArgs), { online: true })
+    await panel.onEvent?.(event(panel, 'details', undefined, listArgs), { online: true })
     const details = await detailsText(panel, listArgs)
     expect(details).toContain('503')
     expect(details).toContain('TEST')

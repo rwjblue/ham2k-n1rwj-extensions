@@ -20,6 +20,7 @@ function required<T>(value: T | undefined): T {
 }
 
 it('registers and loads the weekly receiver data file in the packaged sandbox', async () => {
+  expect(manifest.api).toBe(5)
   const source = await readFile(new URL('../build/index.js', import.meta.url), 'utf8')
   const sharedModules = Object.fromEntries(
     await Promise.all(
@@ -146,7 +147,50 @@ it('restores reports and shared server backoff through the actual SDK settings b
   const { panel: first } = restart()
   await first.render(args(), { online: true })
   await settleHostCalls()
-  expect(JSON.stringify(await first.render(args(), { online: true }))).toContain('W3LPL')
+  const ready = await first.render(args(), { online: true })
+  expect(JSON.stringify(ready)).toContain('W3LPL')
+  if (ready.kind !== 'scene') throw new Error('Expected API-5 reception scene')
+  const band = required(ready.scene.controls?.find((control) => control.id === 'band'))
+  expect(band).toMatchObject({ kind: 'nativeDropdown', value: 'band' })
+  const choice = {
+    ...args(),
+    event: {
+      controlId: 'band',
+      action: required(band.event),
+      phase: 'commit' as const,
+      sequence: 100,
+      text: '40m',
+    },
+  }
+  expect(await first.onEvent?.(choice, { online: true })).toEqual({
+    values: {},
+    strings: { band: '40m' },
+  })
+  expect(await first.onEvent?.(choice, { online: true })).toEqual({
+    values: {},
+    strings: { band: '40m' },
+  })
+  const filtered = await first.render(args(), { online: true })
+  if (filtered.kind !== 'scene') throw new Error('Expected API-5 reception scene')
+  expect(filtered.scene.strings?.band).toBe('40m')
+  expect(JSON.stringify(filtered)).not.toContain('map-receiver-label:W3LPL')
+  const remounted = {
+    ...args(),
+    event: {
+      controlId: 'band',
+      action: required(filtered.scene.controls?.find((control) => control.id === 'band')?.event),
+      phase: 'commit' as const,
+      sequence: 1,
+      text: '20m',
+    },
+  }
+  expect(await first.onEvent?.(remounted, { online: true })).toEqual({
+    values: {},
+    strings: { band: '20m' },
+  })
+  const restoredChoice = await first.render(args(), { online: true })
+  expect(JSON.stringify(restoredChoice)).toContain('map-receiver-label:W3LPL')
+  expect(saved).not.toHaveProperty('band')
   expect(requests).toBe(1)
   clock += 1000
   const { panel: second } = restart()
@@ -154,21 +198,23 @@ it('restores reports and shared server backoff through the actual SDK settings b
   await second.render(args(), { online: true })
   expect(requests).toBe(1)
   limited = true
-  const event = () => ({
-    ...args(),
-    event: {
-      controlId: 'refresh',
-      action: 'refresh:reports',
-      phase: 'activate' as const,
-      sequence: 1,
-    },
-  })
-  await second.onEvent?.(event(), { online: true })
+  const refresh = async (panel: PanelHook) => {
+    const content = await panel.render(args(), { online: false })
+    if (content.kind !== 'scene') throw new Error('Expected API-5 reception scene')
+    const action = required(
+      content.scene.controls?.find((control) => control.id === 'refresh')?.event,
+    )
+    return panel.onEvent?.(
+      { ...args(), event: { controlId: 'refresh', action, phase: 'activate', sequence: 1 } },
+      { online: true },
+    )
+  }
+  await refresh(second)
   await settleHostCalls()
   expect(requests).toBe(2)
   expect(saved['rbn-rate-limit-v1']).toMatchObject({ version: 1, pendingDelayMs: 120_000 })
   const { panel: third, timers: thirdTimers } = restart()
-  await third.onEvent?.(event(), { online: true })
+  await refresh(third)
   expect(requests).toBe(2)
   expect(JSON.stringify(await third.render(args(), { online: true }))).toContain('rate limited')
   clock += 120_000

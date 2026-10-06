@@ -6,7 +6,7 @@ import { fakeTimers } from '../../../../packages/reception/tests/timers.ts'
 import { parsePskPayload } from '../src/data/parser.ts'
 import type { HistoryHost } from '../src/history/client.ts'
 import { createLiveReception } from '../src/live.ts'
-import { createPskPanel, pskPanelModel } from '../src/panel.ts'
+import { createPskPanel as createPanel, pskPanelModel } from '../src/panel.ts'
 import { fakeSocket, publication } from './socket-fixture.ts'
 
 const connection = { state: 'live' as const, message: '', capped: false }
@@ -36,9 +36,55 @@ const report = parsePskPayload(
 )
 if (!report) throw new Error('Invalid reception fixture')
 
+const renderedPanels = new WeakMap<
+  ReturnType<typeof createPanel>,
+  { scenes: Map<string, PanelContent>; sequence: number }
+>()
+
+function createPskPanel(...parameters: Parameters<typeof createPanel>) {
+  const panel = createPanel(...parameters)
+  const state = { scenes: new Map<string, PanelContent>(), sequence: 0 }
+  renderedPanels.set(panel, state)
+  const render = panel.render
+  panel.render = async (renderArgs, ctx) => {
+    const content = await render(renderArgs, ctx)
+    state.scenes.set(renderArgs.instanceId ?? '', content)
+    return content
+  }
+  return panel
+}
+
+function sceneState(content: PanelContent) {
+  if (content.kind !== 'scene') throw new Error('Expected native scene')
+  return content.scene
+}
+
 function sceneText(content: PanelContent): string {
-  if (content.kind !== 'svgScene') throw new Error('Expected native scene')
+  if (content.kind !== 'scene') throw new Error('Expected native scene')
   return content.scene.layers.map((layer) => layer.text?.literal ?? '').join('\n')
+}
+
+function renderedEvent(
+  panel: ReturnType<typeof createPskPanel>,
+  renderArgs: PanelRenderArgs,
+  controlId: string,
+  text?: string,
+) {
+  const state = renderedPanels.get(panel)
+  const content = state?.scenes.get(renderArgs.instanceId ?? '')
+  const control = content && sceneState(content).controls?.find((entry) => entry.id === controlId)
+  if (!state || !control?.event) throw new Error(`Missing rendered control ${controlId}`)
+  const native = control.kind === 'nativeDropdown' || control.kind === 'nativeSegmented'
+  return {
+    ...renderArgs,
+    event: {
+      controlId,
+      action: control.event,
+      phase: native ? ('commit' as const) : ('activate' as const),
+      sequence: ++state.sequence,
+      ...(native ? { text } : {}),
+    },
+  }
 }
 
 function deferred<T>() {
@@ -100,14 +146,8 @@ function backgroundPanel(fetch: HistoryHost['fetch']) {
     stop: () => live.stop(),
     render: (instanceId = 'one', online = true) =>
       panel.render(currentArgs(instanceId), { online }),
-    event: (controlId: string, action: string, online = true) =>
-      panel.onEvent?.(
-        {
-          ...currentArgs(),
-          event: { controlId, action, phase: 'activate', sequence: 1 },
-        },
-        { online },
-      ),
+    event: (controlId: string, text?: string, online = true) =>
+      panel.onEvent?.(renderedEvent(panel, currentArgs(), controlId, text), { online }),
     advance: (ms: number) => {
       clock += ms
     },
@@ -120,13 +160,11 @@ async function detailsText(s: ReturnType<typeof backgroundPanel>) {
     const content = await s.render()
     pages.push(sceneText(content))
     if (
-      content.kind !== 'svgScene' ||
-      !content.scene.controls?.some(
-        (control) => control.id === 'next' && control.event === 'page:next',
-      )
+      content.kind !== 'scene' ||
+      !content.scene.controls?.some((control) => control.id === 'next')
     )
       return pages.join('\n')
-    await s.event('next', 'page:next')
+    await s.event('next', undefined)
   }
   throw new Error('Status details did not reach their final page')
 }
@@ -329,35 +367,36 @@ it('does not open a socket or fabricate reports while offline', async () => {
   const panels = await hook.getPanels({}, { online: false })
   expect(panels[0].on).toEqual(['operation', 'tick:5'])
   const content = await hook.render(args, { online: false })
-  expect(content.kind).toBe('svgScene')
-  if (content.kind !== 'svgScene') throw new Error('Expected scene')
+  expect(content.kind).toBe('scene')
+  if (content.kind !== 'scene') throw new Error('Expected scene')
   const text = content.scene.layers.map((layer) => layer.text?.literal ?? '').join('\n')
   expect(text).toContain('Offline · reception paused')
   expect(open).not.toHaveBeenCalled()
   expect(text).not.toContain('CU3AT')
 })
 
-it('filters cached reports through the header menu per placement and respects a saved Band change', async () => {
+it('filters cached reports through the native Band choice per placement and respects a saved Band change', async () => {
   const fetch = vi.fn<HistoryHost['fetch']>(async () => historyResponse())
   const s = backgroundPanel(fetch)
   expect(sceneText(await s.render('one', false))).toContain('K1ABC')
-  await s.event('band', 'band:40m', false)
+  await s.event('band', '40m', false)
   expect(sceneText(await s.render('one', false))).toContain('No 40m reports in this time window.')
   expect(sceneText(await s.render('one', false))).not.toContain('K1ABC')
   expect(sceneText(await s.render('two', false))).toContain('K1ABC')
-  await s.event('details', 'details:toggle', false)
+  await s.event('details', undefined, false)
   expect(await detailsText(s)).toContain('Latest report · 40m')
-  await s.event('details', 'details:toggle', false)
-  await s.event('band', 'band:all', false)
+  await s.event('details', undefined, false)
+  await s.render('one', false)
+  await s.event('band', 'all', false)
   expect(sceneText(await s.render('one', false))).toContain('All bands · 1 receiver')
   expect(sceneText(await s.render('one', false))).toContain('K1ABC')
-  await s.event('band', 'band:40m', false)
+  await s.event('band', '40m', false)
   const saved = { ...s.args(), config: { view: 'list', band: 'all' } }
   expect(sceneText(await s.panel.render(saved, { online: false }))).toContain('K1ABC')
   s.stop()
 })
 
-it('accepts a reported band outside the tune form and ignores invalid menu actions', async () => {
+it('accepts a reported band outside the tune form and ignores invalid native commits', async () => {
   const live = createLiveReception(() => {
     throw new Error('Unexpected socket')
   })
@@ -368,33 +407,163 @@ it('accepts a reported band outside the tune form and ignores invalid menu actio
   })
   const panel = createPskPanel(live)
   const initial = await panel.render(args, { online: false })
-  if (initial.kind !== 'svgScene') throw new Error('Expected native scene')
-  expect(initial.scene.controls?.find((control) => control.id === 'band')?.menu).toContainEqual({
+  if (initial.kind !== 'scene') throw new Error('Expected native scene')
+  expect(initial.scene.controls?.find((control) => control.id === 'band')?.options).toContainEqual({
     label: '2m',
-    event: 'band:2m',
+    value: '2m',
   })
-  const event = (controlId: string, action: string, phase = 'activate' as const) => ({
-    ...args,
-    event: { controlId, action, phase, sequence: 1 },
-  })
-  for (const [controlId, action] of [
-    ['sort', 'band:2m'],
-    ['band', 'band:bogus'],
-    ['band', 'band:2m:extra'],
+  expect(initial.scene.controls?.some((control) => control.id === 'view')).toBe(false)
+  const band = renderedEvent(panel, args, 'band', '2m')
+  for (const invalid of [
+    { ...band.event, controlId: 'sort' },
+    { ...band.event, controlId: 'unknown' },
+    { ...band.event, text: 'bogus' },
+    { ...band.event, action: `${band.event.action}:extra` },
+    { ...band.event, phase: 'change' as const },
+    { ...band.event, phase: 'activate' as const },
+    { ...band.event, text: undefined, value: 2 },
+    { ...band.event, sequence: -1 },
+    { ...band.event, sequence: Number.NaN },
+    { ...band.event, sequence: 1.5 },
   ])
-    await panel.onEvent?.(event(controlId, action), { online: false })
-  await panel.onEvent?.(
-    { ...event('band', 'band:2m'), event: { ...event('band', 'band:2m').event, phase: 'change' } },
-    { online: false },
-  )
+    expect(await panel.onEvent?.({ ...args, event: invalid }, { online: false })).toEqual({
+      values: {},
+    })
   expect(await panel.render(args, { online: false })).toEqual(initial)
-  await panel.onEvent?.(event('band', 'band:2m'), { online: false })
+  expect(await panel.onEvent?.(band, { online: false })).toEqual({
+    values: {},
+    strings: { band: '2m' },
+  })
+  expect(await panel.onEvent?.(band, { online: false })).toEqual({
+    values: {},
+    strings: { band: '2m' },
+  })
   const filtered = sceneText(await panel.render(args, { online: false }))
   expect(filtered).toContain('2m · 1 receiver')
   expect(filtered).toContain('144174.0')
   expect(filtered).not.toContain('14074.0')
   live.stop()
 })
+
+it('rejects stale context commits and accepts remounted host sequences for each placement', async () => {
+  const live = createLiveReception(() => {
+    throw new Error('Unexpected socket')
+  })
+  const panel = createPskPanel(live)
+  await panel.render(args, { online: false })
+  let obsolete = renderedEvent(panel, args, 'band', '40m')
+  const contexts: PanelRenderArgs[] = [
+    { ...args, operation: { ...args.operation, uuid: 'other-operation' } },
+    { ...args, config: { watchCall: 'CU3AT' } },
+    { ...args, config: { receptionDirection: 'incoming' } },
+    { ...args, config: { view: 'list', band: '20m' } },
+    { ...args, instanceId: 'another-placement' },
+  ]
+  for (const current of contexts) {
+    const before = await panel.render(current, { online: false })
+    expect(await panel.onEvent?.({ ...current, event: obsolete.event }, { online: false })).toEqual(
+      { values: {} },
+    )
+    expect(await panel.render(current, { online: false })).toEqual(before)
+    obsolete = renderedEvent(panel, current, 'band', '40m')
+  }
+  const secondArgs = { ...args, instanceId: 'another-placement' }
+  await panel.render(args, { online: false })
+  await panel.render(secondArgs, { online: false })
+  const first = renderedEvent(panel, args, 'band', '20m')
+  first.event.sequence = 100
+  const second = renderedEvent(panel, secondArgs, 'band', '40m')
+  second.event.sequence = 1
+  expect(await panel.onEvent?.(first, { online: false })).toEqual({
+    values: {},
+    strings: { band: '20m' },
+  })
+  expect(await panel.onEvent?.(second, { online: false })).toEqual({
+    values: {},
+    strings: { band: '40m' },
+  })
+  expect(sceneState(await panel.render(args, { online: false })).strings?.band).toBe('20m')
+  expect(sceneState(await panel.render(secondArgs, { online: false })).strings?.band).toBe('40m')
+  expect(await panel.onEvent?.(second, { online: false })).toEqual({
+    values: {},
+    strings: { band: '40m' },
+  })
+  expect(sceneState(await panel.render(secondArgs, { online: false })).strings?.band).toBe('40m')
+  const remounted = renderedEvent(panel, args, 'band', 'all')
+  remounted.event.sequence = 1
+  expect(await panel.onEvent?.(remounted, { online: false })).toEqual({
+    values: {},
+    strings: { band: 'all' },
+  })
+  expect(sceneState(await panel.render(args, { online: false })).strings?.band).toBe('all')
+  expect(sceneState(await panel.render(secondArgs, { online: false })).strings?.band).toBe('40m')
+  live.stop()
+})
+
+it('commits Status and About tabs while retaining the configured view and rejecting hidden filters', async () => {
+  const s = backgroundPanel(vi.fn(async () => historyResponse()))
+  await s.render('one', false)
+  const hidden = renderedEvent(s.panel, s.args(), 'band', '40m')
+  await s.event('details', undefined, false)
+  const status = await s.render('one', false)
+  expect(sceneState(status).strings?.detailsTab).toBe('status')
+  expect(await s.panel.onEvent?.(hidden, { online: false })).toEqual({ values: {} })
+  expect(await s.event('detailsTab', 'about', false)).toEqual({
+    values: {},
+    strings: { detailsTab: 'about' },
+  })
+  const about = await s.render('one', false)
+  expect(sceneState(about).strings?.detailsTab).toBe('about')
+  expect(sceneText(about)).toContain('PSK Reporter')
+  expect(await s.event('detailsTab', 'status', false)).toEqual({
+    values: {},
+    strings: { detailsTab: 'status' },
+  })
+  expect(sceneState(await s.render('one', false)).strings?.detailsTab).toBe('status')
+  await s.event('details', undefined, false)
+  const reports = await s.render('one', false)
+  expect(sceneState(reports).strings?.band).toBe('20m')
+  expect(sceneState(reports).controls?.some((control) => control.id === 'view')).toBe(false)
+  expect(sceneState(reports).layers.some((layer) => layer.id.startsWith('map-'))).toBe(false)
+  s.stop()
+})
+
+it.each(['operation', 'config', 'rerender'] as const)(
+  'discards restoration superseded by %s and retains the latest event registry',
+  async (change) => {
+    const open = vi.fn(() => {
+      throw new Error('Unexpected socket')
+    })
+    const live = createLiveReception(open)
+    const restore = live.restore.bind(live)
+    const pending = deferred<boolean>()
+    vi.spyOn(live, 'restore').mockImplementationOnce(async (realTime) => {
+      const restored = await restore(realTime)
+      await pending.promise
+      return restored
+    })
+    const panel = createPskPanel(live)
+    const obsolete = panel.render(args, { online: false })
+    const current: PanelRenderArgs =
+      change === 'operation'
+        ? { ...args, operation: { ...args.operation, uuid: 'new-operation' } }
+        : change === 'config'
+          ? { ...args, config: { band: '40m' } }
+          : args
+    const latest = await panel.render(current, { online: false })
+    expect(latest.kind).toBe('scene')
+    const choice = renderedEvent(panel, current, 'band', '20m')
+    pending.resolve(true)
+    expect(await obsolete).toEqual({ kind: 'markdown', content: '' })
+    expect(await panel.onEvent?.(choice, { online: false })).toEqual({
+      values: {},
+      strings: { band: '20m' },
+    })
+    expect(sceneState(await panel.render(current, { online: false })).strings?.band).toBe('20m')
+    expect(open).not.toHaveBeenCalled()
+    live.stop()
+  },
+)
 
 it('discards a render hidden during cache restoration and allows a later render to resume', async () => {
   const stored = deferred<JSONValue>()
@@ -421,7 +590,7 @@ it('discards a render hidden during cache restoration and allows a later render 
   expect(open).not.toHaveBeenCalled()
   expect(fetch).not.toHaveBeenCalled()
   expect(timers.pending.size).toBe(0)
-  expect((await panel.render(args, { online: true })).kind).toBe('svgScene')
+  expect((await panel.render(args, { online: true })).kind).toBe('scene')
   await settle()
   expect(open).toHaveBeenCalledTimes(1)
   expect(fetch).toHaveBeenCalledTimes(1)
@@ -481,7 +650,7 @@ it('renders cached reports immediately, shares pending history across placements
   expect(sceneText(pending)).toContain('Live reception')
   expect(sceneText(pending)).toContain('CU3AT')
   expect(sceneText(pending)).toContain('K1ABC')
-  await s.event('refresh', 'refresh:reports')
+  await s.event('refresh', undefined)
   await s.render()
   expect(fetch).toHaveBeenCalledTimes(1)
 
@@ -507,19 +676,19 @@ it.each(['success', 'failure'] as const)(
     const s = backgroundPanel(fetch)
     await s.render()
     await settle()
-    await s.event('sort', 'sort:call')
+    await s.event('sort', 'call')
     const ready = await s.render()
     expect(ready.triggers).toBeUndefined()
     expect(sceneText(ready)).toContain('W1AW')
 
     s.advance(1_000)
-    await s.event('refresh', 'refresh:reports')
+    await s.event('refresh', undefined)
     await settle()
     const pending = await s.render()
     expect(pending.triggers).toEqual(['tick:1'])
     expect(sceneText(pending)).toContain('W1AW')
-    expect(sceneText(pending)).toContain('Sort: Receiver ▾')
-    await s.event('refresh', 'refresh:reports')
+    expect(sceneState(pending).strings?.sort).toBe('call')
+    await s.event('refresh', undefined)
     await s.render()
     expect(fetch).toHaveBeenCalledTimes(2)
     expect(fetch.mock.calls[1]?.[1]).not.toHaveProperty('timeout')
@@ -531,11 +700,11 @@ it.each(['success', 'failure'] as const)(
     const completed = await s.render()
     expect(completed.triggers).toBeUndefined()
     expect(sceneText(completed)).toContain('W1AW')
-    expect(sceneText(completed)).toContain('Sort: Receiver ▾')
+    expect(sceneState(completed).strings?.sort).toBe('call')
     expect(sceneText(completed)).toContain(outcome === 'success' ? 'K2XYZ' : 'History unavailable')
     expect(fetch).toHaveBeenCalledTimes(2)
 
-    await s.event('details', 'details:toggle')
+    await s.event('details', undefined)
     expect(await detailsText(s)).toMatch(/(?:request|history).*duration:.*15000 ms/i)
   },
 )
@@ -550,7 +719,7 @@ it('does not start an offline force reload and drops the fast trigger when pendi
   expect(offline.triggers).toEqual(['tick:1'])
   expect(sceneText(offline)).toContain('K1ABC')
   expect(sceneText(offline)).toContain('Offline · reception paused')
-  await s.event('refresh', 'refresh:reports', false)
+  await s.event('refresh', undefined, false)
   expect(fetch).toHaveBeenCalledTimes(1)
   request.resolve(historyResponse())
   await settle()

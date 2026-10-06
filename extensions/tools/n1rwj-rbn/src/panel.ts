@@ -1,6 +1,7 @@
 import type { JSONValue, PanelHook, PanelRenderArgs } from '@ham2k/extension-sdk'
 import { host } from '@ham2k/extension-sdk'
 import type { MapTheme } from '../../../../packages/reception/src/map/index.ts'
+import { bindPanelEvents, readPanelEvent } from '../../../../packages/reception/src/panel-events.ts'
 import {
   applySceneEvent,
   createPanelStateStore,
@@ -218,11 +219,14 @@ export function createRbnPanel(
           kind: 'markdown',
           title: 'RBN · App update needed',
           content:
-            '**My Signal requires SVG scene support.**\n\nThis app build does not supply the native panel environment and placement identity. Install a published Ham2K build with SVG scenes to use the reception map and sortable receiver list. No RBN request was made.',
+            '**My Signal requires extension API 5 and native panel controls.**\n\nThis app build does not supply the panel environment and placement identity. Update Ham2K to use the reception map and sortable receiver list. No RBN request was made.',
         }
       }
       const config = readConfig(args.config)
       const call = watchedCall(args.operation, config.watchCall)
+      const state = stateFor(args)
+      const epoch = state.epoch
+      const renderVersion = ++state.renderVersion
       const suppliedTime = args.clock?.realNowMillis
       const realTime =
         typeof suppliedTime === 'number' && Number.isFinite(suppliedTime) ? suppliedTime : undefined
@@ -239,13 +243,14 @@ export function createRbnPanel(
         ),
         settings().catch(() => ({})),
       ])
+      if (!state.active || state.epoch !== epoch || state.renderVersion !== renderVersion)
+        return { kind: 'markdown', content: '' }
       // Successful snapshots share their fetch-time age reference; unavailable
       // snapshots still age once a minute so old reports never appear fresh.
       const ageReference =
         snapshot.status === 'ready' || snapshot.status === 'empty'
           ? (snapshot.lastSuccessMs ?? realTime ?? now())
           : Math.max(snapshot.lastSuccessMs ?? 0, Math.floor((realTime ?? now()) / 60_000) * 60_000)
-      const state = stateFor(args)
       const rendered = renderReceptionScene(
         panelModel(
           args,
@@ -262,24 +267,25 @@ export function createRbnPanel(
           view: state.selection.view ?? config.view,
           band: state.selection.band ?? config.band,
         },
+        { nativeControls: true },
       )
       state.selection = rendered.selection
       state.bands = rendered.bands
+      bindPanelEvents(state, rendered.scene)
       return {
-        kind: 'svgScene',
+        kind: 'scene',
         title: `My Signal${call ? ` · ${call}` : ''}`,
         scene: rendered.scene,
         ...(snapshot.refresh?.state === 'pending' ? { triggers: ['tick:1'] } : {}),
       }
     },
     async onEvent(args, ctx) {
-      if (!args.instanceId || !args.environment || args.event.phase !== 'activate')
-        return { values: {} }
+      if (!args.instanceId || !args.environment) return { values: {} }
       const state = stateFor(args)
+      const event = readPanelEvent(state, args.event)
+      if (!event) return { values: {} }
       const config = readConfig(args.config)
-      const { controlId, action } = args.event
-      const [prefix, value] = action.split(':')
-      if (action !== `${prefix}:${value}`) return { values: {} }
+      const { controlId, action } = event
       if (controlId === 'refresh' && action === 'refresh:reports') {
         const suppliedTime = args.clock?.realNowMillis
         dependencies.observeCollection?.(
@@ -308,7 +314,7 @@ export function createRbnPanel(
       }
       // The host schedules an authoritative render after every scene event.
       // Structural changes (sort/filter/page/view) therefore need no numeric patch.
-      return { values: {} }
+      return { values: {}, ...(event.strings ? { strings: event.strings } : {}) }
     },
   }
 }

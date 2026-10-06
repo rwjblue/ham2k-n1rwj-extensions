@@ -108,7 +108,7 @@ export async function verifyPskBundle(path: string, manifest: Manifest) {
   runInContext(await readFile(path, 'utf8'), sandbox, { timeout: 5000 })
   assert.equal(definitions.length, 1)
   assert.ok('api' in definitions[0])
-  assert.equal(definitions[0].api, 3)
+  assert.equal(definitions[0].api, 5)
   definitions[0].onActivation({
     timers: timers.api,
     registerHook: (category, registration) => {
@@ -186,13 +186,38 @@ export async function verifyPskBundle(path: string, manifest: Manifest) {
     length.push(byte | (remaining ? 128 : 0))
   } while (remaining)
   receive([0x30, ...length, ...body])
-  const rendered = JSON.stringify(await panel.render(args, { online: true }))
+  const content = await panel.render(args, { online: true })
+  assert.equal(content.kind, 'scene')
+  if (content.kind !== 'scene') throw new Error('Expected API-5 reception scene')
+  const rendered = JSON.stringify(content)
   assert.ok(rendered.includes('Live reception'))
   assert.ok(rendered.includes('CU3AT'))
+  const band = content.scene.controls?.find((control) => control.id === 'band')
+  assert.equal(band?.kind, 'nativeDropdown')
+  assert.ok(band?.event)
+  const choice = await panel.onEvent?.(
+    {
+      ...args,
+      event: {
+        controlId: 'band',
+        action: band.event,
+        phase: 'commit',
+        text: '20m',
+        sequence: 1,
+      },
+    },
+    { online: true },
+  )
+  assert.equal(choice?.strings?.band, '20m')
+  const filtered = await panel.render(args, { online: true })
+  if (filtered.kind !== 'scene') throw new Error('Expected committed reception scene')
+  assert.equal(filtered.scene.strings?.band, '20m')
+  const refresh = filtered.scene.controls?.find((control) => control.id === 'refresh')
+  assert.ok(refresh?.event)
   await panel.onEvent?.(
     {
       ...args,
-      event: { controlId: 'refresh', action: 'refresh:reports', phase: 'activate', sequence: 1 },
+      event: { controlId: 'refresh', action: refresh.event, phase: 'activate', sequence: 2 },
     },
     { online: true },
   )

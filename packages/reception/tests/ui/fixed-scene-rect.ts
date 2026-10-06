@@ -2,7 +2,7 @@ import type { SvgSceneControl, SvgSceneLayer } from '@ham2k/extension-sdk'
 
 type FixedSceneRect = Pick<SvgSceneLayer, 'x' | 'y' | 'width' | 'height'>
 
-/** Reception uses drawn controls with explicit rectangles, not native layout nodes. */
+/** Artwork, drawn hit areas, and rectangle-based native controls need concrete bounds. */
 export function assertFixedSceneRect<T extends SvgSceneControl | SvgSceneLayer>(
   item: T,
 ): asserts item is T & FixedSceneRect {

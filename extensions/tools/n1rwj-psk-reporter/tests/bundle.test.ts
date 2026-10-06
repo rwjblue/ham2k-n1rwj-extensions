@@ -13,8 +13,8 @@ function required<T>(value: T | undefined): T {
   return value
 }
 
-it('loads the API-3 bundle with binary MQTT and host timers through the published SDK', async () => {
-  expect(manifest.api).toBe(3)
+it('loads the API-5 bundle with binary MQTT and host timers through the published SDK', async () => {
+  expect(manifest.api).toBe(5)
   expect(manifest.webSockets).toEqual(['mqtt.pskreporter.info'])
   expect(manifest.domains).toEqual(['retrieve.pskreporter.info'])
   await verifyPskBundle(fileURLToPath(new URL('../build/index.js', import.meta.url)), manifest)
@@ -117,23 +117,49 @@ it('keeps initial and manual history requests outside rendering with only SDK ti
   const completed = await hook.render(args(), { online: true })
   expect(completed.triggers).toBeUndefined()
   expect(JSON.stringify(completed)).toContain('US-E-015')
-  if (completed.kind !== 'svgScene') throw new Error('Expected native reception scene')
+  if (completed.kind !== 'scene') throw new Error('Expected native reception scene')
   expect(
     completed.scene.layers.find((layer) => layer.id === 'map-receiver-label:US-E-015')?.text
       ?.literal,
   ).toBe('US-E-015')
   expect((await hook.getPanels({}, { online: true }))[0].on).toEqual(['operation', 'tick:5'])
+  const band = required(completed.scene.controls?.find((control) => control.id === 'band'))
+  expect(band).toMatchObject({ kind: 'nativeDropdown', value: 'band' })
+  const choice = {
+    ...args(),
+    event: {
+      controlId: 'band',
+      action: required(band.event),
+      phase: 'commit' as const,
+      sequence: 100,
+      text: '20m',
+    },
+  }
+  expect(await hook.onEvent?.(choice, { online: true })).toEqual({
+    values: {},
+    strings: { band: '20m' },
+  })
+  expect(await hook.onEvent?.(choice, { online: true })).toEqual({
+    values: {},
+    strings: { band: '20m' },
+  })
+  expect(requests).toBe(1)
+  expect(saved).not.toHaveProperty('band')
 
   defer()
+  let current = completed
+  let sequence = 1
   const reload = () =>
     hook.onEvent?.(
       {
         ...args(),
         event: {
           controlId: 'refresh',
-          action: 'refresh:reports',
+          action: required(
+            current.scene.controls?.find((control) => control.id === 'refresh')?.event,
+          ),
           phase: 'activate' as const,
-          sequence: 1,
+          sequence: ++sequence,
         },
       },
       { online: true },
@@ -141,6 +167,8 @@ it('keeps initial and manual history requests outside rendering with only SDK ti
   await reload()
   await settleHostCalls()
   const reloading = await hook.render(args(), { online: true })
+  if (reloading.kind !== 'scene') throw new Error('Expected native reception scene')
+  current = reloading
   expect(reloading.triggers).toEqual(['tick:1'])
   expect(JSON.stringify(reloading)).toContain('US-E-015')
   await reload()

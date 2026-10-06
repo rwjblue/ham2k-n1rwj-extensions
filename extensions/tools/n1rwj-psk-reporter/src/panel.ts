@@ -7,6 +7,7 @@ import {
   watchedCall,
 } from '../../../../packages/reception/src/config.ts'
 import { receptionMapTheme } from '../../../../packages/reception/src/map/theme.ts'
+import { bindPanelEvents, readPanelEvent } from '../../../../packages/reception/src/panel-events.ts'
 import {
   applySceneEvent,
   createPanelStateStore,
@@ -217,14 +218,22 @@ export function createPskPanel(live: LiveReception): PanelHook {
         return {
           kind: 'markdown',
           content:
-            'PSK Reporter requires a Ham2K version with extension API 3 and native SVG panels.',
+            'PSK Reporter requires a Ham2K version with extension API 5 and native panel controls.',
         }
       const state = stateFor(args, String(args.config.receptionDirection ?? 'outgoing'))
+      const epoch = state.epoch
+      const renderVersion = ++state.renderVersion
       const config = readConfig(args.config)
       const realTime = realNowMillis(args)
       const now = realTime ?? Date.now()
       const restored = await live.restore(realTime)
-      if (!restored.isCurrent()) return { kind: 'markdown', content: '' }
+      if (
+        !restored.isCurrent() ||
+        !state.active ||
+        state.epoch !== epoch ||
+        state.renderVersion !== renderVersion
+      )
+        return { kind: 'markdown', content: '' }
       const snapshot = live.snapshot(
         args.instanceId,
         watchedCall(args.operation, config.watchCall),
@@ -234,23 +243,32 @@ export function createPskPanel(live: LiveReception): PanelHook {
         realTime,
       )
       const model = pskPanelModel(args, snapshot.reports, now, snapshot)
-      const rendered = renderReceptionScene(model, args.environment, {
-        ...state.selection,
-        view: config.view,
-        band: state.selection.band ?? config.band,
-      })
+      const rendered = renderReceptionScene(
+        model,
+        args.environment,
+        {
+          ...state.selection,
+          view: config.view,
+          band: state.selection.band ?? config.band,
+        },
+        { nativeControls: true },
+      )
       state.selection = rendered.selection
       state.bands = rendered.bands
+      bindPanelEvents(state, rendered.scene)
       return {
-        kind: 'svgScene',
+        kind: 'scene',
         title: model.title,
         scene: rendered.scene,
         ...(snapshot.history?.pending ? { triggers: ['tick:1'] } : {}),
       }
     },
     async onEvent(args, ctx) {
-      if (args.instanceId && args.environment && args.event.phase === 'activate') {
-        if (args.event.controlId === 'refresh' && args.event.action === 'refresh:reports') {
+      if (args.instanceId && args.environment) {
+        const state = stateFor(args, String(args.config.receptionDirection ?? 'outgoing'))
+        const event = readPanelEvent(state, args.event)
+        if (!event) return { values: {} }
+        if (event.controlId === 'refresh' && event.action === 'refresh:reports') {
           const config = readConfig(args.config)
           live.forceHistory(
             watchedCall(args.operation, config.watchCall),
@@ -261,12 +279,8 @@ export function createPskPanel(live: LiveReception): PanelHook {
           )
           return { values: {} }
         }
-        applySceneEvent(
-          stateFor(args, String(args.config.receptionDirection ?? 'outgoing')),
-          args.event.controlId,
-          args.event.action,
-          false,
-        )
+        applySceneEvent(state, event.controlId, event.action, false)
+        return { values: {}, ...(event.strings ? { strings: event.strings } : {}) }
       }
       return { values: {} }
     },

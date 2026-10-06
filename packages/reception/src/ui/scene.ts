@@ -1,9 +1,9 @@
 import type {
   PanelEnvironment,
+  PanelScene,
+  PanelSceneControl,
+  PanelSceneLayer,
   PanelTypography,
-  SvgScene,
-  SvgSceneControl,
-  SvgSceneLayer,
 } from '@ham2k/extension-sdk'
 import { layoutReceptionMap } from '../map/index.ts'
 import { receptionMapTheme } from '../map/theme.ts'
@@ -22,7 +22,7 @@ export interface SceneSelection {
 }
 
 export interface SceneResult {
-  scene: SvgScene
+  scene: PanelScene
   selection: SceneSelection
   bands: string[]
   pageCount: number
@@ -97,7 +97,9 @@ export function renderReceptionScene(
   model: UiModel,
   environment?: PanelEnvironment,
   requested: Partial<SceneSelection> = {},
+  options: { nativeControls?: boolean } = {},
 ): SceneResult {
+  const native = options.nativeControls === true
   const source = model.presentation?.source ?? 'Reception'
   const stationLabel = model.presentation?.stationLabel ?? 'Station'
   const station = stationLabel.toLowerCase()
@@ -125,14 +127,29 @@ export function renderReceptionScene(
   }
   const label = environment?.typography.label ?? fallbackRole(13)
   const body = environment?.typography.body ?? fallbackRole(15)
+  const title = environment?.typography.title ?? fallbackRole(16)
   const line = (role: PanelTypography): number =>
     Math.ceil(role.scaledFontSize * role.lineHeight + 4)
   const labelLine = line(label)
   const bodyLine = line(body)
   const buttonHeight = Math.max(44, labelLine + 16)
-  const layers: SvgSceneLayer[] = []
-  const controls: SvgSceneControl[] = []
-  const scene: SvgScene = { version: 1, width, height, values: {}, layers, controls }
+  const textScale = Math.max(
+    label.scaledFontSize / label.fontSize,
+    body.scaledFontSize / body.fontSize,
+    title.scaledFontSize / title.fontSize,
+  )
+  // Material dropdowns use titleMedium plus a floating label and density
+  // padding. Label-small alone under-reserves them at large OS text sizes.
+  const choiceHeight = Math.max(
+    56,
+    Math.ceil(Math.max(line(title), bodyLine) + 14 * textScale * 1.2 + 26 * textScale + 8),
+  )
+  const segmentHeight = Math.max(48, Math.ceil(Math.max(line(title), bodyLine) + 16 * textScale))
+  const sortHeight = native ? choiceHeight : buttonHeight
+  const layers: PanelSceneLayer[] = []
+  const controls: PanelSceneControl[] = []
+  const scene: PanelScene = { version: 1, width, height, values: {}, layers, controls }
+  if (native) scene.strings = {}
   const selection: SceneSelection = {
     view: requested.view ?? model.defaultView ?? 'both',
     band: requested.band ?? model.defaultBand ?? 'all',
@@ -213,7 +230,7 @@ export function renderReceptionScene(
     bw: number,
     options: {
       event?: string
-      menu?: SvgSceneControl['menu']
+      menu?: PanelSceneControl['menu']
       label?: string
       selected?: boolean
     } = {},
@@ -252,6 +269,40 @@ export function renderReceptionScene(
       })
   }
 
+  function choice(
+    id: string,
+    caption: string,
+    value: string,
+    choices: NonNullable<PanelSceneControl['options']>,
+    x: number,
+    y: number,
+    width: number,
+    segmented = false,
+  ): void {
+    // Reserve scaled space, but let the host apply its text scaler once.
+    const segmentWidth = choices.reduce(
+      (sum, option) => sum + option.label.length * label.scaledFontSize * 0.7 + 48,
+      0,
+    )
+    const useSegments = segmented && width >= segmentWidth
+    const height = useSegments ? segmentHeight : choiceHeight
+    if (width < 44 || y + height > bottom) return
+    scene.strings ??= {}
+    scene.strings[id] = value
+    controls.push({
+      id,
+      label: caption,
+      kind: useSegments ? 'nativeSegmented' : 'nativeDropdown',
+      value: id,
+      event: `${id}:set`,
+      options: choices,
+      x,
+      y,
+      width,
+      height,
+    })
+  }
+
   art(
     'surface',
     0,
@@ -278,7 +329,7 @@ export function renderReceptionScene(
   )
   const bandLabel = selection.band === 'all' ? 'All bands' : selection.band
   const summary = `${receivers} ${station}${receivers === 1 ? '' : 's'} · ${bands} band${bands === 1 ? '' : 's'}${farthest ? ` · ${Math.round(farthest).toLocaleString('en-US')} km max` : ''}`
-  const cycleView = model.presentation?.viewCycle === true && !selection.details
+  const cycleView = !native && model.presentation?.viewCycle === true && !selection.details
   const headerTextWidth = w - (cycleView ? 168 : 112)
   const identityLines = selection.details
     ? wrapInfoText(`${source} · ${model.watchCall || 'No callsign'}`, w - 112, label)
@@ -322,22 +373,23 @@ export function renderReceptionScene(
     )
     // A native menu over the existing header keeps the map's space unchanged.
     // Its 44px target includes the band label and remains separate from actions.
-    controls.push({
-      id: 'band',
-      label: `Filter reports by band; currently ${bandLabel}`,
-      kind: 'button',
-      x: left,
-      y,
-      width: Math.min(
-        headerTextWidth,
-        Math.max(44, (bandLabel.length + 2) * label.scaledFontSize * 0.72 + 8),
-      ),
-      height: Math.max(buttonHeight, labelLine * 2),
-      menu: availableBands.map((band) => ({
-        label: band === 'all' ? 'All bands' : band,
-        event: `band:${band}`,
-      })),
-    })
+    if (!native)
+      controls.push({
+        id: 'band',
+        label: `Filter reports by band; currently ${bandLabel}`,
+        kind: 'button',
+        x: left,
+        y,
+        width: Math.min(
+          headerTextWidth,
+          Math.max(44, (bandLabel.length + 2) * label.scaledFontSize * 0.72 + 8),
+        ),
+        height: Math.max(buttonHeight, labelLine * 2),
+        menu: availableBands.map((band) => ({
+          label: band === 'all' ? 'All bands' : band,
+          event: `band:${band}`,
+        })),
+      })
   }
   if (cycleView) {
     const names = { both: 'Map and receivers', map: 'Map', list: 'Receivers' }
@@ -367,24 +419,85 @@ export function renderReceptionScene(
   )
   y += Math.max(labelLine * Math.max(2, 1 + identityLines.length), buttonHeight) + 6
 
+  if (native && !selection.details) {
+    const viewOptions = [
+      { value: 'map', label: 'Map' },
+      { value: 'list', label: `${stationLabel}s` },
+      { value: 'both', label: 'Both' },
+    ]
+    const viewWidth = viewOptions.reduce(
+      (sum, option) => sum + option.label.length * label.scaledFontSize * 0.7 + 48,
+      0,
+    )
+    const bandWidth = Math.max(160, 11 * label.scaledFontSize * 0.7 + 48)
+    const includeView = model.presentation?.viewCycle === true
+    const oneRow = includeView && w >= bandWidth + viewWidth + 8
+    choice(
+      'band',
+      'Band',
+      selection.band,
+      availableBands.map((band) => ({ value: band, label: band === 'all' ? 'All bands' : band })),
+      left,
+      y,
+      oneRow ? bandWidth : w,
+    )
+    let toolbarHeight = choiceHeight
+    if (includeView) {
+      if (!oneRow) y += choiceHeight + 8
+      choice(
+        'view',
+        'View',
+        selection.view,
+        viewOptions,
+        oneRow ? left + bandWidth + 8 : left,
+        y,
+        oneRow ? w - bandWidth - 8 : w,
+        true,
+      )
+      if (!oneRow && w >= viewWidth) toolbarHeight = segmentHeight
+    }
+    y += toolbarHeight + 8
+  }
+
   if (selection.details) {
     // A readable measure on desktop; the same cards reflow to narrow panels.
     const infoWidth = Math.min(w, 840 * (body.scaledFontSize / body.fontSize))
     const infoX = left + (w - infoWidth) / 2
     const tab = selection.detailsTab ?? 'status'
     const tabWidth = (infoWidth - 8) / 2
-    for (const [index, key] of (['status', 'about'] as const).entries()) {
-      const caption =
-        key === 'status'
-          ? `Status${model.warnings?.length ? ` (${model.warnings.length})` : ''}`
-          : 'About'
-      button(`details-${key}`, caption, infoX + index * (tabWidth + 8), y, tabWidth, {
-        event: `details:${key}`,
-        selected: tab === key,
-        label: `${caption}${tab === key ? ', selected' : ''}`,
-      })
-    }
-    y += buttonHeight + 12
+    if (native) {
+      choice(
+        'detailsTab',
+        'Report info',
+        tab,
+        [
+          {
+            value: 'status',
+            label: `Status${model.warnings?.length ? ` (${model.warnings.length})` : ''}`,
+          },
+          { value: 'about', label: 'About' },
+        ],
+        infoX,
+        y,
+        infoWidth,
+        true,
+      )
+    } else
+      for (const [index, key] of (['status', 'about'] as const).entries()) {
+        const caption =
+          key === 'status'
+            ? `Status${model.warnings?.length ? ` (${model.warnings.length})` : ''}`
+            : 'About'
+        button(`details-${key}`, caption, infoX + index * (tabWidth + 8), y, tabWidth, {
+          event: `details:${key}`,
+          selected: tab === key,
+          label: `${caption}${tab === key ? ', selected' : ''}`,
+        })
+      }
+    y +=
+      (native
+        ? (controls.find((control) => control.id === 'detailsTab')?.height ?? choiceHeight)
+        : buttonHeight) + 12
     // Reserve navigation only when needed. This keeps ordinary status panes
     // compact without spending a permanent row on a disabled 1/1 pager.
     let pages = layoutReceptionDetails(
@@ -500,7 +613,7 @@ export function renderReceptionScene(
     const available = contentBottom - y
     // Leave room for the map/list gap, sort controls, one complete card, its
     // row gap, and pagination. Rounding the map down preserves that last row.
-    const minimumList = buttonHeight * 2 + bodyLine + labelLine * 3 + 48
+    const minimumList = sortHeight + buttonHeight + bodyLine + labelLine * 3 + 48
     const mapHeight =
       selection.view === 'both' && !sideBySide
         ? Math.floor(
@@ -586,7 +699,7 @@ export function renderReceptionScene(
   }
 
   if (selection.view !== 'map') {
-    if (contentBottom - listY < buttonHeight + labelLine + 8) {
+    if (contentBottom - listY < sortHeight + labelLine + 8) {
       text('list-compact', 'Enlarge this panel to display reports.', listX, listY, listWidth)
       text(
         'source',
@@ -600,22 +713,33 @@ export function renderReceptionScene(
       return result
     }
     const sortLabel = sorts.find((sort) => sort.key === selection.sort)?.label ?? 'Heard'
-    button('sort', `Sort: ${sortLabel} ▾`, listX, listY, listWidth - 56, {
-      label: `Sort ${station} reports`,
-      menu: sorts.map((sort) => ({ label: sort.label, event: `sort:${sort.key}` })),
-    })
+    if (native)
+      choice(
+        'sort',
+        'Sort',
+        selection.sort,
+        sorts.map((sort) => ({ label: sort.label, value: sort.key })),
+        listX,
+        listY,
+        listWidth - 56,
+      )
+    else
+      button('sort', `Sort: ${sortLabel} ▾`, listX, listY, listWidth - 56, {
+        label: `Sort ${station} reports`,
+        menu: sorts.map((sort) => ({ label: sort.label, event: `sort:${sort.key}` })),
+      })
     button(
       'direction',
       selection.direction === 'desc' ? '↓' : '↑',
       listX + listWidth - 48,
-      listY,
+      listY + (native ? (sortHeight - buttonHeight) / 2 : 0),
       48,
       {
         event: 'direction:toggle',
         label: `Sort ${selection.direction === 'desc' ? 'descending' : 'ascending'}; activate to reverse`,
       },
     )
-    listY += buttonHeight + 8
+    listY += sortHeight + 8
     const table = listWidth >= Math.max(560, (560 * label.scaledFontSize) / label.fontSize)
     const rowHeight = table ? Math.max(44, labelLine * 2 + 8) : bodyLine + labelLine * 3 + 16
     const headingHeight = table ? labelLine + 6 : 0
