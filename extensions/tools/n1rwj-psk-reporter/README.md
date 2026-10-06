@@ -1,7 +1,7 @@
 # N1RWJ PSK Reporter
 
-Live PSK Reporter reception maps for Ham2K with **extension API 3** and native
-SVG panels. The regular package uses the published `@ham2k/extension-sdk`
+Live PSK Reporter reception maps for Ham2K with **extension API 5** and native
+panel controls. The regular package uses the published `@ham2k/extension-sdk`
 **0.12.0** and `@ham2k/extension-tools` **0.8.0**, with a WebSocket permission
 for `mqtt.pskreporter.info`, and HTTPS access to `retrieve.pskreporter.info`
 for recent history.
@@ -32,8 +32,8 @@ The implementation first passed against upstream source commit
 [17b15fdcafdd](https://github.com/ham2k/halo/commit/17b15fdcafdd), then passed the
 same contract, build, packer and binary bridge checks against the published
 SDK 0.6.0/tools 0.5.0. Timer support is checked against SDK 0.12.0/tools 0.8.0.
-The panel keeps the compatible `svgScene` payload and API 3; SDK 0.12's
-`scene` payload and native layout controls require API 5.
+The panel uses the API-5 `scene` payload with native Band, Sort, and Status/About
+choices. Cartography and paginated report/details text stay in the shared renderer.
 The code uses the SDK's socket and timer types and regular entry point; no SDK
 implementation is copied into this repository.
 
@@ -60,7 +60,7 @@ MQTT connected and whether reports arrived, and closes its connection. The local
 probe established connection, subscription and heartbeat with the live broker;
 CU3AT had no reports during that observation. Fixtures validate binary report
 ingestion and scene generation separately. Native UI and lifecycle tests with
-an API-3-capable app remain pending.
+an API-5-capable app remain separate from these checks.
 
 ## Reception behavior
 
@@ -71,8 +71,7 @@ behavior. Warnings and next steps appear before general reference material.
 Closing info returns to the report page you were viewing. See the
 [design review and rendered mockups](../../../docs/RECEPTION-INFO-DESIGN.md).
 
-Tap **All bands** or the active band in the panel summary to open a native band
-menu. The map, report list, and latest-report details follow the chosen band;
+Use the native **Band** dropdown above the map. The map, report list, and latest-report details follow the chosen band;
 **All bands** restores the full view. This choice stays with that panel placement
 through refreshes and unrelated settings changes, and resets when switching
 operations or restarting the extension. Changing the saved **Band** in tune
@@ -189,7 +188,7 @@ persistent extension settings. The host's `kvGet`/`kvSet` are memory-only and ar
 not used for persistence. Timers service visible subscriptions, eligible history
 work and pending cache writes; they do not renew visibility themselves.
 
-Before publishing, install on a host supporting extension API 3 and native SVG
+Before publishing, install on a host supporting extension API 5 and native panel
 panels, and test both directions,
 multiple placements, callsign/operation changes, hidden tabs, app backgrounding,
 panel removal, sleep/resume, disconnects, denied grants and extension reload.

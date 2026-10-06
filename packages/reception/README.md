@@ -13,10 +13,11 @@ through synchronized release bumps; the lockfile pins its resolution.
 | `reports.ts` | Directed transmitter/receiver observations, latest-per-link selection, rows and map points |
 | `callsign.ts`, `geography.ts` | Exact callsigns, distance and bearing |
 | `config.ts` | Operation location/callsign defaults and configurable panel fields |
-| `panel-state.ts` | Bounded per-placement state and validated scene controls |
+| `panel-state.ts` | Bounded per-placement state, defaults reconciliation, and report-page restoration |
+| `panel-events.ts` | Visible-control registration, context guards, and native commit translation |
 | `timers.ts` | Injected host timeouts with one pending callback per slot and cancellation guards |
 | `map/` | Bundled geography, projections, paths, label placement and themes |
-| `ui/` | Pure native SVG scenes, responsive cards/tables, band menus, sorting, report info and pagination |
+| `ui/` | Pure panel scenes, native choices, responsive cards/tables, artwork, report info and pagination |
 
 Reports preserve both endpoints. SNR belongs to the receiver even when the UI
 shows remote transmitters. Keys include transmitter, receiver, band and mode;
@@ -29,10 +30,23 @@ optional CW-speed sorting and the refresh action. Shared rendering performs no
 network or storage operations. RBN retains HTTP snapshot caching and its
 receiver-directory adapter; PSK manages an MQTT stream independently.
 
-The band label in the scene header opens a native menu. Band and sort choices
+The API-5 panel uses native Band and Sort choices. Band and sort choices
 stay per panel placement until the saved default changes, the operation changes,
-or the extension restarts. Menu actions are validated against the bands offered
-by the latest scene, including bands observed in reports.
+or the extension restarts. RBN also offers a temporary direct Map/Receivers/Both
+choice; PSK continues to follow its saved view. Choices commit strings to extension
+logic, rather than using local-only widget state. Event actions are validated
+against the latest scene and its operation/configuration context. A slow render
+cannot replace newer placement state. Host event counters may restart after a
+pane remount; the extension relies on the host's serialized event queue rather
+than persisting a sequence threshold across widget lifetimes.
+
+Native controls use concrete rectangles in logical pixels. Toolbar choices wrap
+when needed, and segmented choices become dropdowns when the labels would crowd.
+The artwork is generated for the remaining space, preserving cartographic scale
+and attribution. Typography reserves scaled space while the host scales text once.
+The default drawn-control rendering path remains for focused artwork tests; it is
+not a runtime compatibility strategy for extensions declaring API 5. See the
+[native-control implementation and acceptance notes](../../docs/NATIVE-RECEPTION-CONTROLS.md).
 
 Reception schedulers use API-3 host timeouts for relative deadlines and finite
 visibility leases. Panel-provided real-time samples supply epoch timestamps;

@@ -2,7 +2,12 @@ import { createHash } from 'node:crypto'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { dirname, join, resolve } from 'node:path'
 import { createContext, runInContext } from 'node:vm'
-import type { PanelEnvironment, SceneBinding, SvgScene, SvgSceneLayer } from '@ham2k/extension-sdk'
+import type {
+  PanelEnvironment,
+  PanelScene,
+  PanelSceneLayer,
+  SceneBinding,
+} from '@ham2k/extension-sdk'
 import { satisfies } from 'semver'
 import { selectExtensions } from './lib/extensions.ts'
 import { installedHostAssetsPath, selectInstalledHost } from './verify-installed-host.ts'
@@ -84,7 +89,11 @@ function xml(value: string): string {
     .replace(/'/g, '&apos;')
 }
 
-function bindingValue(binding: SceneBinding | undefined, values: SvgScene['values'], fallback = 0) {
+function bindingValue(
+  binding: SceneBinding | undefined,
+  values: PanelScene['values'],
+  fallback = 0,
+) {
   if (!binding) return fallback
   let source = values[binding.value] * (binding.scale ?? 1)
   if (binding.truncate) source = Math.floor(source + 1e-7)
@@ -105,9 +114,11 @@ function bindingValue(binding: SceneBinding | undefined, values: SvgScene['value
   return binding.output[0] + (binding.output[1] - binding.output[0]) * fraction
 }
 
-function textValue(text: NonNullable<SvgSceneLayer['text']>, values: SvgScene['values']): string {
+function textValue(text: NonNullable<PanelSceneLayer['text']>, scene: PanelScene): string {
   if (text.literal !== undefined) return text.literal
-  const raw = values[text.value ?? ''] ?? 0
+  const key = text.value ?? ''
+  if (scene.strings?.[key] !== undefined) return scene.strings[key]
+  const raw = scene.values[key] ?? 0
   let value: number | string = text.samples
     ? text.samples[Math.max(0, Math.min(text.samples.length - 1, Math.round(raw)))]
     : raw
@@ -125,7 +136,7 @@ function textValue(text: NonNullable<SvgSceneLayer['text']>, values: SvgScene['v
 
 /** Approximate the scene's initial frame for inspection; Flutter remains the renderer of record. */
 export function scenePreviewSvg(
-  scene: SvgScene,
+  scene: PanelScene,
   environment: PanelEnvironment,
   source = 'RBN',
 ): string {
@@ -166,14 +177,29 @@ export function scenePreviewSvg(
       const size = role?.scaledFontSize ?? text.size ?? 20
       const anchor = text.align === 'center' ? 'middle' : text.align === 'end' ? 'end' : 'start'
       const x = anchor === 'middle' ? layer.width / 2 : anchor === 'end' ? layer.width : 0
-      artwork = `<text x="${x}" y="${layer.height / 2}" dominant-baseline="central" text-anchor="${anchor}" font-family="${xml(text.fontFamily ?? 'sans-serif')}" font-size="${size}" font-weight="${text.fontWeight ?? 400}" letter-spacing="${text.letterSpacing ?? 0}" fill="${xml(text.color ?? environment.colors.onSurface)}">${xml(textValue(text, scene.values))}</text>`
+      artwork = `<text x="${x}" y="${layer.height / 2}" dominant-baseline="central" text-anchor="${anchor}" font-family="${xml(text.fontFamily ?? 'sans-serif')}" font-size="${size}" font-weight="${text.fontWeight ?? 400}" letter-spacing="${text.letterSpacing ?? 0}" fill="${xml(text.color ?? environment.colors.onSurface)}">${xml(textValue(text, scene))}</text>`
     } else throw new Error(`Preview layer ${layer.id} has no artwork or text.`)
     const opacity = Math.max(0, Math.min(1, bindingValue(layer.opacity, scene.values, 1)))
     return `<g transform="${transform}" opacity="${opacity}"><title>${xml(layer.id)}</title><defs><clipPath id="${clip}"><rect width="${layer.width}" height="${layer.height}"/></clipPath></defs><g clip-path="url(#${clip})">${artwork}</g></g>`
   })
+  // Schematic rectangles communicate reserved space; these are not Material
+  // widget renderings. Layout-only controls require an actual native preview.
+  for (const [index, control] of (scene.controls ?? []).entries()) {
+    if (!control.kind.startsWith('native') || control.opacity === 0) continue
+    const { x, y, width, height } = control
+    if (x === undefined || y === undefined || width === undefined || height === undefined) continue
+    const key = control.value ?? ''
+    const value = scene.strings?.[key] ?? String(scene.values[key] ?? '')
+    const selected = control.options?.find((option) => option.value === value)?.label ?? value
+    const caption = control.options ? `${control.label}: ${selected}` : control.label
+    const clip = `preview-control-${index}`
+    layers.push(
+      `<g transform="translate(${x} ${y})"><title>${xml(control.label)} — schematic native control</title><defs><clipPath id="${clip}"><rect width="${width}" height="${height}"/></clipPath></defs><rect x=".5" y=".5" width="${width - 1}" height="${height - 1}" rx="8" fill="${environment.colors.surfaceContainer}" stroke="${environment.colors.outline}" stroke-dasharray="4 2"/><text x="12" y="${height / 2}" dominant-baseline="central" font-family="sans-serif" font-size="${environment.typography.label.scaledFontSize}" fill="${environment.colors.onSurface}" clip-path="url(#${clip})">${xml(caption)}</text></g>`,
+    )
+  }
   const caption = [
     'STATIC SVG PREVIEW · Native UI not tested here',
-    'Text is approximate; controls and animation are inactive.',
+    'Text and native controls are schematic; interaction is inactive.',
   ]
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${scene.width}" height="${scene.height + 42}" viewBox="0 0 ${scene.width} ${scene.height + 42}" role="img" aria-label="${xml(source)} static scene preview, not native app acceptance"><title>${xml(source)} static scene preview</title><desc>This approximates the initial scene frame with browser SVG text, without Flutter text measurement, interaction, menus, or animation.</desc><rect width="100%" height="100%" fill="${environment.colors.surface}"/><svg aria-hidden="true" width="${scene.width}" height="${scene.height}" viewBox="0 0 ${scene.width} ${scene.height}">${layers.join('')}</svg><path d="M0 ${scene.height}H${scene.width}" stroke="${environment.colors.outlineVariant}"/>${caption.map((line, index) => `<text x="8" y="${scene.height + 16 + index * 16}" font-family="sans-serif" font-size="10" fill="${environment.colors.onSurfaceVariant}">${xml(line)}</text>`).join('')}</svg>\n`
 }
@@ -378,11 +404,11 @@ export async function previewRbn(root: string, options: PreviewOptions): Promise
   }
   const renderDurationMs = Math.round(performance.now() - renderStarted)
   const panel = object(rendered)
-  if (panel?.kind !== 'svgScene' || !object(panel.scene))
+  if (!['scene', 'svgScene'].includes(String(panel?.kind)) || !object(panel?.scene))
     throw new Error(
-      `RBN render did not return svgScene content: ${String(panel?.content ?? panel?.kind)}.`,
+      `RBN render did not return scene content: ${String(panel?.content ?? panel?.kind)}.`,
     )
-  const scene = panel.scene as SvgScene
+  const scene = panel?.scene as PanelScene
   const svg = scenePreviewSvg(scene, environment)
   if (renderDurationMs > 5000)
     throw new Error(`RBN render exceeded the host deadline (${renderDurationMs} ms).`)
@@ -411,7 +437,7 @@ export async function previewRbn(root: string, options: PreviewOptions): Promise
     layerCount: scene.layers.length,
     controlCount: scene.controls?.length ?? 0,
     text: scene.layers.flatMap((layer) =>
-      layer.text ? [{ id: layer.id, text: textValue(layer.text, scene.values) }] : [],
+      layer.text ? [{ id: layer.id, text: textValue(layer.text, scene) }] : [],
     ),
     renderDurationMs,
     hostDeadlineMs: 5000,

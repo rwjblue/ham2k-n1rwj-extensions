@@ -7,13 +7,14 @@ operation's **Exports** view. The extension offers:
 | --- | --- |
 | HTML reception report | Offline maps, receiver timelines, collection history, and nearby reception evidence at contact time. |
 | Markdown summary | Readable receiver statistics and UTC quarter-hour timelines. |
-| Observation CSV | One row per distinct provider observation, with measurements, timestamps, and location provenance. |
-| Collected-evidence JSON | Original provider rows, normalized observations, retrieval attempts, warnings, and normalized contact context. |
+| Observation CSV | One row per distinct retained observation, with measurements, timestamps, and collection/location provenance. |
+| Collected-evidence JSON | Archived provider rows when available, normalized observations, retrieval attempts, warnings, and normalized contact context. |
 | SVG map | A portable text-based image of recorded receiver sites. |
 | Contact-context CSV | One row per contact, including matched receiver evidence or an explicit unmatched reason. |
 
-The HTML report is selected by default. ZIP and PNG need binary support in
-the host's extension export workflow, tracked in
+The HTML report is selected by default. Exports read local evidence and cache;
+they do not start a history request or enable recording. ZIP and PNG need binary
+support in the host's extension export workflow, tracked in
 [HALO-757](https://cabo.ham2k.com/halo/c/757); SVG works through the existing text
 contract. The extension supplies content to Ham2K's normal save/share workflow.
 It does not create an ADIF contact or modify the log.
@@ -31,8 +32,10 @@ A blank cell means no retained observation. It cannot establish that nobody
 heard you or that the band was closed. Maps connect estimated transmitter and
 receiver locations; the lines do not trace the ionospheric path or outline a
 coverage area. Current cached RBN directory grids take precedence over Vail's
-registered-address grids. The JSON retains the original provider grid and
-identifies the source of the displayed location. Directory locations are
+registered-address grids. The JSON retains the original provider grid when raw
+rows were archived and identifies the source of the displayed location. Cache
+snapshots retain only normalized coordinates; their original grids and provider
+rows are unavailable. Directory locations are
 current metadata, not proof of where a receiver was during an old activation.
 
 Contact context uses the contact's logged grid or coordinate pair, matching
@@ -51,37 +54,50 @@ Importing and correlating a separate ADIF file is future work.
 
 ## Collection and limits
 
-**Save reception evidence** is enabled in My Signal's tune settings by default.
-It records exact-call raw rows and failures from actual visible-panel requests.
-It does not fetch additional data per render or per keystroke. Hide/suspend
-stops polling; a started request keeps the operation identity captured before
-the fetch, even if you switch operations while it finishes. Turning recording
-off stops new recording for that placement without deleting saved evidence.
-Home panels without an operation UUID do not create activation archives.
+**Save reception evidence** is off by default in My Signal's tune settings.
+Enable it to record exact-call raw rows and failures from future visible-panel
+requests. Display filters never filter this archive. Recording adds no fetch
+per render or per keystroke. Hide/suspend stops polling; a started request keeps
+the operation identity captured before the fetch, even if you switch operations
+while it finishes. Turning recording off stops new recording for that placement
+without deleting saved evidence. Home panels without an operation UUID do not
+create activation archives.
 
-At export time, the extension requests available Vail history for a fixed
-interval. By default this covers dated contacts with a five-minute margin,
-extended by the saved visible-panel collection interval. All selected formats
-use the interval fixed when their options were offered. This is an approximate
-activation interval, not an inferred CQ/PTT log. Undated operations need saved
-reception evidence before an export can be offered. Moving operation segments
+Exports use that operation's saved exact-call archive and supplement gaps with
+unexpired normalized reports from My Signal's rolling cache. Archived raw rows
+take precedence when the same observation ID appears in both. The JSON marks
+mixed data as `collectionSource: "archive-and-snapshot"`; each observation keeps
+its own provenance. When no archive exists, the rolling cache can still provide
+a report. A
+cache snapshot has no original provider rows, original grids, or complete
+retrieval journal. JSON identifies it as `collectionSource: "snapshot"`, each
+observation has `retrievalKind: "snapshot"` and an empty `raw` object, and the
+CSV includes corresponding provenance columns. Cache entries belong to the
+station callsign rather than the operation; reports may have been fetched while
+another operation for that exact call was active. Portable suffixes are never
+broadened to a base callsign. Opening Exports neither renews the cache's polling
+lease nor fetches missing history.
+
+The export interval covers dated contacts with a five-minute margin, extended
+by the available collection interval. This is an approximate activation interval,
+not an inferred CQ/PTT log. Undated operations can export a saved archive or
+rolling cache snapshot. Dated operations without observations offer a clearly
+empty report with guidance for future collection. Moving operation segments
 omit the single transmitter-origin map and distance summaries.
 
-Retrieval preserves successful pages if a later request fails. It stops after
-eight pages of 500 source rows, 4,000 observations, or twelve seconds, whichever
-comes first. Each page allows at most four seconds and one million response
-characters. Exact-call filtering includes portable suffixes; partial provider
-search matches can consume the page budget. An invalid response, changing
-pagination, or a limit leaves the export explicitly partial. A successful
-exhausted query means all accepted records in that service response were
-retrieved, not that the provider retained every spot or transmission.
-The service's historical availability can limit recovery from older activations.
+All companion formats read one dataset, including cached directory coordinates,
+frozen when their options were offered, even if a visible panel or receiver
+directory subsequently refreshes. The extension keeps at most
+eight offered datasets; reopen Exports if options expire. A frozen dataset is
+checked against operation and station identity before generation. Online and
+offline exports both use only saved evidence and cache.
 
-Same-interval requests share one retrieval. Successful retrievals are reused
-for five minutes and partial retrievals for one minute, so companion formats
-do not repeatedly query the service. History requests use the existing shared
-HTTP rate-limit backoff. Offline exports include saved evidence and state that
-no history request was sent.
+Opening Exports waits for already-completed panel responses queued for archive
+storage, rather than for an unfinished network fetch. That recording queue is
+bounded to eight responses. A full queue rejects additional recording and marks
+the archive as partial with an explicit warning; finishing writes releases the
+capacity. Slow local storage can delay an export even though no network request
+is started.
 
 Persistent settings retain four recent operation/callsign archives, each with
 up to 4,000 observations, 512 retrieval attempts, and a two-million-character
@@ -106,19 +122,22 @@ not a copy of the complete private log.
 Run `mise run rbn:export-samples` to regenerate
 [complete](examples/rbn-exports/complete/reception.html) and
 [partial](examples/rbn-exports/partial/reception.html) examples using the
-production retriever and exporter. Their observations and contacts are
+production exporter after explicitly preloading synthetic archives. Historical
+retrieval runs only while preparing these fixtures, not during runtime exports.
+Their observations and contacts are
 synthetic and are labeled as such in every format. The complete fixture has
 39 observations at eight receivers; the partial fixture has fourteen
-observations and a failed history request. Every output folder includes all
-six formats.
+observations and a failed historical retrieval. Every output folder includes all
+six formats. A complete fixture demonstrates rendering and provenance; it does
+not claim that visible-panel recording produces complete activation evidence.
 
 Deterministic tests cover collection bounds, restart persistence, concurrent
 updates, exact calls, failed pages, UTC bins, location precision, QSO joins,
-escaping, privacy, and the SDK export workflow. Packaged sandbox tests cover
-hook registration and existing panel behavior. Desktop and phone-width HTML
-previews have been visually inspected. Native Ham2K save/share, restart,
-background, and large-archive performance still need device acceptance.
+escaping, privacy, frozen datasets, cache provenance, no-network generation, and
+the SDK export workflow. Packaged sandbox tests cover hook registration and panel
+behavior. Browser previews can assess exported HTML separately from native
+Ham2K panels. Native Ham2K save/share, restart, background, and large-archive
+performance still need device acceptance.
 
-These runtime changes are confined to RBN. Synchronized version changes are
-personal packaging; no CWT or CQ WW behavior changes require an upstream
-backport.
+These runtime changes are confined to RBN and do not change release versions.
+No CWT or CQ WW behavior changes require an upstream backport.

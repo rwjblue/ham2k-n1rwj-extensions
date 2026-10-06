@@ -1,6 +1,6 @@
 import { mkdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import type { PanelEnvironment, PanelRenderArgs, SvgScene } from '@ham2k/extension-sdk'
+import type { PanelEnvironment, PanelRenderArgs, PanelScene } from '@ham2k/extension-sdk'
 import type { LiveSnapshot } from '../extensions/tools/n1rwj-psk-reporter/src/live.ts'
 import type { RbnSnapshot } from '../extensions/tools/n1rwj-rbn/src/model.ts'
 import type { ReceptionReport } from '../packages/reception/src/reports.ts'
@@ -26,7 +26,8 @@ export interface ReceptionPreviewRuntime {
     model: UiModel,
     environment: PanelEnvironment,
     selection: { details: true; detailsTab: DetailsTab; page: number },
-  ): { scene: SvgScene; pageCount: number }
+    options: { nativeControls: true },
+  ): { scene: PanelScene; pageCount: number }
 }
 
 interface Scenario {
@@ -374,11 +375,16 @@ export async function previewReceptionInfo(
     for (const tab of ['status', 'about'] as const) {
       let pageCount = 1
       for (let page = 0; page < pageCount; page++) {
-        const result = runtime.renderReceptionScene(model, environment, {
-          details: true,
-          detailsTab: tab,
-          page,
-        })
+        const result = runtime.renderReceptionScene(
+          model,
+          environment,
+          {
+            details: true,
+            detailsTab: tab,
+            page,
+          },
+          { nativeControls: true },
+        )
         pageCount = result.pageCount
         if (pageCount > 40)
           throw new Error(`Unexpected pagination: ${scenario.id}/${tab} has ${pageCount} pages.`)

@@ -17,6 +17,7 @@ These are sampled reception observations, not contacts or a coverage boundary. R
 - History retrieval was incomplete; successful pages and saved observations are included\.
 - Synthetic timeout: history unavailable
 - The requested interval covers logged contacts with a five\-minute margin and saved visible\-panel observations\. It does not identify when CQ was called\.
+- This export reads saved reception evidence and cached reports only\. No network request or new recording was started\.
 - Transmitter origins are shown at six\-character grid precision; precise operator coordinates and location labels are withheld\.
 
 ## 40m · CW

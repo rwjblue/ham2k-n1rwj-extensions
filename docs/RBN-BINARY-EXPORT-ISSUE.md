@@ -3,6 +3,14 @@
 Filed as [HALO-757](https://cabo.ham2k.com/halo/c/757), an idea in Backlog,
 on October 5, 2026. The reviewed title and description are preserved below.
 
+**October 6 SDK recheck:** Installed `@ham2k/extension-sdk` 0.12.0 still
+defines `ExportResult` as `{ filename: string, mimeType: string, content: string }`
+in `dist/index.d.ts`. File Stash transport methods accept that string-based
+file contract; they do not add a binary export envelope. The current RBN
+implementation therefore provides separate HTML, Markdown, JSON, CSV, and SVG
+files. The investigation quoted below describes the original filing's SDK
+versions, rather than the current installed versions.
+
 ## Title
 
 Allow extensions to export binary files through the standard Exports workflow

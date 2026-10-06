@@ -15,6 +15,7 @@ These are sampled reception observations, not contacts or a coverage boundary. R
 - Live capture covers visible My Signal panels; hidden or suspended periods are not continuously recorded\.
 - Live retrieval times are host clock samples and may be lower bounds on request completion\.
 - The requested interval covers logged contacts with a five\-minute margin and saved visible\-panel observations\. It does not identify when CQ was called\.
+- This export reads saved reception evidence and cached reports only\. No network request or new recording was started\.
 - Transmitter origins are shown at six\-character grid precision; precise operator coordinates and location labels are withheld\.
 
 ## 20m · CW

@@ -3,7 +3,7 @@
 See where the [Reverse Beacon Network](https://www.reversebeacon.net/) has
 heard your CW, RTTY, FT8, and FT4 signals, with a reception map and sortable
 receiver reports provided by [Vail ReRBN](https://vailrerbn.com/).
-Requires Ham2K extension API 3 and native SVG panels.
+Requires Ham2K extension API 5 and native panel controls.
 The panel automatically follows your operation's station callsign and location.
 It is read-only: it does not transmit, spot a station, post to POTA, or create
 contacts.
@@ -15,9 +15,12 @@ Part of the [N1RWJ extension family](../../../README.md).
 Open the operation's **Exports** view for an offline HTML report with receiver
 maps and fifteen-minute UTC SNR timelines. Markdown, individual-observation
 CSV, collected-evidence JSON, SVG map, and contact-context CSV are also available.
-My Signal saves bounded reception evidence while visible; exporting queries
-available service history to recover additional observations. Gaps and limits
-remain explicit, and nearby receiver evidence is never described as a contact's SNR.
+Exports use already-saved evidence or an exact-call rolling My Signal cache;
+exporting starts no network request. **Save reception evidence** is off by
+default. Enable it in My Signal's tune settings to retain bounded raw evidence
+from future visible-panel requests. Cache snapshots are explicitly partial and
+lack original provider rows. Gaps and limits remain explicit, and nearby receiver
+evidence is never described as a contact's SNR.
 See [collection behavior, limits, and generated examples](../../../docs/RBN-EXPORTS.md).
 
 ## Find stations in Spots
@@ -178,7 +181,7 @@ source controls in the native Spots panel further narrow these results.
 
 ## Install and open the panel
 
-1. Use a Ham2K version supporting extension API 3 and native SVG panels. If the panel shows
+1. Use a Ham2K version supporting extension API 5 and native panel controls. If the panel shows
    **App update needed**, update Ham2K before using it.
 2. Download `n1rwj-rbn-<version>.h2kext` from the
    [latest GitHub release](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/latest).
@@ -295,10 +298,10 @@ The map includes the selected band's located receivers across all list pages.
 Receiver positions come from RBN node grids, with registered grids as a fallback, and may differ from the actual
 skimmer location. Receivers without a valid grid remain in the list.
 
-Use the view-cycle button beside refresh and info, or **View** in the panel's tune settings, to choose **Map and receivers**, **Map**,
+Use the native **View** choice above the map, or **View** in the panel's tune settings, to choose **Both**, **Map**,
 or **Receivers**, and **Band** to select a supported band or **All bands**, even
-before reports arrive. The compact band summary above the map also opens a
-native band menu; **All bands** restores the full view. Both the map and receiver
+before reports arrive. On narrow panes the choices wrap and View uses a dropdown.
+**All bands** restores the full view. Both the map and receiver
 list follow this filter, and **Details** (ⓘ or !) shows timing for the selected
 band along with map origin and provenance.
 The list
@@ -314,8 +317,12 @@ shown below the reports.
 Narrow panels show receiver cards; sufficiently wide panels put the map and
 table side by side. Page size follows the available height and text size.
 In a short pane, choose **Map** or **List** to give that view more room. The
-information button opens **Report details** with timestamps, origin, source
-attribution and warnings. Long details are paginated too.
+information button opens **Report details** with native **Status/About** choices,
+timestamps, origin, source attribution and warnings. Long details remain paginated
+text; refresh, info, direction and pagination keep compact drawn buttons with full
+accessible labels. The toolbar reserves real map space without shrinking or
+double-scaling the artwork. Band, sort and RBN view choices are temporary per
+placement; tune settings remain the defaults across restarts.
 
 ## Refreshes and interpreting reports
 

@@ -150,9 +150,9 @@ Its original MQTT subscriber follows the [MQTT 3.1.1 specification](https://docs
 The live build uses the published SDK 0.12.0 socket and timer contracts. The
 socket contract was first verified in
 [Ham2K/halo 17b15fdcafdd](https://github.com/ham2k/halo/commit/17b15fdcafdd).
-No SDK implementation is vendored. Normal packaging uses API 3 and published
-tools 0.8.0. Its `svgScene` payload remains compatible with API 3; the SDK's
-new `scene` payload and native controls require API 5. The extension does not
+No SDK implementation is vendored. Normal reception packaging uses API 5 and
+published tools 0.8.0. The `scene` payload provides native Band, Sort, and info-tab
+choices around the retained SVG cartography and text layers. The extension does not
 submit reports or log QSOs.
 These reception-only changes and packaging work do not affect CWT behavior
 and are exempt from the upstream CWT synchronization requirement.

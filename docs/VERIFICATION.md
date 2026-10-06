@@ -1,5 +1,60 @@
 # Verification and compatibility
 
+## SDK capability adoption — 2026-10-06
+
+Implemented SST setup suggestions with state/province names while retaining
+freeform corrections and clearing. CWT, MST, SST and WRT now register their own
+ADIF/Cabrillo export types and filename defaults, preserving exchange fields,
+contest tags, compact names and legacy generic requests. CWT runtime, tests and
+documentation are synchronized to [Ham2K/extensions PR #1](https://github.com/ham2k/extensions/pull/1),
+whose source branch `codex/cwt-call-history` was verified and updated with signed
+commit `a63546d341ee66c08a3aef37c1614e0f0703072e`. CQ WW behavior and PR #2 were
+unchanged. Mini-contest-only, reception-only and personal tooling changes are
+exempt from those official contest synchronization requirements.
+
+RBN and PSK Reporter declare API 5 and return `kind: 'scene'`. Native Band,
+Sort and Status/About choices preserve the existing cartography, readable text
+and pagination. RBN has direct temporary Map/Receivers/Both selection; PSK keeps
+its saved View behavior. Context guards and render versions reject obsolete
+operation/configuration work. Host event counters restart on widget remount, so
+the extension does not persist a counter threshold across widget lifetimes.
+
+RBN text exports cover HTML, Markdown, observations CSV, JSON, SVG and contact
+context CSV. Exports use a frozen saved/cache dataset without starting network
+requests. Archive collection defaults to off, its response queue is bounded,
+raw archive rows win duplicates, and missing coverage is explicit. Format
+selection keys are independent while companion observations and receiver
+metadata share one dataset. PNG/ZIP and custom transport/email remain absent.
+
+`mise run format` and `mise run check` passed: **1,143 tests across 87 files**,
+strict runtime/test/task typechecks, lint, seven ES2020 builds and official
+packaging. The independent geometry review checked 3,240 combinations of pane
+size, text scaling, view and details state without out-of-bounds items.
+`mise run reception:preview` regenerated nine scenarios and 51 pages with
+schematic native controls; these are browser SVG approximations, not Flutter
+widget screenshots. The RBN export examples remain explicitly synthetic.
+
+`mise run verify-host` passed all seven bundles against installed **Ham2K Next
+26.9.0 build 177**, kernel SHA-256
+`c572080a83d2f6773bfa32ec814063d40578a8698a64e7dae89d82b89c3d9102`.
+Timer wakes are simulated under Node VM; this does not establish Flutter UI,
+accessibility, native exports or background/resume behavior.
+
+The actual installed macOS app accepted a temporary API-5 official SDK sample
+and rendered native dropdown, segmented and switch controls. Their values
+reached extension logic, and an edited text field committed before a following
+simulated action. No real spot, radio action, upload or email occurred. The Mac
+then locked, preventing final reception-panel acceptance and temporary pilot
+cleanup. The production renderer still needs narrow/short pane, large OS text,
+theme, keyboard and screen-reader acceptance. Native save/share of RBN exports
+and lifecycle behavior remain separate acceptance work. The temporary SDK Pilot
+and its Home tab must be removed when the Mac is unlocked.
+
+SDK 0.12.0, tools 0.8.0, shared-library ranges and synchronized version **0.7.6**
+remain unchanged. These are implementation commits, not a release or catalog
+publication. Previously uncommitted export designs and unrelated contest work
+were preserved in their original Jujutsu change rather than overwritten.
+
 ## Non-Ham2K dependency review — 2026-10-05
 
 Updated the independently committed development dependencies:
