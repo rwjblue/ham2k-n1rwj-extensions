@@ -1,5 +1,43 @@
 # Verification and compatibility
 
+## Release 0.8.1 publication — 2026-10-07
+
+Published [v0.8.1](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.8.1)
+from signed commit `af27338c4f934a523bfc4e2014945b7841e3e2cf` at 13:10:06 UTC
+(09:10 US Eastern time). GitHub verifies the signature, and the release tag
+resolves to this tested commit. The
+[check workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/37626350480)
+and [release workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/37626394161)
+succeeded. All seven bundles and seven SHA-256 checksum files are present;
+the published body matches `docs/releases/v0.8.1.md` exactly.
+
+`mise run release:notes v0.8.1`, `mise run format` and
+`mise run release v0.8.1 --dry-run` passed, including **1,180 tests across 87
+files**, lint, strict runtime/test/task typechecks, seven ES2020 builds,
+official packaging and all seven bundle/checksum pairs.
+`mise run release:catalog v0.8.1 --dry-run` downloaded and validated every
+published asset, selected SST only and skipped the other six extensions.
+
+The catalog approved SST on `stable` at 13:11:09.923 UTC. Public catalog
+metadata confirms 0.8.1 is the current stable version. The GitHub SST archive,
+published checksum and catalog bundle match exactly: **58,135 bytes**, SHA-256
+`d01bfb1f7fd4e131f37dd470c250710d77714a8c056e9e62ae4bd56823584b82`.
+There were no catalog retries.
+
+The source `K1USNSST-064.txt` (file date 2026-10-06) contains
+`KE2ET,LARRY,CWA,` on line 5314 and `SM4X,LARS,SM,` on line 10108.
+The fixed bundled sandbox accepts all **15,682 calls** and reports five
+warnings: three duplicate calls and two unsupported locations. Fresh loading
+and serialized offline replay preserve names and valid location hints; the
+unsupported fields are omitted. SM4X can still receive the independent
+callsign-country `DX` suggestion. Malformed refreshes retain the previous cache.
+This is unit/bundle verification, not a native Ham2K runtime test.
+
+All extensions and shared packages advance to 0.8.1, with unchanged dependencies
+and host compatibility. SST-only behavior and personal release metadata are
+exempt from CWT and CQ WW upstream synchronization. Unrelated reception and
+calendar work remains outside the release in its original working copy.
+
 ## Release 0.8.0 publication — 2026-10-06
 
 Published [v0.8.0](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.8.0)

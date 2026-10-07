@@ -8,6 +8,25 @@ each submission before operators can install it from the catalog.
 
 ## Current release status
 
+[v0.8.1](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.8.1)
+was published from signed commit `af27338c4f934a523bfc4e2014945b7841e3e2cf`
+on October 7, 2026 at 09:10 US Eastern time (13:10:06 UTC).
+All seven bundles and seven checksum files are available. The
+[check workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/37626350480)
+and [release workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/37626394161)
+passed. Downloaded assets passed `mise run release:catalog v0.8.1 --dry-run`,
+and the published body matches `docs/releases/v0.8.1.md` exactly.
+
+SST returned **approved** on `stable` at 13:11 UTC and is the catalog's current
+version. Its catalog bundle matches the GitHub archive and published checksum.
+CQ WW, CWT, MST, PSK Reporter, RBN and WRT were skipped because their behavior
+is unchanged. This release fixes SST history imports containing unsupported
+location hints; native Ham2K acceptance remains unverified. See the
+[release notes](releases/v0.8.1.md) and
+[verification record](VERIFICATION.md#release-081-publication--2026-10-07).
+
+### Previous releases
+
 [v0.8.0](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.8.0)
 was published from signed commit `7416bfa326470cf933d7121ecee63009557dcfe5`
 on October 6, 2026 at 18:26 US Eastern time (22:26:22 UTC).
@@ -26,8 +45,6 @@ RBN and PSK Reporter require extension API 5; contest extensions retain API 1.
 Native verification scope and remaining device checks are recorded in the
 [release notes](releases/v0.8.0.md) and
 [verification record](VERIFICATION.md#release-080-publication--2026-10-06).
-
-### Previous releases
 
 [v0.7.6](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.7.6)
 was published from signed commit `02f6a921b75bc4db149a233dc0facdd589886453`
