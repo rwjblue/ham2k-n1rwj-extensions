@@ -11,6 +11,7 @@ import { createReceiverData } from './data/receivers.ts'
 import { createRbnExportHook } from './export/hook.ts'
 import { createRbnPanel } from './panel.ts'
 import { createRbnSpots } from './spots/index.ts'
+import { ownSettings } from './spots/preferences.ts'
 
 defineExtension({
   ...manifest,
@@ -35,7 +36,13 @@ defineExtension({
     registerHook('settingsPanel', { hook: settings })
     registerHook('dataFile', { key: receivers.dataFile.key, hook: receivers.dataFile })
     registerHook('export', {
-      hook: createRbnExportHook(rbnEvidence, Date.now, receivers.lookup, rbnClient.readSnapshots),
+      hook: createRbnExportHook(
+        rbnEvidence,
+        Date.now,
+        receivers.lookup,
+        rbnClient.readSnapshots,
+        async () => ownSettings(await host.getSettings()),
+      ),
     })
     registerHook('panel', {
       key: manifest.key,

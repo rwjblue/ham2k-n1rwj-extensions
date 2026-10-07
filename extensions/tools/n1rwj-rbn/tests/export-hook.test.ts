@@ -11,6 +11,7 @@ import type { ReceiverMetadata } from '../src/data/receivers.ts'
 import { createEvidenceArchive } from '../src/export/archive.ts'
 import { createEvidenceRetriever } from '../src/export/history.ts'
 import { createRbnExportHook } from '../src/export/hook.ts'
+import { additionalExportChoices, additionalExportFormats } from '../src/export/preferences.ts'
 import { NOW, payload, spotPayload } from './data/fixtures.ts'
 
 const args: ExportOptionsRequest = {
@@ -35,6 +36,13 @@ const args: ExportOptionsRequest = {
 }
 const timers = { setTimeout: () => 1, clearTimeout: () => {} }
 
+/** Opt in to every companion for the existing full-format workflow checks. */
+function allFormatsHook(...args: Parameters<typeof createRbnExportHook>) {
+  return createRbnExportHook(args[0], args[1], args[2], args[3], async () => ({
+    additionalExportFormats: additionalExportChoices.map((choice) => choice.value),
+  }))
+}
+
 /** Use the published preparation path the host applies to registered types. */
 async function preparedOptions(
   hook: ExportHook,
@@ -57,13 +65,90 @@ async function preparedOptions(
 }
 
 describe('RBN export workflow', () => {
-  it('uses a station title for blank SDK-prepared titles and preserves explicit titles in all formats', async () => {
+  it('offers one combined HTML report by default while retaining all generation types', async () => {
     const archive = createEvidenceArchive()
     await archive.appendLive(
       { operationId: 'operation', call: 'N1RWJ', startMs: NOW - 900_000, endMs: NOW },
       { startedAtMs: NOW, retrievedAtMs: NOW, payload: payload() },
     )
     const hook = createRbnExportHook(archive, () => NOW)
+    const options = await preparedOptions(hook)
+    expect(options.map((option) => option.format)).toEqual(['html'])
+    expect(options[0]).toMatchObject({
+      exportType: 'rbnReception-html',
+      exportKey: 'rbn:html',
+      selectedByDefault: true,
+    })
+    const report = await hook.generateExport({ ...args, ...options[0] }, { online: false })
+    expect(report.content).toContain('<svg')
+    const types = await hook.getExportTypes?.({}, { online: false })
+    expect(types?.map((type) => type.format)).toEqual([
+      'html',
+      'md',
+      'csv',
+      'json',
+      'svg',
+      'qso.csv',
+    ])
+    for (const type of types ?? []) {
+      const result = await hook.generateExport(
+        { ...args, exportType: type.exportType },
+        { online: false },
+      )
+      expect(result.content.length).toBeGreaterThan(0)
+    }
+  })
+
+  it('offers only chosen companions and honors already-offered files after the choice is cleared', async () => {
+    let settings: Record<string, unknown> = { additionalExportFormats: ['qso.csv', 'json', 'json'] }
+    const readSettings = vi.fn(async () => settings)
+    const hook = createRbnExportHook(
+      createEvidenceArchive(),
+      () => NOW,
+      undefined,
+      undefined,
+      readSettings,
+    )
+    const first = await preparedOptions(hook)
+    expect(first.map((option) => option.format)).toEqual(['html', 'json', 'qso.csv'])
+    expect(first.map((option) => option.priority)).toEqual([10, 9, 8])
+    expect(
+      first.filter((option) => option.selectedByDefault).map((option) => option.format),
+    ).toEqual(['html'])
+    expect(new Set(first.map((option) => option.exportData.rbnDatasetKey)).size).toBe(1)
+    const json = first.find((option) => option.format === 'json')
+    if (!json) throw new Error('Missing chosen JSON export')
+    const baseline = await hook.generateExport({ ...args, ...json }, { online: false })
+    settings = { additionalExportFormats: [] }
+    const next = await preparedOptions(hook)
+    expect(next.map((option) => option.exportKey)).toEqual(['rbn:html'])
+    expect(readSettings).toHaveBeenCalledTimes(2)
+    expect(await hook.generateExport({ ...args, ...json }, { online: false })).toEqual(baseline)
+  })
+
+  it.each([undefined, null, false, true, 'json', {}, ['pdf'], ['json', 'pdf'], [1]])(
+    'keeps extra files hidden for missing or malformed saved choices: %j',
+    async (additional) => {
+      const raw = { additionalExportFormats: additional }
+      expect(additionalExportFormats(raw)).toEqual([])
+      const hook = createRbnExportHook(
+        createEvidenceArchive(),
+        () => NOW,
+        undefined,
+        undefined,
+        async () => raw,
+      )
+      expect((await preparedOptions(hook)).map((option) => option.format)).toEqual(['html'])
+    },
+  )
+
+  it('uses a station title for blank SDK-prepared titles and preserves explicit titles in all formats', async () => {
+    const archive = createEvidenceArchive()
+    await archive.appendLive(
+      { operationId: 'operation', call: 'N1RWJ', startMs: NOW - 900_000, endMs: NOW },
+      { startedAtMs: NOW, retrievedAtMs: NOW, payload: payload() },
+    )
+    const hook = allFormatsHook(archive, () => NOW)
     const options = await preparedOptions(hook)
     expect(options.map((option) => option.format)).toEqual([
       'html',
@@ -106,7 +191,7 @@ describe('RBN export workflow', () => {
       { operationId: 'operation', call: 'N1RWJ', startMs: NOW - 15 * 60_000, endMs: NOW },
       { startedAtMs: NOW, retrievedAtMs: NOW, payload: payload() },
     )
-    const hook = createRbnExportHook(archive, () => now)
+    const hook = allFormatsHook(archive, () => now)
     const options = await preparedOptions(hook)
     expect(fetch).not.toHaveBeenCalled()
     expect(options).toHaveLength(6)
@@ -142,7 +227,7 @@ describe('RBN export workflow', () => {
     expect(firstKey).toMatch(/^rbn:/)
   })
   it('keeps format checkbox identities independent and rejects a key for a different format', async () => {
-    const hook = createRbnExportHook(createEvidenceArchive(), () => NOW)
+    const hook = allFormatsHook(createEvidenceArchive(), () => NOW)
     const options = await preparedOptions(hook)
     if (!options) throw new Error('Missing export options')
     // Mirror the host selection key to catch accidental coupling of formats.
@@ -186,7 +271,7 @@ describe('RBN export workflow', () => {
       },
     }
     await archive.appendLive(request, { startedAtMs: NOW, retrievedAtMs: NOW, payload: payload() })
-    const hook = createRbnExportHook(archive, () => NOW)
+    const hook = allFormatsHook(archive, () => NOW)
     const first = await preparedOptions(hook)
     const json = first.find((option) => option.format === 'json')
     if (!json) throw new Error('Missing JSON export')
@@ -255,7 +340,7 @@ describe('RBN export workflow', () => {
     expect(reloadedResult.content).not.toContain(String(args.operation.lat))
   })
   it('rejects missing or invalid prepared dataset tokens rather than silently collecting a different snapshot', async () => {
-    const hook = createRbnExportHook(createEvidenceArchive(), () => NOW)
+    const hook = allFormatsHook(createEvidenceArchive(), () => NOW)
     const options = await preparedOptions(hook)
     const option = options.find((item) => item.format === 'json')
     if (!option) throw new Error('Missing JSON export')
@@ -298,7 +383,7 @@ describe('RBN export workflow', () => {
       },
       { startedAtMs: NOW, retrievedAtMs: NOW, payload: payload() },
     )
-    const hook = createRbnExportHook(
+    const hook = allFormatsHook(
       archive,
       () => NOW,
       () => ({ call: 'W3LPL', grid: 'FN42', country: 'United States', continent: 'NA' }),
@@ -321,7 +406,7 @@ describe('RBN export workflow', () => {
   })
   it('exports honest partial evidence offline and declines operations without dates or collection', async () => {
     const fetch = vi.fn()
-    const hook = createRbnExportHook(createEvidenceArchive(), () => NOW)
+    const hook = allFormatsHook(createEvidenceArchive(), () => NOW)
     expect(await hook.suggestExportOptions?.({ ...args, qsos: [] }, { online: true })).toEqual([])
     const result = await hook.generateExport(
       { ...args, exportType: 'rbnReception-json' },
@@ -339,12 +424,7 @@ describe('RBN export workflow', () => {
     const client = createRbnClient({ fetch, now: () => NOW })
     await client.getSnapshot({ call: 'N1RWJ', windowMinutes: 15 })
     fetch.mockClear()
-    const hook = createRbnExportHook(
-      createEvidenceArchive(),
-      () => NOW,
-      undefined,
-      client.readSnapshots,
-    )
+    const hook = allFormatsHook(createEvidenceArchive(), () => NOW, undefined, client.readSnapshots)
     const emptyLog = { ...args, qsos: [] }
     const options = await preparedOptions(hook, emptyLog)
     expect(options).toHaveLength(6)
@@ -370,7 +450,7 @@ describe('RBN export workflow', () => {
     ).toEqual([])
   })
   it('guards operation ownership and bounds the lifetime of offered datasets', async () => {
-    const hook = createRbnExportHook(createEvidenceArchive(), () => NOW)
+    const hook = allFormatsHook(createEvidenceArchive(), () => NOW)
     const options = await preparedOptions(hook)
     const option = options?.[0]
     if (!option) throw new Error('Missing export option')
@@ -423,7 +503,7 @@ describe('RBN export workflow', () => {
       const client = createRbnClient({ fetch, now: () => NOW })
       await client.getSnapshot({ call: 'N1RWJ', windowMinutes: 15 })
       fetch.mockClear()
-      const hook = createRbnExportHook(archive, () => NOW, undefined, client.readSnapshots)
+      const hook = allFormatsHook(archive, () => NOW, undefined, client.readSnapshots)
       const result = await hook.generateExport(
         { ...args, exportType: 'rbnReception-json' },
         { online: true },
@@ -458,7 +538,7 @@ describe('RBN export workflow', () => {
       continent: 'NA',
     }
     const lookup = vi.fn(() => node)
-    const hook = createRbnExportHook(archive, () => NOW, lookup)
+    const hook = allFormatsHook(archive, () => NOW, lookup)
     const options = await preparedOptions(hook)
     const json = options?.find((option) => option.format === 'json')
     const csv = options?.find((option) => option.format === 'csv')
@@ -472,7 +552,7 @@ describe('RBN export workflow', () => {
     expect(lookup).toHaveBeenCalledTimes(1)
   })
   it('omits one transmitter origin when generation receives moving operation segments', async () => {
-    const hook = createRbnExportHook(createEvidenceArchive(), () => NOW)
+    const hook = allFormatsHook(createEvidenceArchive(), () => NOW)
     const options = await preparedOptions(hook)
     const option = options?.find((item) => item.format === 'json')
     if (!option) throw new Error('Missing export option')

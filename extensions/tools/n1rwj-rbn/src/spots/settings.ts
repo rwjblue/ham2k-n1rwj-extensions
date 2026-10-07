@@ -1,5 +1,6 @@
 import type { FormActionElement, FormDefinition } from '@ham2k/extension-sdk'
 import { type Continent, continents } from '../data/continents.ts'
+import { additionalExportChoices, additionalExportFormats } from '../export/preferences.ts'
 import { allCalls, type Provider } from './filters.ts'
 import type { HealthNotice } from './health.ts'
 import { allowSpotMerging, radiusIssue, speedIssue, spotModes, tokens } from './preferences.ts'
@@ -50,6 +51,22 @@ export function settingsDefinition(
       {
         type: 'markdown',
         text: 'The My Signal map and receiver reports show who hears your station. Configure them with the tune button beside the My Signal panel title in your operation. The Spots filters below never affect My Signal.',
+      },
+      {
+        type: 'header',
+        style: 'section',
+        title: 'Exports',
+      },
+      {
+        type: 'field',
+        fieldType: 'multiselect',
+        key: 'additionalExportFormats',
+        label: 'Additional export files',
+        description:
+          'The HTML reception report includes maps, timelines, and contact context. By default it is the only RBN export. Select any companion files you need, then reopen the operation’s Exports view to refresh the list. These choices apply across operations.',
+        value: additionalExportFormats(selected.raw),
+        options: additionalExportChoices,
+        defaultValue: [],
       },
       {
         type: 'header',

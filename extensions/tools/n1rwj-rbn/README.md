@@ -12,9 +12,12 @@ Part of the [N1RWJ extension family](../../../README.md).
 
 ## Export an activation reception report
 
-Open the operation's **Exports** view for an offline HTML report with receiver
-maps and fifteen-minute UTC SNR timelines. Markdown, individual-observation
-CSV, collected-evidence JSON, SVG map, and contact-context CSV are also available.
+Open the operation's **Exports** view for one offline HTML report containing
+receiver maps, fifteen-minute UTC SNR timelines, and contact context. To add
+Markdown, individual-observation CSV, collected-evidence JSON, SVG map, or
+contact-context CSV, choose the files you need in **Settings → RBN → Exports →
+Additional export files**, then reopen **Exports**. No companion files are shown
+by default. Your choices persist across restarts and apply across operations.
 Exports use already-saved evidence or an exact-call rolling My Signal cache;
 exporting starts no network request. **Save reception evidence** is off by
 default. Enable it in My Signal's tune settings to retain bounded raw evidence
@@ -92,7 +95,7 @@ clears both bounds; **Reset distance** clears both origin and limit, including
 inconsistent saved values. **Clear continent filter — All continents** explicitly
 allows every receiver continent, while **Reset continents** restores the local
 suggestion or last nonempty selection. Resets update the settings form and take
-effect on the next Spots refresh. They preserve My Signal settings, reception
+effect on the next Spots refresh. They preserve export-file preferences, My Signal settings, reception
 caches, receiver data, and every other extension's settings.
 
 Separate skimmers or regions with spaces or commas. Blank means unrestricted.

@@ -1,18 +1,25 @@
 # RBN activation exports
 
 Enable N1RWJ RBN, use **My Signal** during your activation, then open the
-operation's **Exports** view. The extension offers:
+operation's **Exports** view. By default, RBN adds one file: an HTML reception
+report containing the maps, receiver timelines, collection history, and contact
+context together. It is selected by default and opens offline in a browser.
 
-| Export | Purpose |
+For other workflows, open **Settings → RBN → Exports → Additional export files**
+and select only the companions you need. Reopen the operation's **Exports** view
+after changing the preference. Clearing the selection restores the single HTML
+report. These choices persist across restarts and apply across operations; spot
+filter resets preserve them.
+
+| Optional companion | Purpose |
 | --- | --- |
-| HTML reception report | Offline maps, receiver timelines, collection history, and nearby reception evidence at contact time. |
 | Markdown summary | Readable receiver statistics and UTC quarter-hour timelines. |
 | Observation CSV | One row per distinct retained observation, with measurements, timestamps, and collection/location provenance. |
 | Collected-evidence JSON | Archived provider rows when available, normalized observations, retrieval attempts, warnings, and normalized contact context. |
 | SVG map | A portable text-based image of recorded receiver sites. |
 | Contact-context CSV | One row per contact, including matched receiver evidence or an explicit unmatched reason. |
 
-The HTML report is selected by default. Exports read local evidence and cache;
+Exports read local evidence and cache;
 they do not start a history request or enable recording. ZIP and PNG need binary
 support in the host's extension export workflow, tracked in
 [HALO-757](https://cabo.ham2k.com/halo/c/757); SVG works through the existing text
@@ -92,7 +99,7 @@ eight offered datasets; reopen Exports if options expire. A frozen dataset is
 checked against operation and station identity before generation. Online and
 offline exports both use only saved evidence and cache.
 
-Changing export settings preserves the formats you checked. Refreshed options
+Changing an export's settings preserves the formats you checked. Refreshed options
 use a new saved-data snapshot; companion files from the same option list still
 share one frozen snapshot.
 
@@ -131,8 +138,9 @@ retrieval runs only while preparing these fixtures, not during runtime exports.
 Their observations and contacts are
 synthetic and are labeled as such in every format. The complete fixture has
 39 observations at eight receivers; the partial fixture has fourteen
-observations and a failed historical retrieval. Every output folder includes all
-six formats. A complete fixture demonstrates rendering and provenance; it does
+observations and a failed historical retrieval. The sample generator explicitly
+requests every format, so every output folder includes all six formats.
+A complete fixture demonstrates rendering and provenance; it does
 not claim that visible-panel recording produces complete activation evidence.
 
 Deterministic tests cover collection bounds, restart persistence, concurrent

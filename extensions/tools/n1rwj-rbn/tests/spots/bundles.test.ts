@@ -4,6 +4,8 @@ import type {
   ActivityHook,
   DataFileDefinition,
   DynamicSettingsPanel,
+  ExportHook,
+  ExportOptionsRequest,
   ExtensionDefinition,
   JSONValue,
   RegisterHookParams,
@@ -268,6 +270,93 @@ it('defaults to merging without an activity and toggles cached spots across rest
   expect(await activity.loggingControls?.({ operation: {} }, ctx)).toEqual([])
 })
 
+it('offers one bundled reception report by default and persists only opted-in companions', async () => {
+  const runtime = await harness({ 'extension_n1rwj-rbn': { unrelated: 42 } }, [])
+  const ctx = { online: false }
+  const args: ExportOptionsRequest = {
+    operation: { uuid: 'activation', stationCall: 'N1RWJ', grid: 'FN42' },
+    qsos: [
+      {
+        uuid: 'contact',
+        startAtMillis: Date.parse('2026-10-02T15:55:00Z'),
+        our: { call: 'N1RWJ' },
+        their: { call: 'K1ABC', grid: 'FN41' },
+        band: '20m',
+        mode: 'CW',
+      },
+    ],
+  }
+  const exporter = runtime.hook<ExportHook>('n1rwj-rbn', 'export')
+  const options = () => exporter.suggestExportOptions?.(args, ctx)
+  const edit = (value: JSONValue) =>
+    runtime.settings.onChangeField(
+      { panelKey: 'n1rwj-rbn', fieldKey: 'additionalExportFormats', value, state: {} },
+      ctx,
+    )
+  const form = await runtime.settings.getDefinition({ panelKey: 'n1rwj-rbn' }, ctx)
+  expect(form.elements).toContainEqual(
+    expect.objectContaining({
+      key: 'additionalExportFormats',
+      fieldType: 'multiselect',
+      value: [],
+      defaultValue: [],
+      options: expect.arrayContaining([expect.objectContaining({ value: 'json' })]),
+    }),
+  )
+  expect((await options())?.map((option) => option.format)).toEqual(['html'])
+  await edit(['json'])
+  expect((await options())?.map((option) => option.format)).toEqual(['html', 'json'])
+  expect(runtime.preferences['extension_n1rwj-rbn']).toEqual({
+    unrelated: 42,
+    additionalExportFormats: ['json'],
+  })
+  const restarted = await harness(runtime.preferences, [])
+  expect(
+    (
+      await restarted.hook<ExportHook>('n1rwj-rbn', 'export').suggestExportOptions?.(args, ctx)
+    )?.map((option) => option.format),
+  ).toEqual(['html', 'json'])
+  await runtime.action('resetAllSpotSettings')
+  expect((await options())?.map((option) => option.format)).toEqual(['html', 'json'])
+  await edit([])
+  expect((await options())?.map((option) => option.format)).toEqual(['html'])
+  expect(runtime.preferences['extension_n1rwj-rbn']).toMatchObject({
+    unrelated: 42,
+    additionalExportFormats: [],
+  })
+  const definitions = (await exporter.getExportTypes?.({}, ctx)) ?? []
+  expect(definitions.map((definition) => definition.format)).toEqual([
+    'html',
+    'md',
+    'csv',
+    'json',
+    'svg',
+    'qso.csv',
+  ])
+  for (const definition of definitions) {
+    expect(
+      await exporter.generateExport({ ...args, exportType: definition.exportType }, ctx),
+    ).toMatchObject({ content: expect.any(String), filename: expect.any(String) })
+  }
+  expect(runtime.requests).not.toHaveBeenCalled()
+})
+
+it('rejects invalid companion-file preferences without changing bundled settings', async () => {
+  const runtime = await harness({ 'extension_n1rwj-rbn': { unrelated: 42 } }, [])
+  const ctx = { online: false }
+  for (const value of ['json', ['zip'], ['html'], ['json', 42], null]) {
+    const args = {
+      panelKey: 'n1rwj-rbn',
+      fieldKey: 'additionalExportFormats',
+      value,
+      state: {},
+    }
+    expect(await runtime.settings.validateField?.(args, ctx)).toContain('export files')
+    await expect(runtime.settings.onChangeField(args, ctx)).rejects.toThrow('export files')
+  }
+  expect(runtime.preferences['extension_n1rwj-rbn']).toEqual({ unrelated: 42 })
+})
+
 it('RBN defaults to all calls and respects explicit CWT filtering, removal and saved choices across restarts', async () => {
   const runtime = await harness()
   expect(runtime.spots.sourceName).toBe('RBN')
@@ -424,6 +513,7 @@ it('resets all spot settings in the bundle while preserving reception caches and
       spotRadiusGrid: '',
       spotRadiusMiles: 100,
       receptionCache: { marker: 'preserve' },
+      additionalExportFormats: ['json'],
       unrelated: 42,
     },
   })
@@ -455,6 +545,7 @@ it('resets all spot settings in the bundle while preserving reception caches and
     spotRadiusGrid: '',
     spotRadiusMiles: '',
     receptionCache: { marker: 'preserve' },
+    additionalExportFormats: ['json'],
     unrelated: 42,
   }
   expect(runtime.preferences['extension_n1rwj-rbn']).toEqual(expected)

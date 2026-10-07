@@ -1,6 +1,7 @@
 import type { JSONValue } from '@ham2k/extension-sdk'
 import { continentCode } from '../data/continents.ts'
 import { isValidReceiver, receiverLocation } from '../data/parser.ts'
+import { validAdditionalExportFormats } from '../export/preferences.ts'
 import { type ReceiverSelection, record } from './model.ts'
 
 export const spotModes = ['all', 'CW', 'RTTY', 'FT8', 'FT4']
@@ -24,6 +25,10 @@ export function allowSpotMerging(raw: Record<string, unknown>): boolean {
   return raw.spotAllowMerging !== false
 }
 export function validation(key: string, value: unknown): string | null {
+  if (key === 'additionalExportFormats')
+    return validAdditionalExportFormats(value)
+      ? null
+      : 'Choose additional export files from the list.'
   if (key === 'spotAllowMerging')
     return typeof value === 'boolean' ? null : 'Choose whether to allow merging of RBN spots.'
   if (key === 'spotMinWpm' || key === 'spotMaxWpm') {

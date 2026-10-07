@@ -5,6 +5,7 @@ import type { RbnClient } from '../data/client.ts'
 import { receiverLocation } from '../data/parser.ts'
 import type { ReceiverMetadata } from '../data/receivers.ts'
 import { emptyEvidence, evidenceForRange, type RbnEvidence } from './evidence.ts'
+import { additionalExportFormats } from './preferences.ts'
 import { publicReceptionEvidence } from './privacy.ts'
 import {
   renderEvidenceCsv,
@@ -76,6 +77,7 @@ export function createRbnExportHook(
   now: () => number = Date.now,
   lookup?: (receiver: string) => ReceiverMetadata | undefined,
   readSnapshots?: NonNullable<RbnClient['readSnapshots']>,
+  readSettings: () => Promise<Record<string, unknown>> = async () => ({}),
 ): ExportHook {
   const offered = new Map<string, RbnEvidence>()
   let sequence = 0
@@ -162,6 +164,7 @@ export function createRbnExportHook(
       }))
     },
     async suggestExportOptions(args) {
+      const additional = additionalExportFormats(await readSettings())
       const selected = await collectSaved(args)
       if (!selected) return []
       // All companion files use one immutable dataset, even if a visible panel
@@ -172,28 +175,30 @@ export function createRbnExportHook(
         const oldest = offered.keys().next().value
         if (oldest !== undefined) offered.delete(oldest)
       }
-      return formats.map((format, index) => ({
-        exportType: `rbnReception-${format.extension}`,
-        // The host preserves checkbox choices across settings reloads by this
-        // stable option identity. The dataset token travels separately below.
-        exportKey: `rbn:${format.extension}`,
-        format: format.extension,
-        label: format.label,
-        filename: filename(args, format.extension),
-        icon: 'radar',
-        priority: 10 + index,
-        selectedByDefault: index === 0,
-        templateData: {
-          rbnDatasetKey: datasetKey,
-          activity: 'RBN',
-          modifier:
-            format.extension === 'json'
-              ? 'evidence'
-              : format.extension === 'csv'
-                ? 'observations'
-                : 'reception',
-        },
-      }))
+      return formats
+        .filter((format) => format.extension === 'html' || additional.includes(format.extension))
+        .map((format, index) => ({
+          exportType: `rbnReception-${format.extension}`,
+          // The host preserves checkbox choices across settings reloads by this
+          // stable option identity. The dataset token travels separately below.
+          exportKey: `rbn:${format.extension}`,
+          format: format.extension,
+          label: format.label,
+          filename: filename(args, format.extension),
+          icon: 'radar',
+          priority: 10 - index,
+          selectedByDefault: format.extension === 'html',
+          templateData: {
+            rbnDatasetKey: datasetKey,
+            activity: 'RBN',
+            modifier:
+              format.extension === 'json'
+                ? 'evidence'
+                : format.extension === 'csv'
+                  ? 'observations'
+                  : 'reception',
+          },
+        }))
     },
     async generateExport(args, ctx) {
       const format = formats.find(
