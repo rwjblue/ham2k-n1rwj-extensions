@@ -93,6 +93,49 @@ personal release metadata and tooling changes are exempt from official contest
 synchronization. Previously preserved designs and unrelated contest work remain
 outside this release in their original Jujutsu change.
 
+## Compact native reception controls — 2026-10-07
+
+RBN and PSK Reporter now use compact outlined native menu buttons for Band and
+Window on narrow panels. RBN's direct View choice shares that row and opens
+Map/Receivers/Both choices; its closed caption uses Map/List/Both. Compact buttons
+show only their current values and down arrows, with no Band/Window/View label
+row or wrapped prefixes.
+Refresh and Details/Back have native outlines. Status text wraps beside those
+actions instead of clipping, and all native buttons retain 48-pixel minimum
+targets. Wide panels keep the native dropdown/segmented toolbar.
+
+With the deterministic normal-text fixture, the RBN map starts at y=118 instead
+of y=205 at 390/430 pixels wide; the 320-pixel default starts at y=130 because
+status wraps. Removing the initial compact label row reclaims another 20 logical
+pixels above the map, or 29/36 pixels with 1.6/2-times text. Map-only artwork grows
+by the full amount; Both distributes the space between the map and report list.
+At 320 pixels, selected 40m/160m values can wrap View onto a second
+row without exceeding the old y=205 map budget. Larger text wraps naturally.
+PSK retains its saved View with no temporary View menu.
+
+All **1,192 tests across 87 files** passed, along with strict runtime/test/task
+typechecks, seven ES2020 builds and official packaging. Lint passed across the
+289 repository files outside unrelated `output/contest-calendar` mockups being
+created concurrently. `mise run check` encountered lint errors in those mockups;
+they were left untouched. Formatting was applied before their creation, and the
+four changed TypeScript files were checked again afterward.
+
+Six temporary widget fixtures rendered the generated scenes using Flutter
+3.44.9 and the API-5 host source in the local `halo-patches/map-state-override`
+checkout. They covered 320/390/430-pixel panes, 40m/160m values, 1.6/2-times text,
+and explicit View menu selection. Native button captions did not ellipsize,
+and Receivers emitted `view:list` with the original View control ID and activate
+phase. The widget harness loaded bundled Roboto, Material/MDI icons and an Arial
+Unicode fallback for the headless environment; it exported local PNG previews.
+These are synthetic widget tests, not installed-app or iOS/Android acceptance.
+Screen-reader traversal of value-only menu buttons, platform font
+fallbacks, production feeds, saved settings and real lifecycle behavior remain
+native acceptance work before publishing.
+
+Reception-only runtime, tests and documentation do not affect CWT or CQ WW,
+so no official contest PR synchronization is required. Dependency ranges,
+API declarations and synchronized release version 0.8.1 remain unchanged.
+
 ## Native reception actions and report window — 2026-10-06
 
 RBN and PSK Reporter now use native Refresh and Details/Back buttons and a

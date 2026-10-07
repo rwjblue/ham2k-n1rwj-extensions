@@ -146,13 +146,16 @@ function event(
   const state = renderedPanels.get(panel)
   const content = state?.scenes.get(renderArgs.instanceId ?? '')
   const control = content && sceneState(content).controls?.find((entry) => entry.id === controlId)
-  if (!state || !control?.event) throw new Error(`Missing rendered control ${controlId}`)
+  const action = control?.menu
+    ? control.menu.find((item) => item.event.endsWith(`:${text}`))?.event
+    : control?.event
+  if (!state || !control || !action) throw new Error(`Missing rendered control ${controlId}`)
   const native = control.kind === 'nativeDropdown' || control.kind === 'nativeSegmented'
   return {
     ...renderArgs,
     event: {
       controlId,
-      action: control.event,
+      action,
       phase: native ? ('commit' as const) : ('activate' as const),
       sequence: ++state.sequence,
       ...(native ? { text } : {}),
@@ -185,6 +188,112 @@ function deferred<T>() {
 }
 
 describe('RBN native panel integration', () => {
+  it.each([320, 390])(
+    'uses compact menus for band, window, and view on a %dpx phone',
+    async (width) => {
+      const { panel, getSnapshot } = setup()
+      const phone = { ...args, environment: { ...environment, width, height: 800 } }
+      const initial = await panel.render(phone, { online: true })
+      for (const id of ['band', 'window', 'view'])
+        expect(sceneState(initial).controls?.find((control) => control.id === id)).toMatchObject({
+          kind: 'nativeButton',
+          variant: 'outlined',
+          menu: expect.any(Array),
+        })
+      const before = getSnapshot.mock.calls.length
+      await panel.onEvent?.(event(panel, 'band', '20m', phone), { online: true })
+      await panel.onEvent?.(event(panel, 'window', '30', phone), { online: true })
+      await panel.onEvent?.(event(panel, 'view', 'list', phone), { online: true })
+      expect(getSnapshot).toHaveBeenCalledTimes(before)
+      const selected = await panel.render(phone, { online: true })
+      expect(sceneState(selected).strings).toMatchObject({
+        band: '20m',
+        window: '30',
+        view: 'list',
+      })
+      for (const [id, label] of [
+        ['band', '20m ▾'],
+        ['window', '30 min ▾'],
+        ['view', 'List ▾'],
+      ])
+        expect(sceneState(selected).controls?.find((control) => control.id === id)?.label).toBe(
+          label,
+        )
+      expect(sceneText(selected)).toContain('No 20m reports in this time window.')
+      expect(sceneText(selected)).not.toContain('W1NT')
+      expect(
+        sceneState(selected).layers.some((layer) => layer.id.startsWith('reception-map-')),
+      ).toBe(false)
+      expect(getSnapshot).toHaveBeenLastCalledWith(
+        { call: 'K8BTU', windowMinutes: 30 },
+        { instanceId: args.instanceId, online: true, waitForRequest: false },
+      )
+      await panel.onEvent?.(event(panel, 'refresh', undefined, phone), { online: true })
+      expect(getSnapshot).toHaveBeenLastCalledWith(
+        { call: 'K8BTU', windowMinutes: 30 },
+        { force: true, instanceId: args.instanceId, online: true, waitForRequest: false },
+      )
+      await panel.onEvent?.(event(panel, 'details', undefined, phone), { online: true })
+      expect(await detailsText(panel, phone)).toContain('Last 30 minutes')
+      await panel.onEvent?.(event(panel, 'details', undefined, phone), { online: true })
+      await panel.render(phone, { online: true })
+      await panel.onEvent?.(event(panel, 'band', 'all', phone), { online: true })
+      await panel.onEvent?.(event(panel, 'view', 'both', phone), { online: true })
+      const restored = await panel.render(phone, { online: true })
+      expect(sceneState(restored).strings).toMatchObject({
+        band: 'all',
+        window: '30',
+        view: 'both',
+      })
+      expect(sceneText(restored)).toContain('W1NT')
+      expect(
+        sceneState(restored).layers.some((layer) => layer.id.startsWith('reception-map-')),
+      ).toBe(true)
+      expect(phone.config).toEqual(args.config)
+    },
+  )
+
+  it.each([320, 390])(
+    'rejects invalid, hidden, and stale compact menu actions on a %dpx phone',
+    async (width) => {
+      const { panel, getSnapshot } = setup()
+      const phone = { ...args, environment: { ...environment, width, height: 800 } }
+      const initial = await panel.render(phone, { online: true })
+      for (const [id, value] of [
+        ['band', '20m'],
+        ['window', '30'],
+        ['view', 'map'],
+      ]) {
+        const choice = event(panel, id, value, phone)
+        for (const invalid of [
+          { ...choice.event, phase: 'commit' as const },
+          { ...choice.event, phase: 'change' as const },
+          { ...choice.event, action: `${choice.event.action}:invalid` },
+          { ...choice.event, controlId: id === 'band' ? 'window' : 'band' },
+        ])
+          expect(await panel.onEvent?.({ ...phone, event: invalid }, { online: true })).toEqual({
+            values: {},
+          })
+      }
+      expect(getSnapshot).toHaveBeenCalledTimes(1)
+      expect(await panel.render(phone, { online: true })).toEqual(initial)
+      const hidden = event(panel, 'window', '30', phone)
+      await panel.onEvent?.(event(panel, 'details', undefined, phone), { online: true })
+      const details = await panel.render(phone, { online: true })
+      expect(await panel.onEvent?.(hidden, { online: true })).toEqual({ values: {} })
+      expect(await panel.render(phone, { online: true })).toEqual(details)
+      await panel.onEvent?.(event(panel, 'details', undefined, phone), { online: true })
+      await panel.render(phone, { online: true })
+      const obsolete = event(panel, 'band', '20m', phone)
+      const current = { ...phone, operation: { ...phone.operation, uuid: 'another-operation' } }
+      const fresh = await panel.render(current, { online: true })
+      expect(
+        await panel.onEvent?.({ ...current, event: obsolete.event }, { online: true }),
+      ).toEqual({ values: {} })
+      expect(await panel.render(current, { online: true })).toEqual(fresh)
+    },
+  )
+
   it('uses a temporary Report window for queries, collection ownership, details, and refresh per placement', async () => {
     const getSnapshot = vi.fn().mockResolvedValue(snapshot)
     const observeCollection = vi.fn()

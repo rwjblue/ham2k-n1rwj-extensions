@@ -147,12 +147,34 @@ export function renderReceptionScene(
     Math.ceil(Math.max(line(title), bodyLine) + 14 * textScale * 1.2 + 26 * textScale + 8),
   )
   const segmentHeight = Math.max(48, Math.ceil(Math.max(line(title), bodyLine) + 16 * textScale))
-  // Material text buttons use labelLarge rather than the panel's labelSmall.
-  // Reserve scaled bounds; the host still applies text scaling to the label.
-  const nativeButtonFont = Math.max(body.scaledFontSize, 14 * textScale)
+  // Material buttons use labelLarge (14px), not the panel's labelSmall.
+  // Reserve scaled captions and outlined-button padding. The host scales once.
+  const nativeButtonFont = 14 * textScale
   const nativeButtonHeight = Math.max(48, bodyLine + 16)
-  const nativeButtonWidth = (caption: string): number =>
-    Math.max(64, Math.ceil(caption.length * nativeButtonFont * 0.55 + 24))
+  const nativeButtonWidth = (caption: string): number => {
+    // A conservative proportional-font estimate keeps short menu values compact
+    // without treating narrow letters/spaces like a wide 'm'. Actual native
+    // measurement remains a host acceptance check, as with the field estimates.
+    const units = [...caption].reduce((sum, character) => {
+      const unit = /[il]/.test(character)
+        ? 0.25
+        : character === ' '
+          ? 0.28
+          : /[ft]/.test(character)
+            ? 0.35
+            : character === 'r'
+              ? 0.4
+              : character === 's'
+                ? 0.5
+                : /[mwMW]/.test(character)
+                  ? 0.9
+                  : /[A-Z▾]/.test(character)
+                    ? 0.7
+                    : 0.56
+      return sum + unit
+    }, 0)
+    return Math.max(64, Math.ceil(units * nativeButtonFont + caption.length * 0.1 * textScale + 48))
+  }
   const sortHeight = native ? choiceHeight : buttonHeight
   const layers: PanelSceneLayer[] = []
   const controls: PanelSceneControl[] = []
@@ -330,7 +352,7 @@ export function renderReceptionScene(
       label: caption,
       kind: 'nativeButton',
       event,
-      variant: 'text',
+      variant: 'outlined',
       x,
       y,
       width,
@@ -374,7 +396,7 @@ export function renderReceptionScene(
   const actionWidth =
     actions.reduce((sum, action) => sum + nativeButtonWidth(action.caption), 0) +
     (actions.length - 1) * 8
-  const inlineActions = native && w >= actionWidth + 8 + Math.max(112, 8 * label.scaledFontSize)
+  const inlineActions = native && w >= actionWidth + 8 + Math.max(84, 6 * label.scaledFontSize)
   const headerTextWidth = native
     ? inlineActions
       ? w - actionWidth - 8
@@ -383,41 +405,44 @@ export function renderReceptionScene(
   const identityLines = selection.details
     ? wrapInfoText(`${source} · ${model.watchCall || 'No callsign'}`, headerTextWidth, label)
     : []
+  const statusLiteral = selection.details
+    ? 'Report info'
+    : `${testObservation ? 'TEST · ' : ''}${model.status ?? `${stationLabel} reports`}`
+  const statusLines = native ? wrapInfoText(statusLiteral, headerTextWidth, label) : [statusLiteral]
   // The host tab already names the watched call. Keep status and the active
   // filter beside refresh/details instead of spending a row on a title.
-  text(
-    'status',
-    selection.details
-      ? 'Report info'
-      : `${testObservation ? 'TEST · ' : ''}${model.status ?? `${stationLabel} reports`}`,
-    left,
-    y,
-    headerTextWidth,
-    label,
-    colors.accent,
-  )
+  for (const [index, status] of statusLines.entries())
+    text(
+      index === 0 ? 'status' : `status-${index}`,
+      status,
+      left,
+      y + index * labelLine,
+      headerTextWidth,
+      label,
+      colors.accent,
+    )
   if (selection.details) {
     for (const [index, identity] of identityLines.entries())
       text(
         index === 0 ? 'summary' : `summary-${index}`,
         identity,
         left,
-        y + (index + 1) * labelLine,
+        y + (index + statusLines.length) * labelLine,
         headerTextWidth,
       )
   } else {
-    const countSummary = `▾ ${bandLabel} · ${receivers} ${station}${receivers === 1 ? '' : 's'}`
+    const countSummary = `${native ? '' : '▾ '}${bandLabel} · ${receivers} ${station}${receivers === 1 ? '' : 's'}`
     // Keep the count visible on small screens without adding another header row.
-    const compactSummary = `▾ ${selection.band === 'all' ? 'All' : bandLabel} · ${receivers} ${station === 'receiver' ? 'RX' : station === 'transmitter' ? 'TX' : 'stns'}`
+    const compactSummary = `${native ? '' : '▾ '}${selection.band === 'all' ? 'All' : bandLabel} · ${receivers} ${station === 'receiver' ? 'RX' : station === 'transmitter' ? 'TX' : 'stns'}`
     text(
       'summary',
       (native || cycleView) && countSummary.length * label.scaledFontSize * 0.55 > headerTextWidth
         ? compactSummary
         : w >= 600 * (label.scaledFontSize / label.fontSize)
-          ? `▾ ${bandLabel} · ${summary}`
+          ? `${native ? '' : '▾ '}${bandLabel} · ${summary}`
           : countSummary,
       left,
-      y + labelLine,
+      y + statusLines.length * labelLine,
       headerTextWidth,
     )
     // A native menu over the existing header keeps the map's space unchanged.
@@ -449,7 +474,7 @@ export function renderReceptionScene(
     })
   }
   if (native) {
-    const metadataHeight = labelLine * Math.max(2, 1 + identityLines.length)
+    const metadataHeight = labelLine * (statusLines.length + Math.max(1, identityLines.length))
     let actionY = inlineActions ? y : y + metadataHeight + 6
     if (actionWidth <= w) {
       let actionX = right - actionWidth
@@ -507,46 +532,125 @@ export function renderReceptionScene(
     const windowWidth = Math.max(112, Math.ceil(6 * choiceFont * 0.55 + 48))
     const includeView = model.presentation?.viewCycle === true
     const oneRow = includeView && w >= bandWidth + windowWidth + viewWidth + 16
-    const fieldsInRow = w >= bandWidth + windowWidth + 8
-    const renderedBandWidth = oneRow ? bandWidth : fieldsInRow ? w - windowWidth - 8 : w
-    choice(
-      'band',
-      'Band',
-      selection.band,
-      availableBands.map((band) => ({ value: band, label: band === 'all' ? 'All bands' : band })),
-      left,
-      y,
-      renderedBandWidth,
-    )
-    if (!fieldsInRow) y += choiceHeight + 8
-    choice(
-      'window',
-      'Window',
-      String(selection.windowMinutes),
-      receptionWindowMinutes.map((minutes) => ({
-        value: String(minutes),
-        label: `${minutes} min`,
-      })),
-      fieldsInRow ? left + renderedBandWidth + 8 : left,
-      y,
-      fieldsInRow ? windowWidth : w,
-    )
-    let toolbarHeight = choiceHeight
-    if (includeView) {
-      if (!oneRow) y += choiceHeight + 8
-      choice(
-        'view',
-        'View',
-        selection.view,
-        viewOptions,
-        oneRow ? left + bandWidth + windowWidth + 16 : left,
-        y,
-        oneRow ? w - bandWidth - windowWidth - 16 : w,
-        true,
+    // Narrow panels use native menu buttons instead of spending another row on
+    // View or floating-label field decoration. All choices remain explicit menus.
+    const compactToolbar = w < bandWidth + windowWidth + viewWidth + 16
+    if (compactToolbar) {
+      const viewCaption = { map: 'Map', list: 'List', both: 'Both' }[selection.view]
+      const windowCaption = `${selection.windowMinutes} min ▾`
+      const windowMenuWidth = Math.max(
+        ...receptionWindowMinutes.map((minutes) => nativeButtonWidth(`${minutes} min ▾`)),
       )
-      if (!oneRow && w >= viewWidth) toolbarHeight = segmentHeight
+      const viewMenuWidth = Math.max(
+        ...['Map', 'List', 'Both'].map((caption) => nativeButtonWidth(`${caption} ▾`)),
+      )
+      let bandCaption = `${bandLabel} ▾`
+      const otherWidths = windowMenuWidth + (includeView ? viewMenuWidth + 16 : 8)
+      if (selection.band === 'all' && nativeButtonWidth(bandCaption) + otherWidths > w)
+        bandCaption = 'All ▾'
+      const fields = [
+        {
+          id: 'band',
+          caption: bandCaption,
+          width: nativeButtonWidth(bandCaption),
+          value: selection.band,
+          menu: availableBands.map((band) => ({
+            label: band === 'all' ? 'All bands' : band,
+            event: `band:${band}`,
+          })),
+        },
+        {
+          id: 'window',
+          caption: windowCaption,
+          width: windowMenuWidth,
+          value: String(selection.windowMinutes),
+          menu: receptionWindowMinutes.map((minutes) => ({
+            label: `${minutes} min`,
+            event: `window:${minutes}`,
+          })),
+        },
+        ...(includeView
+          ? [
+              {
+                id: 'view',
+                caption: `${viewCaption} ▾`,
+                width: viewMenuWidth,
+                value: selection.view,
+                menu: viewOptions.map((option) => ({
+                  label: option.label,
+                  event: `view:${option.value}`,
+                })),
+              },
+            ]
+          : []),
+      ]
+      let fieldX = left
+      for (const field of fields) {
+        const fieldWidth = Math.min(w, field.width)
+        if (fieldX > left && fieldX + fieldWidth > right) {
+          fieldX = left
+          y += nativeButtonHeight + 4
+        }
+        if (y + nativeButtonHeight <= bottom) {
+          scene.strings ??= {}
+          scene.strings[field.id] = field.value
+          controls.push({
+            id: field.id,
+            label: field.caption,
+            kind: 'nativeButton',
+            variant: 'outlined',
+            menu: field.menu,
+            x: fieldX,
+            y,
+            width: fieldWidth,
+            height: nativeButtonHeight,
+          })
+        }
+        fieldX += fieldWidth + 8
+      }
+      y += nativeButtonHeight + 8
+    } else {
+      const fieldsInRow = w >= bandWidth + windowWidth + 8
+      const renderedBandWidth = oneRow ? bandWidth : fieldsInRow ? w - windowWidth - 8 : w
+      choice(
+        'band',
+        'Band',
+        selection.band,
+        availableBands.map((band) => ({ value: band, label: band === 'all' ? 'All bands' : band })),
+        left,
+        y,
+        renderedBandWidth,
+      )
+      if (!fieldsInRow) y += choiceHeight + 8
+      choice(
+        'window',
+        'Window',
+        String(selection.windowMinutes),
+        receptionWindowMinutes.map((minutes) => ({
+          value: String(minutes),
+          label: `${minutes} min`,
+        })),
+        fieldsInRow ? left + renderedBandWidth + 8 : left,
+        y,
+        fieldsInRow ? windowWidth : w,
+      )
+      let toolbarHeight = choiceHeight
+      if (includeView) {
+        if (!oneRow) y += choiceHeight + 8
+        choice(
+          'view',
+          'View',
+          selection.view,
+          viewOptions,
+          oneRow ? left + bandWidth + windowWidth + 16 : left,
+          y,
+          oneRow ? w - bandWidth - windowWidth - 16 : w,
+          true,
+        )
+        if (!oneRow && w >= viewWidth) toolbarHeight = segmentHeight
+      }
+      y += toolbarHeight + 8
     }
-    y += toolbarHeight + 8
   }
 
   if (selection.details) {

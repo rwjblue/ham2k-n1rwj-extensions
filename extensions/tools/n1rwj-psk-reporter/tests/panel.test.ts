@@ -73,13 +73,16 @@ function renderedEvent(
   const state = renderedPanels.get(panel)
   const content = state?.scenes.get(renderArgs.instanceId ?? '')
   const control = content && sceneState(content).controls?.find((entry) => entry.id === controlId)
-  if (!state || !control?.event) throw new Error(`Missing rendered control ${controlId}`)
+  const action = control?.menu
+    ? control.menu.find((item) => item.event.endsWith(`:${text}`))?.event
+    : control?.event
+  if (!state || !control || !action) throw new Error(`Missing rendered control ${controlId}`)
   const native = control.kind === 'nativeDropdown' || control.kind === 'nativeSegmented'
   return {
     ...renderArgs,
     event: {
       controlId,
-      action: control.event,
+      action,
       phase: native ? ('commit' as const) : ('activate' as const),
       sequence: ++state.sequence,
       ...(native ? { text } : {}),
@@ -176,6 +179,108 @@ function historyResponse(receiver = 'W1AW'): FetchResponse {
     body: `<pskreporter><receptionReport senderCallsign="N1RWJ" receiverCallsign="${receiver}" receiverLocator="FN31" frequency="14074000" mode="FT8" flowStartSeconds="${now / 1000}"/></pskreporter>`,
   }
 }
+
+it.each([320, 390])(
+  'filters cached reports and retains the compact window menu on a %dpx phone',
+  async (width) => {
+    const live = createLiveReception(() => {
+      throw new Error('Unexpected socket')
+    })
+    const cached = live.snapshot('one', 'N1RWJ', 'outgoing', 15, false, now)
+    const snapshot = vi.spyOn(live, 'snapshot').mockReturnValue({ ...cached, reports: [report] })
+    const forceHistory = vi.spyOn(live, 'forceHistory')
+    const panel = createPskPanel(live)
+    const phone = { ...args, environment: environment(width, 800), config: { view: 'list' } }
+    const initial = await panel.render(phone, { online: false })
+    for (const id of ['band', 'window'])
+      expect(sceneState(initial).controls?.find((control) => control.id === id)).toMatchObject({
+        kind: 'nativeButton',
+        variant: 'outlined',
+        menu: expect.any(Array),
+      })
+    expect(sceneState(initial).controls?.some((control) => control.id === 'view')).toBe(false)
+    expect(sceneText(initial)).toContain('CU3AT')
+    const before = snapshot.mock.calls.length
+    await panel.onEvent?.(renderedEvent(panel, phone, 'band', '40m'), { online: false })
+    await panel.onEvent?.(renderedEvent(panel, phone, 'window', '30'), { online: false })
+    expect(snapshot).toHaveBeenCalledTimes(before)
+    expect(forceHistory).not.toHaveBeenCalled()
+    const filtered = await panel.render(phone, { online: false })
+    expect(sceneState(filtered).strings).toMatchObject({ band: '40m', window: '30' })
+    expect(sceneState(filtered).controls?.find((control) => control.id === 'band')?.label).toBe(
+      '40m ▾',
+    )
+    expect(sceneState(filtered).controls?.find((control) => control.id === 'window')?.label).toBe(
+      '30 min ▾',
+    )
+    expect(sceneText(filtered)).toContain('No 40m reports in this time window.')
+    expect(sceneText(filtered)).not.toContain('CU3AT')
+    expect(snapshot).toHaveBeenLastCalledWith('one', 'N1RWJ', 'outgoing', 30, false, now)
+    await panel.onEvent?.(renderedEvent(panel, phone, 'refresh'), { online: false })
+    expect(forceHistory).toHaveBeenLastCalledWith('N1RWJ', 'outgoing', 30, false, now)
+    await panel.onEvent?.(renderedEvent(panel, phone, 'details'), { online: false })
+    expect(sceneText(await panel.render(phone, { online: false }))).toContain('Last 30 minutes')
+    await panel.onEvent?.(renderedEvent(panel, phone, 'details'), { online: false })
+    await panel.render(phone, { online: false })
+    await panel.onEvent?.(renderedEvent(panel, phone, 'band', 'all'), { online: false })
+    const restored = await panel.render(phone, { online: false })
+    expect(sceneState(restored).strings).toMatchObject({ band: 'all', window: '30' })
+    expect(sceneText(restored)).toContain('CU3AT')
+    expect(sceneState(restored).controls?.some((control) => control.id === 'view')).toBe(false)
+    expect(phone.config).toEqual({ view: 'list' })
+    live.stop()
+  },
+)
+
+it.each([320, 390])(
+  'rejects invalid, hidden, and stale compact menu actions on a %dpx PSK phone',
+  async (width) => {
+    const live = createLiveReception(() => {
+      throw new Error('Unexpected socket')
+    })
+    const forceHistory = vi.spyOn(live, 'forceHistory')
+    const panel = createPskPanel(live)
+    const phone = { ...args, environment: environment(width, 800) }
+    const initial = await panel.render(phone, { online: false })
+    for (const [id, value] of [
+      ['band', '40m'],
+      ['window', '30'],
+    ]) {
+      const choice = renderedEvent(panel, phone, id, value)
+      for (const invalid of [
+        { ...choice.event, phase: 'commit' as const },
+        { ...choice.event, phase: 'change' as const },
+        { ...choice.event, action: `${choice.event.action}:invalid` },
+        { ...choice.event, controlId: id === 'band' ? 'window' : 'band' },
+        {
+          ...choice.event,
+          controlId: 'view',
+          action: choice.event.action.replace(/:(?:40m|30)$/, ':map'),
+        },
+      ])
+        expect(await panel.onEvent?.({ ...phone, event: invalid }, { online: false })).toEqual({
+          values: {},
+        })
+    }
+    expect(forceHistory).not.toHaveBeenCalled()
+    expect(await panel.render(phone, { online: false })).toEqual(initial)
+    const hidden = renderedEvent(panel, phone, 'window', '30')
+    await panel.onEvent?.(renderedEvent(panel, phone, 'details'), { online: false })
+    const details = await panel.render(phone, { online: false })
+    expect(await panel.onEvent?.(hidden, { online: false })).toEqual({ values: {} })
+    expect(await panel.render(phone, { online: false })).toEqual(details)
+    await panel.onEvent?.(renderedEvent(panel, phone, 'details'), { online: false })
+    await panel.render(phone, { online: false })
+    const obsolete = renderedEvent(panel, phone, 'band', '40m')
+    const current = { ...phone, operation: { ...phone.operation, uuid: 'another-operation' } }
+    const fresh = await panel.render(current, { online: false })
+    expect(await panel.onEvent?.({ ...current, event: obsolete.event }, { online: false })).toEqual(
+      { values: {} },
+    )
+    expect(await panel.render(current, { online: false })).toEqual(fresh)
+    live.stop()
+  },
+)
 
 it('uses a temporary Report window for cached filtering, snapshot requests, details, and reload per placement', async () => {
   const live = createLiveReception(

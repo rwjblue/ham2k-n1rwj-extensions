@@ -7,34 +7,43 @@ No dependency ranges or synchronized release versions changed for this work.
 
 ## Rendering and state
 
-`packages/reception/src/ui/scene.ts` remains pure. Native Band, Window and Sort
-dropdowns and Status/About choices surround the existing map, cards, text and
-pagination. RBN has a direct Map/Receivers/Both choice. PSK retains its saved View
-behavior. Refresh and Details/Back use native buttons with short visible labels.
+`packages/reception/src/ui/scene.ts` remains pure. On narrow panels, Band and
+Window use compact outlined native menu buttons; RBN adds a View menu in the
+same row. Current values and down arrows identify the choices without a separate
+Band/Window/View label row or prefixes on wrapped buttons. The band caption can
+shorten to All to keep the row together. View shows Map, List or Both and opens
+the explicit Map/Receivers/Both menu.
+Wide panels retain native dropdowns and segmented View. PSK retains its saved View
+behavior. Refresh and Details/Back use outlined native buttons with short visible labels.
+Native Sort dropdowns and Status/About choices surround the existing map, cards,
+text and pagination.
 Sort direction and pagination retain compact drawn controls with full accessible
 descriptions.
 Long information pages retain wrapped, paginated text layers; host `nativeText`
 is a single-line display and does not solve long diagnostic text layout.
 
-Controls have full rectangles. A pure toolbar calculation wraps choices and uses
-a dropdown when segmented labels would crowd at the current width/text scale.
+Controls have full rectangles. A pure toolbar calculation wraps choices at the
+current width/text scale. Native button widths reserve Material's outlined
+button padding and proportional caption space; status text wraps beside actions.
 The map is generated at the space left below the toolbar, rather than fitting an
 old full-size map into a smaller `layout.scene` viewport. Scene units equal host
 logical pixels; `scaledFontSize` reserves space while text layers keep `fontSize`.
 No layout-only controls or unbounded intrinsic-width rows are emitted.
 
-At normal text sizes, 320/390/430-pixel fixtures keep Band and Window on the same
-row and actions in the existing header. The map loses four logical pixels of
-height compared with the preceding renderer, matching the change from 44-pixel
-drawn actions to 48-pixel native targets. Larger text can move actions below the
-metadata and split field rows to keep captions readable. For example, a 320 by
-900 fixture at twice-normal text retains a 296 by 238 map; a 390 by 844 fixture
-at 1.6 times normal retains a 366 by 416 map. These are deterministic renderer
-bounds, rather than measurements from a phone's native UI.
+At normal text sizes, 390/430-pixel fixtures keep Band, Window and RBN View in
+one row, moving the map from y=205 to y=118. Removing the compact headings reclaims
+another 20 pixels compared with the initial menu layout. The 320-pixel default
+fixture keeps the same control row; wrapped status text puts the map at y=130. Button targets
+remain at least 48 logical pixels high. Wider selected values or larger text
+can wrap choices, and actions can move below metadata or stack vertically to
+keep captions readable. These are deterministic renderer bounds, rather than
+measurements from a phone's native UI.
 
 `panel-events.ts` binds each visible control to a bounded placement context.
-Native choices require `commit` and a valid `event.text`; button actions require
-`activate`. Responses include `values: {}` plus the committed string patch.
+Native dropdown/segmented choices require `commit` and a valid `event.text`;
+menu selections and button actions require `activate`. Dropdown responses include
+`values: {}` plus the committed string patch. Menu selections return `values: {}`
+and the host's following authoritative render updates captions and scene strings.
 The adapters apply those choices to `panel-state.ts`, then render authoritative
 state. No filtering choice is local-only, and no new extension-wide preference
 is written. Saved defaults, temporary selections and persisted source settings
@@ -72,7 +81,8 @@ window, and Details/Back restored the report page and selections. PSK retained
 its saved View with no direct temporary View control. Previous pilot checks
 covered Sort, RBN View, Status/About and large app text in a dark panel theme.
 Dropdown keyboard selection worked after pointer focus; full Tab traversal and
-screen-reader operation remain unverified. Earlier SDK sample checks also
+screen-reader operation remain unverified. These pilot checks predate the compact
+menu layout and outlined actions. Earlier SDK sample checks also
 exercised switches and pending text edits before an action.
 These checks cover native rendering with synthetic data, rather than production
 network adapters, saved-config forms or every platform. See `VERIFICATION.md`
@@ -82,7 +92,7 @@ for the acceptance scope and remaining checks.
 
 Deterministic tests retain finite concrete rectangles for artwork/drawn controls
 and add the same assertions for rectangle-based native controls. They cover
-wrapping, segmented fallback, bounds, payload limits, OS text-space reservation,
+wrapping, compact menu values and activation, bounds, payload limits, OS text-space reservation,
 per-placement state, valid native commits, wrong phases/values, operation changes,
 hidden controls, remounted widgets with restarted sequences, and pending refresh behavior.
 

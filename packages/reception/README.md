@@ -40,8 +40,11 @@ cannot replace newer placement state. Host event counters may restart after a
 pane remount; the extension relies on the host's serialized event queue rather
 than persisting a sequence threshold across widget lifetimes.
 
-Native controls use concrete rectangles in logical pixels. Toolbar choices wrap
-when needed, and segmented choices become dropdowns when the labels would crowd.
+Native controls use concrete rectangles in logical pixels. Narrow toolbars use
+outlined menu buttons for Band, Window and RBN View, with visible current values
+and down arrows. Compact choices show only their values, without a label row
+or prefixes on wrapped buttons. Wide toolbars retain dropdowns and segmented View.
+Refresh and Details/Back also use outlined native buttons.
 The artwork is generated for the remaining space, preserving cartographic scale
 and attribution. Typography reserves scaled space while the host scales text once.
 The default drawn-control rendering path remains for focused artwork tests; it is

@@ -85,6 +85,16 @@ function bounds(scene: PanelScene): void {
       )
     }
   }
+  const compactFields = scene.controls?.filter(
+    (control) => ['band', 'window', 'view'].includes(control.id) && control.kind === 'nativeButton',
+  )
+  if (compactFields?.length) {
+    expect(scene.layers.some((layer) => /^(band|window|view)-heading$/.test(layer.id))).toBe(false)
+    for (const control of compactFields) {
+      expect(control.label).not.toMatch(/^(Band|Window|View): /)
+      expect(control.label).toMatch(/ ▾$/)
+    }
+  }
 }
 
 describe('native reception choices', () => {
@@ -99,8 +109,8 @@ describe('native reception choices', () => {
     expect(scene.layers.find((layer) => layer.id === 'map-compact')?.text?.literal).toBe(
       'Choose Map above for a larger map.',
     )
-    expect(scene.controls?.find((control) => control.id === 'view')?.options).toContainEqual({
-      value: 'map',
+    expect(scene.controls?.find((control) => control.id === 'view')?.menu).toContainEqual({
+      event: 'view:map',
       label: 'Map',
     })
     bounds(scene)
@@ -169,13 +179,13 @@ describe('native reception choices', () => {
       kind: 'nativeButton',
       label: 'Refresh',
       event: 'refresh:reports',
-      variant: 'text',
+      variant: 'outlined',
     })
     expect(scene.controls?.find((control) => control.id === 'details')).toMatchObject({
       kind: 'nativeButton',
       label: 'Details',
       event: 'details:toggle',
-      variant: 'text',
+      variant: 'outlined',
     })
     expect(
       scene.layers.some((layer) => /^(refresh|details)-(background|label)$/.test(layer.id)),
@@ -186,7 +196,7 @@ describe('native reception choices', () => {
   it('offers the source report windows as temporary named string choices', () => {
     const first = renderReceptionScene(
       { ...model, defaultWindowMinutes: 30 },
-      environment(320, 900),
+      environment(),
       { view: 'map' },
       { nativeControls: true },
     )
@@ -204,7 +214,7 @@ describe('native reception choices', () => {
     expect(first.scene.strings?.window).toBe('30')
     const changed = renderReceptionScene(
       { ...model, defaultWindowMinutes: 30 },
-      environment(320, 900),
+      environment(),
       { view: 'map', windowMinutes: 5 },
       { nativeControls: true },
     )
@@ -217,9 +227,120 @@ describe('native reception choices', () => {
     bounds(changed.scene)
   })
 
-  it.each([320, 390, 430])(
-    'keeps Band and Window beside each other at %ipx with normal text',
-    (width) => {
+  it('keeps explicit mobile menus and authoritative state for every report window and view', () => {
+    for (const windowMinutes of [1, 3, 5, 10, 15, 30, 45, 60]) {
+      for (const view of ['map', 'list', 'both'] as const) {
+        const { scene, selection } = renderReceptionScene(
+          model,
+          environment(390, 900),
+          { band: '40m', view, windowMinutes },
+          { nativeControls: true },
+        )
+        const band = scene.controls?.find((control) => control.id === 'band')
+        const window = scene.controls?.find((control) => control.id === 'window')
+        const viewControl = scene.controls?.find((control) => control.id === 'view')
+        expect(band).toMatchObject({
+          kind: 'nativeButton',
+          label: '40m ▾',
+          menu: [
+            { label: 'All bands', event: 'band:all' },
+            { label: '20m', event: 'band:20m' },
+            { label: '40m', event: 'band:40m' },
+          ],
+        })
+        expect(window).toMatchObject({
+          kind: 'nativeButton',
+          label: `${windowMinutes} min ▾`,
+          menu: [1, 3, 5, 10, 15, 30, 45, 60].map((minutes) => ({
+            label: `${minutes} min`,
+            event: `window:${minutes}`,
+          })),
+        })
+        expect(viewControl).toMatchObject({
+          kind: 'nativeButton',
+          label: `${{ map: 'Map', list: 'List', both: 'Both' }[view]} ▾`,
+          menu: [
+            { label: 'Map', event: 'view:map' },
+            { label: 'Receivers', event: 'view:list' },
+            { label: 'Both', event: 'view:both' },
+          ],
+        })
+        expect(window?.y).toBe(band?.y)
+        expect(viewControl?.y).toBe(band?.y)
+        expect(selection).toMatchObject({ band: '40m', view, windowMinutes })
+        expect(scene.strings).toMatchObject({ band: '40m', window: String(windowMinutes), view })
+        bounds(scene)
+      }
+    }
+  })
+
+  it('retains unusual active bands and wraps longer captions instead of overlapping menus', () => {
+    const bandName = 'Experimental band'
+    const { scene, selection, bands } = renderReceptionScene(
+      model,
+      environment(390, 900),
+      { band: bandName, view: 'list', windowMinutes: 60 },
+      { nativeControls: true },
+    )
+    const band = scene.controls?.find((control) => control.id === 'band')
+    const window = scene.controls?.find((control) => control.id === 'window')
+    const view = scene.controls?.find((control) => control.id === 'view')
+    if (!band || !window || !view) throw new Error('Missing wrapped active band menus')
+    assertFixedSceneRect(band)
+    assertFixedSceneRect(window)
+    assertFixedSceneRect(view)
+    expect(bands).toContain(bandName)
+    expect(selection.band).toBe(bandName)
+    expect(scene.strings?.band).toBe(bandName)
+    expect(band.label).toBe(`${bandName} ▾`)
+    expect(band.menu).toContainEqual({ label: bandName, event: `band:${bandName}` })
+    expect(window.label).toBe('60 min ▾')
+    expect(view.label).toBe('List ▾')
+    expect(view.y).toBeGreaterThanOrEqual(band.y + band.height + 4)
+    expect(scene.layers.some((layer) => layer.id === 'view-heading')).toBe(false)
+    bounds(scene)
+  })
+
+  it.each(['40m', '160m'])(
+    'keeps wrapped %s phone controls within the preceding map-space budget',
+    (bandName) => {
+      for (const view of ['map', 'both'] as const) {
+        const { scene } = renderReceptionScene(
+          model,
+          environment(320, 900),
+          { band: bandName, view },
+          { nativeControls: true },
+        )
+        const band = scene.controls?.find((control) => control.id === 'band')
+        const window = scene.controls?.find((control) => control.id === 'window')
+        const viewControl = scene.controls?.find((control) => control.id === 'view')
+        const map = scene.layers.find((layer) => layer.id === 'reception-map-0')
+        if (!band || !window || !viewControl || !map)
+          throw new Error('Missing narrow selected-band layout')
+        assertFixedSceneRect(band)
+        assertFixedSceneRect(window)
+        assertFixedSceneRect(viewControl)
+        assertFixedSceneRect(map)
+        expect(window.y).toBe(band.y)
+        expect(viewControl.label).toBe(`${{ map: 'Map', both: 'Both' }[view]} ▾`)
+        expect(viewControl.y).toBe(window.y + window.height + 4)
+        expect(scene.layers.some((layer) => layer.id === 'view-heading')).toBe(false)
+        expect(map.y).toBe(viewControl.y + viewControl.height + 8)
+        // The preceding dropdown/segmented toolbar put the map at y=205.
+        // Real band values may wrap; neither toolbar row spends space on headings.
+        expect(map.y).toBeLessThanOrEqual(205)
+        bounds(scene)
+      }
+    },
+  )
+
+  it.each([
+    [320, 130, 734],
+    [390, 118, 746],
+    [430, 118, 746],
+  ])(
+    'reclaims a toolbar row at %ipx while retaining native menu targets',
+    (width, mapY, mapHeight) => {
       const { scene } = renderReceptionScene(
         model,
         environment(width, 900),
@@ -230,16 +351,34 @@ describe('native reception choices', () => {
       const window = scene.controls?.find((control) => control.id === 'window')
       const refresh = scene.controls?.find((control) => control.id === 'refresh')
       const details = scene.controls?.find((control) => control.id === 'details')
+      const view = scene.controls?.find((control) => control.id === 'view')
       expect(window?.y).toBe(band?.y)
+      expect(view?.y).toBe(band?.y)
       expect(details?.y).toBe(refresh?.y)
       expect(refresh?.y).toBe(8)
-      // Before native actions/window, the mobile RBN map began at y=201.
-      // The extra 4px reserves Material's action height; no toolbar row is added.
+      for (const id of ['band', 'window', 'view']) {
+        const control = scene.controls?.find((control) => control.id === id)
+        const heading = scene.layers.find((layer) => layer.id === `${id}-heading`)
+        if (!control) throw new Error(`Missing compact ${id} field`)
+        assertFixedSceneRect(control)
+        expect(control.kind).toBe('nativeButton')
+        expect(control.variant).toBe('outlined')
+        expect(control.height).toBe(48)
+        expect(control.label).toMatch(/ ▾$/)
+        expect(control.event).toBeUndefined()
+        expect(control.value).toBeUndefined()
+        expect(control.menu?.length).toBeGreaterThan(0)
+        expect(heading).toBeUndefined()
+      }
+      expect(band?.label).toBe(width === 320 ? 'All ▾' : 'All bands ▾')
+      expect(scene.strings).toEqual({ band: 'all', window: '15', view: 'map' })
+      // The preceding dropdown/segmented toolbar put every phone map at y=205.
+      // Even the narrow header with wrapped status now recovers 75px of map.
       expect(scene.layers.find((layer) => layer.id === 'reception-map-0')).toMatchObject({
         x: 12,
-        y: 205,
+        y: mapY,
         width: width - 24,
-        height: 659,
+        height: mapHeight,
       })
       bounds(scene)
     },
@@ -267,26 +406,32 @@ describe('native reception choices', () => {
     assertFixedSceneRect(window)
     expect(status?.text?.size).toBe(13)
     expect(refresh.y).toBeGreaterThanOrEqual(summary.y + summary.height + 6)
-    expect(details.y).toBe(refresh.y)
+    expect(details.y).toBeGreaterThanOrEqual(refresh.y + refresh.height + 8)
     expect(refresh.width).toBeGreaterThanOrEqual(140)
     expect(details.width).toBeGreaterThanOrEqual(140)
-    expect(band.y).toBeGreaterThanOrEqual(refresh.y + refresh.height + 6)
-    expect(window.y).toBeGreaterThanOrEqual(band.y + band.height + 8)
+    expect(band.y).toBeGreaterThanOrEqual(details.y + details.height + 6)
+    expect(window.y).toBe(band.y)
     expect(refresh.label).toBe('Refresh')
     expect(details.label).toBe('Details')
-    // At 2x text this reserves an additional header row and separate fields.
-    // The map remains useful rather than hiding any native control caption.
-    expect(scene.layers.find((layer) => layer.id === 'reception-map-0')).toMatchObject({
-      y: 610,
-      width: 296,
-      height: 238,
-    })
+    const view = scene.controls?.find((control) => control.id === 'view')
+    const map = scene.layers.find((layer) => layer.id === 'reception-map-0')
+    if (!view || !map) throw new Error('Missing large-text view menu or map')
+    assertFixedSceneRect(view)
+    assertFixedSceneRect(map)
+    expect(view.y).toBeGreaterThanOrEqual(window.y + window.height + 4)
+    expect(view.label).toBe('Map ▾')
+    expect(scene.layers.some((layer) => layer.id === 'view-heading')).toBe(false)
+    expect(map.y).toBeGreaterThanOrEqual(view.y + view.height + 8)
+    expect(map.width).toBe(296)
+    // The preceding large-text toolbar left a 238px map. Readable actions and
+    // wrapped menu rows now leave more artwork without reducing target sizes.
+    expect(map.height).toBeGreaterThan(238)
     bounds(scene)
   })
 
   it.each([
-    [390, 844, 1.6, 383, 416],
-    [430, 900, 2, 456, 392],
+    [390, 844, 1.6, 237, 562],
+    [430, 900, 2, 272, 576],
   ])(
     'reserves readable toolbar space and map bounds at %ix%i with text scale %i',
     (width, height, scale, mapY, mapHeight) => {
@@ -307,7 +452,7 @@ describe('native reception choices', () => {
     },
   )
 
-  it('wraps native choices and falls back to a dropdown when segments would crowd the artwork', () => {
+  it('wraps compact native menus while retaining dropdowns and segments in wide panels', () => {
     const wide = renderReceptionScene(
       model,
       environment(1366, 900),
@@ -325,11 +470,17 @@ describe('native reception choices', () => {
     if (!band || !view) throw new Error('Missing native toolbar')
     assertFixedSceneRect(band)
     assertFixedSceneRect(view)
-    expect(view.kind).toBe('nativeDropdown')
-    expect(view.y).toBeGreaterThanOrEqual(band.y + band.height + 8)
+    expect(view.kind).toBe('nativeButton')
+    expect(view.variant).toBe('outlined')
+    expect(view.y).toBeGreaterThanOrEqual(band.y + band.height + 4)
+    expect(view.label).toBe('Map ▾')
+    expect(narrow.layers.some((layer) => layer.id === 'view-heading')).toBe(false)
     expect(wide.controls?.find((control) => control.id === 'view')?.y).toBe(
       wide.controls?.find((control) => control.id === 'band')?.y,
     )
+    expect(wide.controls?.find((control) => control.id === 'band')?.kind).toBe('nativeDropdown')
+    expect(wide.controls?.find((control) => control.id === 'window')?.kind).toBe('nativeDropdown')
+    expect(wide.controls?.find((control) => control.id === 'view')?.kind).toBe('nativeSegmented')
     const map = narrow.layers.find((layer) => layer.id === 'reception-map-0')
     expect(map?.y).toBeGreaterThanOrEqual(view.y + view.height + 8)
     expect(map?.width).toBe(296)
@@ -363,7 +514,11 @@ describe('native reception choices', () => {
     ).not.toContain('wpm')
   })
 
-  it.each([320, 390, 430])('retains the PSK saved view and a single field row at %ipx', (width) => {
+  it.each([
+    [320, 130, 734],
+    [390, 118, 746],
+    [430, 118, 746],
+  ])('retains the PSK saved view and a compact field row at %ipx', (width, mapY, mapHeight) => {
     const { scene, selection } = renderReceptionScene(
       {
         ...model,
@@ -387,11 +542,12 @@ describe('native reception choices', () => {
     expect(scene.controls?.find((control) => control.id === 'window')?.y).toBe(
       scene.controls?.find((control) => control.id === 'band')?.y,
     )
-    // PSK has no temporary View row. Its baseline map was y=145, height=719.
+    expect(scene.controls?.find((control) => control.id === 'band')?.kind).toBe('nativeButton')
+    expect(scene.controls?.find((control) => control.id === 'window')?.kind).toBe('nativeButton')
     expect(scene.layers.find((layer) => layer.id === 'reception-map-0')).toMatchObject({
-      y: 149,
+      y: mapY,
       width: width - 24,
-      height: 715,
+      height: mapHeight,
     })
     bounds(scene)
   })
