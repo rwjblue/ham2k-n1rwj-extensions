@@ -1,5 +1,50 @@
 # Verification and compatibility
 
+## BIGFOOT Hunt implementation (unreleased) — 2026-10-19
+
+Added the standalone `n1rwj-bigfoot` activity with the confirmed 2026 event
+window, seven letter slots, a separate W4S bonus, independent CW/Phone/Digital/
+Mixed progress, and actual-mode breakdowns for digital contacts. The second O
+requires distinct contacts differing in band, normalized mode, or UTC date.
+Progress is derived from the dedicated operation's log, including corrections
+and deletions. Exports provide eligible event QSOs as ADIF and a CSV worksheet
+with the selected Mixed/CW letter slots and the actual sent/received reports.
+
+Validation passed:
+
+- `mise run test`: **1,247 tests across 93 files**, including six BIGFOOT test
+  files covering pure rules, activity setup, scoring checkpoints/live/spot
+  candidates, panels, exports and bundled ES2020 execution.
+- `mise run typecheck`: strict runtime, test and task TypeScript checks.
+- Scoped Biome checks for the new extension and changed documentation.
+- `mise run pack`: all eight extensions built and passed official packaging.
+- `mise run verify-host n1rwj-bigfoot`: all six declared hooks activated in
+  the installed **Ham2K Mac Logger (Next) 26.9.0, build 180** JavaScript kernel.
+  Its SHA-256 is
+  `21eaa53e90efa10d8599da19b0140d2344211f5bafd6add9f55d04c4a53c507a`.
+
+The scaffold initially required LiquidJS `^10.30.0`; this new extension uses
+the repository's existing `^10.28.0` host contract, verified against build
+180's 10.28.0. No existing extension's dependency ranges were changed.
+Actual host-source inspection confirms that logging, edits and deletions
+refresh operation data and trigger panel refreshes. The panel requests
+`operation` and `qsoLogged`, with no per-keystroke full-log read or timer.
+
+`mise run format` applied the source formatting, and `mise run check` was
+attempted. Both remain blocked by **five pre-existing lint errors** in
+`output/contest-calendar/desktop-proposals.html` (four ARIA-role errors and
+one returning `forEach` callback). That unrelated prototype was preserved
+byte-for-byte, SHA-256
+`c8841e736d4d0e0e9f43b5b563b2e99aabc0d5cf93f1efcd13c99a465a64108e`.
+The test, typecheck and packaging tasks were then run independently to
+completion.
+
+This is unit, bundle and installed-kernel verification. Native installation,
+UI layout/save/share behavior and on-air use remain unverified. The synchronized
+workspace version remains 0.8.1; the local BIGFOOT bundle has not been released
+or submitted to the catalog. This independent activity and its documentation
+are exempt from CWT and CQ WW upstream synchronization.
+
 ## Release 0.8.1 publication — 2026-10-07
 
 Published [v0.8.1](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.8.1)
