@@ -3,8 +3,8 @@
 ## Release 0.9.0 preparation — 2026-10-07
 
 Prepared synchronized version 0.9.0 in the separate Jujutsu workspace
-`~/src/github/rwjblue/ham2k-n1rwj-contest-calendar`, on
-`codex/contest-calendar`. The Calendar feature was rebased onto main commit
+`~/src/github/rwjblue/ham2k-n1rwj-contest-calendar` for `main`.
+The Calendar feature was rebased onto main commit
 `6ba91f6a`, incorporating compact reception controls from `e9a43208` and the
 HTML-only RBN export default. The original working directory remains separate.
 This preparation does not publish a GitHub release or submit catalog entries.

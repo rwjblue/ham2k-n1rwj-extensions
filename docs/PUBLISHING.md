@@ -252,7 +252,9 @@ mise run release v0.3.5 --dry-run
 ```
 
 Commit the prepared files using the repository's signed Jujutsu workflow and
-push them, then publish a GitHub release tagged `v0.3.5` at that tested commit.
+push them to `main`. Releases must come from tested, signed commits on `main`.
+Create drafts with `--target main`, and verify that `main` still matches the
+tested commit before publishing a GitHub release tagged `v0.3.5`.
 Use `docs/releases/v0.3.5.md` as its body (`gh release create` accepts
 `--notes-file docs/releases/v0.3.5.md`), so GitHub and the catalog share one
 authored document.
