@@ -35,14 +35,19 @@ export function parseHistory(config: DownloadedContestConfig, body: string): His
       `This call-history file is for another contest, not ${config.shortName}. Previous data retained.`,
     )
   const records: Record<string, HistoryEntry> = {}
+  let warnings = parsed.issues.length
   for (const row of parsed.rows) {
     const name = firstName(row.fields.name)
     const rawLocation = location(row.fields.exch1 || row.fields.state)
     // AK/HI from generic history become the actual SST exchange, DX. An
     // unrelated numeric exchange must never be interpreted as a location.
-    const qth = ['AK', 'HI', 'PR'].includes(rawLocation) ? 'DX' : rawLocation
-    if (config.exchange === 'name-location' && qth && !LOCATIONS.includes(qth))
-      throw new Error(`Invalid SST location on line ${row.line}. Previous data retained.`)
+    let qth = ['AK', 'HI', 'PR'].includes(rawLocation) ? 'DX' : rawLocation
+    if (config.exchange === 'name-location' && qth && !LOCATIONS.includes(qth)) {
+      // Community files can contain unsupported exchanges. Keep the name
+      // and other usable records, but never guess a location from this value.
+      warnings++
+      qth = ''
+    }
     records[row.call] = {
       ...records[row.call],
       call: row.call,
@@ -53,7 +58,7 @@ export function parseHistory(config: DownloadedContestConfig, body: string): His
   return {
     records,
     count: Object.keys(records).length,
-    warnings: parsed.issues.length,
+    warnings,
     updatedAt: parsed.sourceUpdatedAt,
   }
 }

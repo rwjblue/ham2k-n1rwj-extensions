@@ -89,6 +89,10 @@ names and locations. See N1MM's
 for background on these community-maintained files. They are suggestions,
 not a guarantee of where a station is operating today.
 
+The importer omits unsupported location values and counts them as parser
+warnings, while keeping their callsigns and names. The remaining usable
+records load normally. Unsupported values are never converted to `DX`.
+
 Ham2K checks the data when it loads the extension and when it reconnects,
 downloading a missing file or refreshing one older than 24 hours. You can
 also refresh it manually. **SST call history** settings show the file date,
@@ -98,7 +102,6 @@ text URL, then refresh. Local file paths are not supported.
 
 N1MM requests allow slower responses within a bounded refresh. Slower or
 failed refreshes retain the last successful file.
-
 
 Typing a callsign uses the downloaded data and your local history; it does
 not download the N1MM file for every contact. The native app keeps the last

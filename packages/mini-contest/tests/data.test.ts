@@ -188,3 +188,50 @@ describe.each([
     expect(vi.getTimerCount()).toBe(0)
   })
 })
+
+describe('SST history with unsupported location fields', () => {
+  it('refreshes and replays names and valid locations, while keeping the cache after a fatal parse failure', async () => {
+    vi.spyOn(host, 'getSettings').mockResolvedValue({})
+    const { dataFile, settings, current } = createHistoryData(sst, sstManifest)
+    const url = 'https://n1mm.hamdocs.com/history.txt'
+    dataFile.onLoadRawData?.({
+      schema: 1,
+      body: '# K1USNSST\n!!Order!!,Call,Name,Exch1\nK1ABC,OLD,CT\n',
+      url,
+      fetchedAt: '2026-09-29T12:00:00.000Z',
+    })
+    const body =
+      '# K1USNSST\n!!Order!!,Call,Name,Exch1\nK1ABC,BOB,MA\nKE2ET,LARRY,CWA\nSM4X,LARS,SM\n'
+    const snapshot = await dataFile.rawToJSONData?.({ body, url, options: {} })
+    expect(snapshot).toMatchObject({ schema: 1, body, url })
+    expect(current()).toEqual({
+      count: 3,
+      warnings: 2,
+      updatedAt: undefined,
+      records: {
+        K1ABC: { call: 'K1ABC', name: 'BOB', location: 'MA' },
+        KE2ET: { call: 'KE2ET', name: 'LARRY' },
+        SM4X: { call: 'SM4X', name: 'LARS' },
+      },
+    })
+    expect(
+      await settings.getDefinition({ panelKey: sstManifest.key }, { online: false }),
+    ).toMatchObject({
+      elements: [
+        { type: 'markdown', text: expect.stringContaining('Parser warnings: 2.') },
+        {},
+        {},
+      ],
+    })
+
+    const restarted = createHistoryData(sst, sstManifest)
+    restarted.dataFile.onLoadRawData?.(JSON.parse(JSON.stringify(snapshot)))
+    expect(restarted.current()).toEqual(current())
+
+    const previous = current()
+    await expect(
+      dataFile.rawToJSONData?.({ body: `${body}INVALID,NAME,MA\n`, url, options: {} }),
+    ).rejects.toThrow('Invalid call-history file. Previous data retained.')
+    expect(current()).toBe(previous)
+  })
+})

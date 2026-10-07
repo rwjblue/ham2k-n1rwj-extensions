@@ -40,12 +40,54 @@ describe('contest-aware N1MM files', () => {
       location: 'CT',
     })
   })
-  it('rejects wrong-contest, invalid location, HTML and malformed data', () => {
+  it('keeps names and valid rows when the SST file contains unsupported locations', () => {
+    // K1USNSST-064.txt (2026-10-06), lines 5314 and 10108.
+    const parsed = parseHistory(sst, `${file}KE2ET,LARRY,CWA,\nSM4X,LARS,SM,\n`)
+    expect(parsed).toMatchObject({
+      count: 3,
+      warnings: 2,
+      records: {
+        K1ABC: { call: 'K1ABC', name: 'BOB', location: 'MA' },
+        KE2ET: { call: 'KE2ET', name: 'LARRY' },
+        SM4X: { call: 'SM4X', name: 'LARS' },
+      },
+    })
+    expect(parsed.records.KE2ET).not.toHaveProperty('location')
+    expect(parsed.records.SM4X).not.toHaveProperty('location')
+  })
+  it('omits numeric and unknown location hints without replacing an earlier valid duplicate', () => {
+    const parsed = parseHistory(sst, `${file}K2ABC,AL,1234,\nK1ABC,ROB,CWA,\nK3ABC,JIM,,\n`)
+    expect(parsed.records).toEqual({
+      K1ABC: { call: 'K1ABC', name: 'ROB', location: 'MA' },
+      K2ABC: { call: 'K2ABC', name: 'AL' },
+      K3ABC: { call: 'K3ABC', name: 'JIM' },
+    })
+    // One duplicate plus two unsupported locations; blanks are not warnings.
+    expect(parsed.warnings).toBe(3)
+  })
+  it('ignores MST exchange values without generating SST location warnings', () => {
+    const parsed = parseHistory(mst, '# ICWC-MST\n!!Order!!,Call,Name,Exch1\nK1ABC,BOB,CWA\n')
+    expect(parsed.records.K1ABC).toEqual({ call: 'K1ABC', name: 'BOB' })
+    expect(parsed.warnings).toBe(0)
+  })
+  it('accepts a later valid duplicate and keeps Exch1 precedence over State', () => {
+    const parsed = parseHistory(
+      sst,
+      '# K1USNSST\n!!Order!!,Call,Name,Exch1,State\nKE2ET,LARRY,CWA,CA\nKE2ET,,WA,\nSM4X,LARS,SM,MA\nK1ABC,BOB,,MA\n',
+    )
+    expect(parsed.records).toEqual({
+      KE2ET: { call: 'KE2ET', name: 'LARRY', location: 'WA' },
+      SM4X: { call: 'SM4X', name: 'LARS' },
+      K1ABC: { call: 'K1ABC', name: 'BOB', location: 'MA' },
+    })
+    expect(parsed.warnings).toBe(3)
+  })
+  it('rejects wrong-contest, HTML and malformed data', () => {
     for (const body of [
       file.replace('K1USNSST', 'CWOPS'),
-      file.replace('BOB,MA', 'BOB,1234'),
       '<html>Error</html>',
       'not a dataset',
+      `${file}INVALID,BOB,MA,\n`,
     ])
       expect(() => parseHistory(sst, body)).toThrow()
     expect(() => parseHistory(mst, file)).toThrow('another contest')

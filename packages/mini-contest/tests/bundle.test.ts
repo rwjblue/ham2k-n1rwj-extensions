@@ -3,6 +3,7 @@ import { createContext, runInContext } from 'node:vm'
 import type {
   ActivityHook,
   DataFileDefinition,
+  DynamicSettingsPanel,
   ExtensionDefinition,
   RegisterHookParams,
   ScoringHook,
@@ -23,7 +24,7 @@ for (const manifest of [mstManifest, sstManifest]) {
     type === 'mst'
       ? '# ICWC-MST\n!!Order!!,Call,Name,Misc\nK1ABC,BOB,123\n'
       : '# K1USNSST\n!!Order!!,Call,Name,Exch1\nK1ABC,BOB,MA\n'
-  async function harness() {
+  async function harness(allowSettings = false) {
     const source = await readFile(
       new URL(`../../../extensions/contests/${manifest.key}/build/index.js`, import.meta.url),
       'utf8',
@@ -52,6 +53,7 @@ for (const manifest of [mstManifest, sstManifest]) {
     required(definitions[0]).onActivation({
       registerHook: (category, hook) => registered.set(category, hook),
       hostCall: async (method) => {
+        if (allowSettings && method === 'getSettings') return {}
         throw new Error(`Unexpected host call ${method}`)
       },
     })
@@ -125,6 +127,58 @@ for (const manifest of [mstManifest, sstManifest]) {
         )?.input,
       ).toMatchObject({ suggestedValue: ' ' })
     })
+    if (type === 'sst')
+      it('accepts history with unsupported locations and replays names offline', async () => {
+        const { registered } = await harness(true)
+        const dataFile = required(registered.get('dataFile')).hook as DataFileDefinition
+        const body =
+          '# K1USNSST\n!!Order!!,Call,Name,Exch1,UserText\nK1ABC,BOB,MA,\nKE2ET,LARRY,CWA,\nSM4X,LARS,SM,\n'
+        const url = 'https://n1mmwp.hamdocs.com/mmfile/get/file/K1USNSST-064.txt'
+        const snapshot = await required(dataFile.rawToJSONData)({ body, url, options: {} })
+        expect(snapshot).toMatchObject({ schema: 1, body, url, fetchedAt: expect.any(String) })
+
+        const replay = await harness(true)
+        const replayFile = required(replay.registered.get('dataFile')).hook as DataFileDefinition
+        required(replayFile.onLoadRawData)(JSON.parse(JSON.stringify(snapshot)))
+
+        for (const hooks of [registered, replay.registered]) {
+          const activity = required(hooks.get('activity')).hook as ActivityHook
+          const settings = required(hooks.get('settingsPanel')).hook as DynamicSettingsPanel
+          const ctx = { online: false }
+          const operation = { refs: [{ type }], stationCall: 'N1RWJ' }
+          const definition = await settings.getDefinition({ panelKey: manifest.key }, ctx)
+          expect(definition).toMatchObject({
+            elements: [
+              {
+                type: 'markdown',
+                text: expect.stringContaining('3 calls loaded.'),
+              },
+              {},
+              {},
+            ],
+          })
+          expect(definition.elements[0]).toMatchObject({
+            text: expect.stringContaining('Parser warnings: 2.'),
+          })
+
+          // SM4X still receives a valid DX guess from its callsign's country;
+          // the unsupported file exchange itself never becomes a suggestion.
+          for (const [call, name, qth] of [
+            ['K1ABC', 'BOB', 'MA'],
+            ['KE2ET', 'LARRY', ' '],
+            ['SM4X', 'LARS', 'DX'],
+          ]) {
+            const qso = { their: { call } }
+            const controls = await required(activity.loggingControls)({ operation, qso }, ctx)
+            expect(controls.find((row) => row.key.endsWith('/name'))?.input).toMatchObject({
+              suggestedValue: name,
+            })
+            expect(controls.find((row) => row.key.endsWith('/location'))?.input).toMatchObject({
+              suggestedValue: qth,
+            })
+          }
+        }
+      })
     it('scores a batch, resumes a serialized checkpoint and detects a same-band duplicate', async () => {
       const { registered } = await harness()
       const scorer = required(registered.get('scoring')).hook as ScoringHook
