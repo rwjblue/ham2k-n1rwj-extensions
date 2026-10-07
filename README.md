@@ -21,9 +21,8 @@ testing remains pending; see the [verification record](docs/VERIFICATION.md).
 
 ## Install
 
-Contest Calendar is prepared for v0.9.0. Until that release is published, build
-its installable bundle with `mise run pack n1rwj-contest-calendar`. Published
-extensions use the steps below.
+Contest Calendar is available starting with
+[v0.9.0](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.9.0).
 
 1. Download the bundle for each extension you want from
    [latest GitHub release](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/latest).
@@ -46,7 +45,7 @@ versions; use the latest release linked above when installing.
 
 ### Contest Calendar
 
-Build and install `dist/n1rwj-contest-calendar-0.9.0.h2kext` in a Ham2K version
+Download and install `n1rwj-contest-calendar-0.9.0.h2kext` in a Ham2K version
 supporting extension API 5. On **Home**, choose **Edit Layout → Add a Panel →
 Contest Calendar** and save the layout. Enable **Layout Customization** in app
 settings if layout editing is unavailable.

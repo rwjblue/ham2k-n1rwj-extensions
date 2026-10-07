@@ -8,13 +8,24 @@ each submission before operators can install it from the catalog.
 
 ## Current release status
 
-Version **0.9.0 is prepared**, with authored
-[release notes](releases/v0.9.0.md) and eight validated bundle/checksum pairs.
-It adds Contest Calendar and reception improvements; the catalog selector
-chooses Calendar, PSK Reporter and RBN. Publication and catalog submission have
-not occurred. See the
-[preparation record](VERIFICATION.md#release-090-preparation--2026-10-07)
-for checks and native testing scope.
+[v0.9.0](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.9.0)
+was published from signed main commit `fb4f131e932f50c6f03e7c313ebef806c5fd2acb`
+on October 7, 2026 at 15:31 US Eastern time (19:31:58 UTC).
+All eight bundles and eight checksum files are available. The
+[check workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/37674744006)
+and [release workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/37675196268)
+passed. Downloaded assets passed `mise run release:catalog v0.9.0 --dry-run`,
+and the published body matches `docs/releases/v0.9.0.md` exactly.
+
+Contest Calendar, PSK Reporter and RBN returned **approved** on `stable` between
+19:32:59 and 19:33:03 UTC. All three are current at 0.9.0 and discoverable by
+API-5 hosts; their catalog bundles and notes match the GitHub archives and
+authored sections. CQ WW, CWT, MST, SST and WRT were skipped because their
+behavior is unchanged. Native Calendar UI testing remains pending. See the
+[release notes](releases/v0.9.0.md) and
+[verification record](VERIFICATION.md#release-090-publication--2026-10-07).
+
+### Previous releases
 
 [v0.8.1](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.8.1)
 was published from signed commit `af27338c4f934a523bfc4e2014945b7841e3e2cf`
@@ -32,8 +43,6 @@ is unchanged. This release fixes SST history imports containing unsupported
 location hints; native Ham2K acceptance remains unverified. See the
 [release notes](releases/v0.8.1.md) and
 [verification record](VERIFICATION.md#release-081-publication--2026-10-07).
-
-### Previous releases
 
 [v0.8.0](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.8.0)
 was published from signed commit `7416bfa326470cf933d7121ecee63009557dcfe5`

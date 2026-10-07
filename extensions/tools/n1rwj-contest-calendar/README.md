@@ -6,15 +6,16 @@ mode filtering, saved contests, and links to sponsor rules. Ham2K manages its
 calendar download as a Data File. It is available
 on all screen sizes; installing the extension does not add it to any layout.
 
-This extension is prepared for v0.9.0. Until that release is published, build
-from this workspace to try it:
+Download `n1rwj-contest-calendar-0.9.0.h2kext` from the
+[v0.9.0 GitHub release](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.9.0).
+You can also build the bundle from source:
 
 ```sh
 mise run install
 mise run pack n1rwj-contest-calendar
 ```
 
-Install `dist/n1rwj-contest-calendar-0.9.0.h2kext` using **Settings → Features &
+Install the `.h2kext` bundle using **Settings → Features &
 Extensions → Install from file**. The app must support extension API 5 and native
 panel scenes. On **Home**, choose **Edit Layout → Add a Panel → Contest
 Calendar** and save. Enable **Layout Customization** in app settings if needed.

@@ -1,5 +1,48 @@
 # Verification and compatibility
 
+## Release 0.9.0 publication — 2026-10-07
+
+Published [v0.9.0](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.9.0)
+from signed main commit `fb4f131e932f50c6f03e7c313ebef806c5fd2acb` at 19:31:58
+UTC (15:31 US Eastern time). GitHub verifies the signature, and the release
+tag resolves to this tested main commit. The
+[check workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/37674744006)
+and [release workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/37675196268)
+succeeded. All eight bundles and eight SHA-256 checksum files are present;
+the published body matches `docs/releases/v0.9.0.md` exactly.
+
+The release workflow passed **1,264 tests across 93 files**, lint, strict
+runtime/test/task typechecks, eight ES2020 builds, official packaging and
+all eight bundle/checksum pairs. The local
+`mise run release:catalog v0.9.0 --dry-run` downloaded and validated every
+published asset, selected Calendar, PSK Reporter and RBN, and skipped all five
+contests.
+
+The catalog approved Calendar at 19:32:59.576 UTC, PSK Reporter at 19:33:01.532
+UTC and RBN at 19:33:03.230 UTC, all on `stable`. Public metadata and the API-5
+catalog confirm all three are current at 0.9.0. Their catalog notes exactly
+match the authored per-extension extraction. Independently downloaded catalog
+bundles equal the corresponding GitHub archives byte for byte, with matching
+catalog metadata, GitHub asset digests and checksum files:
+
+- Calendar: **33,592 bytes**, SHA-256
+  `cd71dbccdccc5f0b755d689c3a6e2a3660e5fc231c5f60db7d1907d6edd861e3`.
+- PSK Reporter: **284,863 bytes**, SHA-256
+  `b135e725de3c7d623c3e0baec24e316125e168787d32444b82028958a3435b18`.
+- RBN: **318,603 bytes**, SHA-256
+  `17d5a4edde75f07a5efddd0f7ba385ff1ae35d83d3327fc52ed02100b01655ca`.
+
+There were no catalog retries. The preparation and earlier native pilot
+records retain their verification scope; publication does not establish
+native Calendar installation, UI, mobile, accessibility, production-network
+or lifecycle acceptance. Compact reception menus still await installed-app
+and mobile acceptance.
+
+All extensions and shared packages are synchronized at 0.9.0. Calendar,
+reception-only behavior and personal release metadata are exempt from CWT
+and CQ WW upstream synchronization. The original working directory and its
+mockups remain unchanged.
+
 ## Release 0.9.0 preparation — 2026-10-07
 
 Prepared synchronized version 0.9.0 in the separate Jujutsu workspace
