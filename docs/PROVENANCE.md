@@ -1,5 +1,27 @@
 # Extension provenance and attribution
 
+## Contest Calendar
+
+`extensions/tools/n1rwj-contest-calendar/` is an independent panel extension.
+It reads the public [ContestClock JSON API](https://contestclock.com/data),
+whose catalog by Joe Leone, W4GGJ, is licensed under
+[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). The
+[catalog repository](https://github.com/w4ggj/contest-calendar) records sponsor
+sources; sponsors' own rules remain authoritative.
+
+The extension normalizes and filters downloaded records and formats times.
+Separate sessions remain separate, and records without a universal UTC instant
+are identified rather than assigned an invented time. The panel retains source
+attribution and rules links, and its bundle includes
+`assets/CONTEST_CALENDAR_ATTRIBUTION.md`. No WA7BNM calendar content is scraped,
+downloaded, or redistributed. Coverage and source verification can vary.
+
+Calendar work changes no CWT or CQ WW activity, scoring, exchanges, history,
+translations, or export behavior. This independent tool and its personal
+packaging are exempt from synchronization to those official contest PRs.
+
+## Contest extension origins
+
 **Primary upstream author: Sebastian Delmont, KI2D**, the main Ham2K developer.
 The setup, scheduling, scoring, exchange controls, translations, ADIF fields,
 and Cabrillo behavior in `extensions/contests/n1rwj-cwt/` derive from his

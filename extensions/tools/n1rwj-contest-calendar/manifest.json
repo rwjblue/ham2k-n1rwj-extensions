@@ -1,0 +1,25 @@
+{
+  "key": "n1rwj-contest-calendar",
+  "name": "N1RWJ Contest Calendar",
+  "shortName": "Contest Calendar",
+  "version": "0.8.0",
+  "description": "An optional upcoming-contests panel for your Home layout, with UTC or local times, saved contests, and sponsor rules. Calendar data provided by ContestClock.",
+  "category": "dashboard",
+  "icon": "calendar-clock",
+  "accentColor": "#006783",
+  "api": 5,
+  "keywords": ["contest", "calendar", "schedule", "upcoming", "planning"],
+  "hooks": ["panel", "dataFile"],
+  "domains": ["contestclock.com"],
+  "sharedDependencies": {
+    "@ham2k/lib-callsigns": "^1.0.2",
+    "@ham2k/lib-country-files": "^1.0.202605301",
+    "@ham2k/lib-dxcc-data": "^1.0.1",
+    "@ham2k/lib-format-tools": "^1.2.0",
+    "@ham2k/lib-geo-tools": "^1.1.1",
+    "@ham2k/lib-operation-data": "^1.1.3",
+    "@ham2k/lib-qson-cabrillo": "^1.2.0",
+    "i18next": "^23.16.8",
+    "liquidjs": "^10.28.0"
+  }
+}

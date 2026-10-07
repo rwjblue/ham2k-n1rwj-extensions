@@ -21,6 +21,12 @@ See their shared [map attribution](https://github.com/rwjblue/ham2k-n1rwj-extens
 for sources and licenses. Each reception bundle includes that attribution and the
 corresponding library notices under `assets/`.
 
+The independent Contest Calendar extension downloads the ContestClock catalog
+by Joe Leone, W4GGJ, licensed under Creative Commons Attribution 4.0
+International. Its bundle carries `assets/CONTEST_CALENDAR_ATTRIBUTION.md` with
+source and license links. Calendar data is normalized and filtered; sponsor
+rules remain theirs and are linked rather than copied.
+
 The bundles include portions of the published `@ham2k/extension-sdk`;
 CWT also includes prefill improvements backported from Ham2K/extensions
 PR #1. The shared spot-filter contract and its CWT provider are original

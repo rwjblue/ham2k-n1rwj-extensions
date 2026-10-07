@@ -1,5 +1,59 @@
 # Verification and compatibility
 
+## Contest Calendar development preview — 2026-10-07
+
+Implemented `n1rwj-contest-calendar` in the separate Jujutsu workspace
+`~/src/github/rwjblue/ham2k-n1rwj-contest-calendar`, based on committed `main`.
+The original workspace and its unrelated reception changes remain separate.
+The optional panel is available at every screen size and is never inserted
+automatically. Home is the primary suggested placement; compact panes open a
+scrolling native Browse form.
+
+The extension uses ContestClock's attributed CC BY 4.0 catalog rather than
+WA7BNM scraping. It preserves separate sessions and local rolling schedules,
+registers the static thirty-day JSON endpoint as a native raw data file with
+`maxAgeInDays: 7`, and uses persistent settings only for placement preferences.
+Ham2K owns download scheduling, disk replay, ETags and download error notices.
+The panel never fetches data; it recomputes a fourteen-day preview each minute
+and Browse exposes the full download. Display status follows the app clock;
+file age and coverage warnings use `PanelClock.realNowMillis`. It changes no
+operation data.
+
+A live default API response on October 7 contained **78 occurrences** and
+explicit thirty-day server-generated coverage; all 78 passed the production
+normalizer. The static endpoint returned no ETag and answered a conditional
+request with HTTP 200. This verifies that response shape,
+not sponsor accuracy or complete calendar coverage. Bands, exchanges and
+scoring are intentionally outside the panel's data model.
+
+`mise run format` and `mise run check` passed: **1,239 tests across 93 files**,
+lint, strict runtime/test/task typechecks, eight ES2020 builds and official
+packaging. Calendar coverage includes parsing and split sessions, malformed
+data, managed-file conversion/replay and coverage, independent placements,
+native control phases,
+stale render events, scene remounts, visible selection and responsive geometry.
+The local installable bundle is
+`dist/n1rwj-contest-calendar-0.8.0.h2kext`, SHA-256
+`eb98120f76bcda86453de16e32bf2a88623eb5ede61bc16e6c2b8fadabb90f67`.
+
+The installed-kernel compatibility probe passed against **Ham2K Next 26.9.0
+build 177**, kernel SHA-256
+`c572080a83d2f6773bfa32ec814063d40578a8698a64e7dae89d82b89c3d9102`.
+This runs the JavaScript kernel under Node VM with simulated timer dispatch.
+The published-SDK bundle test also exercises settings persistence, data-file
+replay, and real versus app clocks without Node, DOM, Intl, URL or global
+fetch in the extension context. Native installation, UI, mobile, accessibility,
+production host-network calls and lifecycle acceptance remain unverified.
+The host refresh age is checked at startup, reconnection and runtime restart,
+not by a weekly timer. Native raw cache persistence is unavailable on web.
+Local-time behavior across future DST boundaries retains the examined Windows
+QuickJS limitation documented in the extension guide; UTC is the default.
+
+This independent tool changes no CWT or CQ WW behavior and is exempt from
+synchronization to those contest PRs. Version 0.8.0 stays synchronized with
+the monorepo's development version. Historical release notes remain unchanged;
+no release, catalog publication, push or native layout changes were performed.
+
 ## Release 0.8.1 publication — 2026-10-07
 
 Published [v0.8.1](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.8.1)
