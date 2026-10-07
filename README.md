@@ -1,11 +1,12 @@
 # N1RWJ extensions for Ham2K
 
-Extensions for Ham2K contest logging and seeing where your signal is
-heard. Each extension is available as a ready-to-install `.h2kext` bundle;
-install only the ones you want.
+Extensions for Ham2K contest logging, special-event hunting, and seeing where
+your signal is heard. Published extensions are available as ready-to-install
+`.h2kext` bundles; install only the ones you want.
 
 | Extension | What it adds |
 | --- | --- |
+| [BIGFOOT Hunt](extensions/activities/n1rwj-bigfoot/README.md) (`n1rwj-bigfoot`) | 2026 BIGFOOT letter and Skunk Ape bonus tracking, same-mode progress, and event worksheets; build from source until released |
 | [Contest Calendar](extensions/tools/n1rwj-contest-calendar/README.md) (`n1rwj-contest-calendar`) | Optional Home panel with upcoming contests, UTC/local times, and sponsor rules from ContestClock |
 | [RBN](extensions/tools/n1rwj-rbn/README.md) (`n1rwj-rbn`) | Reception map and sortable CW, RTTY, FT8, and FT4 reports from the Reverse Beacon Network via Vail ReRBN, using your operation's callsign and location |
 | [CQ WW (temporary)](extensions/contests/n1rwj-cqww/README.md) (`n1rwj-cqww`) | Preview of official CQ WW RTTY exchange, scoring, and export improvements |
@@ -53,6 +54,21 @@ see the installed extensions and their enable switches. See the
 versions; use the latest release linked above when installing.
 
 ![Installed N1RWJ contest extensions and RBN panel in Ham2K](docs/images/extensions-installed.jpg)
+
+### BIGFOOT Hunt
+
+Build the new extension with `mise run pack n1rwj-bigfoot` and install its
+`.h2kext` bundle from `dist/`. Create a dedicated operation and add the
+**BIGFOOT Hunt 2026** activity. Its score summary and optional panel track
+**B I G F O O T** plus the separate **W4S** Skunk Ape bonus, with Mixed,
+CW, Phone, and Digital completion shown independently.
+
+The supported edition runs **October 13, 2026 at 00:00 UTC through October 21
+at 23:59 UTC**. The two W7O contacts must differ in band, mode, or UTC date.
+Use another band or date for an all-CW completion. This is a fixed 2026 event
+profile; future annual dates are not inferred. See the
+[BIGFOOT guide](extensions/activities/n1rwj-bigfoot/README.md) for operating
+links, export instructions, certificate requests, and verification limits.
 
 ### Contest Calendar
 

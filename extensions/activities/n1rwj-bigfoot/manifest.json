@@ -1,0 +1,27 @@
+{
+  "key": "n1rwj-bigfoot",
+  "name": "BIGFOOT Hunt",
+  "shortName": "BIGFOOT",
+  "version": "0.10.0",
+  "description": "Chase the BIGFOOT special event, track CW and mixed-mode progress, and collect the Skunk Ape bonus.",
+  "category": "activity",
+  "api": 1,
+  "icon": "paw",
+  "accentColor": "#496B3A",
+  "keywords": ["bigfoot", "sasquatch", "special event", "cw", "ssb", "skunk ape"],
+  "hooks": ["activity", "ref:bigfoot", "panel", "scoring", "export", "adifFields"],
+  "domains": [],
+  "relevance": {
+    "interests": ["cw", "phone", "digital"]
+  },
+  "sharedDependencies": {
+    "@ham2k/lib-callsigns": "^1.0.2",
+    "@ham2k/lib-country-files": "^1.0.202605301",
+    "@ham2k/lib-dxcc-data": "^1.0.1",
+    "@ham2k/lib-format-tools": "^1.2.0",
+    "@ham2k/lib-geo-tools": "^1.1.1",
+    "@ham2k/lib-operation-data": "^1.1.3",
+    "i18next": "^23.16.8",
+    "liquidjs": "^10.28.0"
+  }
+}
