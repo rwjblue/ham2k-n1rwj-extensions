@@ -1,5 +1,40 @@
 # Verification and compatibility
 
+## Release 0.9.0 preparation — 2026-10-07
+
+Prepared synchronized version 0.9.0 in the separate Jujutsu workspace
+`~/src/github/rwjblue/ham2k-n1rwj-contest-calendar`, on
+`codex/contest-calendar`. The Calendar feature was rebased onto main commit
+`6ba91f6a`, incorporating compact reception controls from `e9a43208` and the
+HTML-only RBN export default. The original working directory remains separate.
+This preparation does not publish a GitHub release or submit catalog entries.
+
+The authored notes in `docs/releases/v0.9.0.md` include all eight extensions.
+The real catalog notes selector chooses **Contest Calendar, PSK Reporter and
+RBN** and skips all five contests. Existing dependencies, host API declarations
+and shared-library ranges are unchanged; Calendar requires API 5. Historical
+release notes remain unchanged.
+
+`mise run release:notes v0.9.0`, `mise run format` and
+`mise run release v0.9.0 --dry-run` passed, including **1,264 tests across 93
+files**, lint, strict runtime/test/task typechecks, eight ES2020 builds,
+official packaging and all eight bundle/checksum pairs. The local Calendar
+archive is `dist/n1rwj-contest-calendar-0.9.0.h2kext`, SHA-256
+`d9e3bd3fed9706ea94bc85f2a4d5657f1f079c92018d1fe13fa7276839b040d0`.
+
+`mise run verify-host` passed for all eight extensions against the running
+**Ham2K Next 26.9.0 build 177**, kernel SHA-256
+`c572080a83d2f6773bfa32ec814063d40578a8698a64e7dae89d82b89c3d9102`.
+The probe executes the installed JavaScript kernel under Node VM with simulated
+timer wake delivery. Calendar native installation, UI, mobile, accessibility,
+production networking and lifecycle acceptance remain unverified. Compact
+reception menus have synthetic Flutter fixture verification; installed-app and
+mobile acceptance remain pending. Earlier native pilot records retain their
+original scope.
+
+Calendar, reception-only behavior and personal release metadata are exempt
+from CWT and CQ WW upstream synchronization. No contest runtime behavior changed.
+
 ## Contest Calendar development preview — 2026-10-07
 
 Implemented `n1rwj-contest-calendar` in the separate Jujutsu workspace

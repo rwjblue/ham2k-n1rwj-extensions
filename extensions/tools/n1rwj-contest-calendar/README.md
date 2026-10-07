@@ -6,15 +6,15 @@ mode filtering, saved contests, and links to sponsor rules. Ham2K manages its
 calendar download as a Data File. It is available
 on all screen sizes; installing the extension does not add it to any layout.
 
-This is an unreleased extension. The existing GitHub release does not contain
-its bundle. Build from this workspace to try it:
+This extension is prepared for v0.9.0. Until that release is published, build
+from this workspace to try it:
 
 ```sh
 mise run install
 mise run pack n1rwj-contest-calendar
 ```
 
-Install `dist/n1rwj-contest-calendar-0.8.0.h2kext` using **Settings → Features &
+Install `dist/n1rwj-contest-calendar-0.9.0.h2kext` using **Settings → Features &
 Extensions → Install from file**. The app must support extension API 5 and native
 panel scenes. On **Home**, choose **Edit Layout → Add a Panel → Contest
 Calendar** and save. Enable **Layout Customization** in app settings if needed.
@@ -85,6 +85,6 @@ mise run verify-host n1rwj-contest-calendar
 ```
 
 This independent calendar tool changes no official CWT or CQ WW runtime
-behavior and is exempt from synchronization to those contest PRs. Development
-version 0.8.0 remains synchronized with the monorepo; a future release must
-include a Contest Calendar section without rewriting historical release notes.
+behavior and is exempt from synchronization to those contest PRs. Version 0.9.0
+is synchronized with the monorepo; its authored release notes include a Contest
+Calendar section without rewriting historical release notes.

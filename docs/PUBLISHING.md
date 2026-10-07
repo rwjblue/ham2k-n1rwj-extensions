@@ -8,6 +8,14 @@ each submission before operators can install it from the catalog.
 
 ## Current release status
 
+Version **0.9.0 is prepared**, with authored
+[release notes](releases/v0.9.0.md) and eight validated bundle/checksum pairs.
+It adds Contest Calendar and reception improvements; the catalog selector
+chooses Calendar, PSK Reporter and RBN. Publication and catalog submission have
+not occurred. See the
+[preparation record](VERIFICATION.md#release-090-preparation--2026-10-07)
+for checks and native testing scope.
+
 [v0.8.1](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.8.1)
 was published from signed commit `af27338c4f934a523bfc4e2014945b7841e3e2cf`
 on October 7, 2026 at 09:10 US Eastern time (13:10:06 UTC).

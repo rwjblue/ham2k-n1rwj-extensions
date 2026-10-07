@@ -2,7 +2,7 @@
   "key": "n1rwj-contest-calendar",
   "name": "N1RWJ Contest Calendar",
   "shortName": "Contest Calendar",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "description": "An optional upcoming-contests panel for your Home layout, with UTC or local times, saved contests, and sponsor rules. Calendar data provided by ContestClock.",
   "category": "dashboard",
   "icon": "calendar-clock",

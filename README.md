@@ -6,7 +6,7 @@ install only the ones you want.
 
 | Extension | What it adds |
 | --- | --- |
-| [Contest Calendar (development)](extensions/tools/n1rwj-contest-calendar/README.md) (`n1rwj-contest-calendar`) | Optional Home panel with upcoming contests, UTC/local times, and sponsor rules from ContestClock |
+| [Contest Calendar](extensions/tools/n1rwj-contest-calendar/README.md) (`n1rwj-contest-calendar`) | Optional Home panel with upcoming contests, UTC/local times, and sponsor rules from ContestClock |
 | [RBN](extensions/tools/n1rwj-rbn/README.md) (`n1rwj-rbn`) | Reception map and sortable CW, RTTY, FT8, and FT4 reports from the Reverse Beacon Network via Vail ReRBN, using your operation's callsign and location |
 | [CQ WW (temporary)](extensions/contests/n1rwj-cqww/README.md) (`n1rwj-cqww`) | Preview of official CQ WW RTTY exchange, scoring, and export improvements |
 | [CWops CWT](extensions/contests/n1rwj-cwt/README.md) (`n1rwj-cwt`) | CWT sessions, exchange suggestions, scoring, and exports |
@@ -21,9 +21,9 @@ testing remains pending; see the [verification record](docs/VERIFICATION.md).
 
 ## Install
 
-Contest Calendar is an unreleased extension. Build its installable bundle with
-`mise run pack n1rwj-contest-calendar`; it is not included in the existing
-GitHub release assets. Published extensions use the steps below.
+Contest Calendar is prepared for v0.9.0. Until that release is published, build
+its installable bundle with `mise run pack n1rwj-contest-calendar`. Published
+extensions use the steps below.
 
 1. Download the bundle for each extension you want from
    [latest GitHub release](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/latest).
@@ -46,7 +46,7 @@ versions; use the latest release linked above when installing.
 
 ### Contest Calendar
 
-Build and install `dist/n1rwj-contest-calendar-0.8.0.h2kext` in a Ham2K version
+Build and install `dist/n1rwj-contest-calendar-0.9.0.h2kext` in a Ham2K version
 supporting extension API 5. On **Home**, choose **Edit Layout → Add a Panel →
 Contest Calendar** and save the layout. Enable **Layout Customization** in app
 settings if layout editing is unavailable.
