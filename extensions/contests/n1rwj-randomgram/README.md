@@ -1,13 +1,15 @@
 # N1RWJ RandomGram
 
-A local preview for Ham2K Logger, using extension API 5 and SDK 0.12.0.
+RandomGram event logging for Ham2K Logger, using extension API 5 and SDK 0.12.0.
 It imports organizer-issued five-character TX groups, shows the exact group
 in a large exchange pane, records RX groups, and prepares organizer submissions.
 It works offline after setup. It does not generate groups or send submissions.
 
 ## Setup and operation
 
-1. Build and install `dist/n1rwj-randomgram-0.9.0.h2kext` using **Settings →
+1. Download `n1rwj-randomgram-0.10.0.h2kext` from the
+   [GitHub release](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.10.0)
+   and install it using **Settings →
    Extensions & Features → Install from file**. Enable N1RWJ RandomGram.
 2. Create an operation for the event, search for **RandomGram** in Activities,
    and select it. Enter its number, your callsign/SWL ID, and its alphabet.
@@ -96,7 +98,7 @@ numbers, padded, or sent using cut-number substitutions.
 If the editor submits when you enter a newline, replace the template's line
 breaks with spaces before entering it. This equivalent single-line form was
 verified in Mac build 179; multiline clipboard paste has not been checked.
-Use a separate message set while trying the preview.
+Use a separate message set for RandomGram.
 
 The template guards the whole message. Missing/invalid positions, malformed
 overrides and exhausted lists render nothing. The verbose selection is necessary

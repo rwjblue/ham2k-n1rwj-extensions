@@ -1,7 +1,7 @@
 {
   "key": "n1rwj-randomgram",
   "name": "N1RWJ RandomGram",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "shortName": "RG",
   "description": "RandomGram with organizer-issued TX lists, a readable exchange pane, listening-only entries and received-group submission exports.",
   "category": "contest",
@@ -11,7 +11,9 @@
   "keywords": ["randomgram", "random gram", "rg", "cw", "code groups"],
   "hooks": ["activity", "adifFields", "command", "export", "panel", "ref:randomgram", "scoring"],
   "domains": [],
-  "relevance": { "interests": ["cw"] },
+  "relevance": {
+    "interests": ["cw"]
+  },
   "sharedDependencies": {
     "@ham2k/lib-callsigns": "^1.0.2",
     "@ham2k/lib-country-files": "^1.0.202605301",

@@ -13,7 +13,7 @@ install only the ones you want.
 | [ICWC MST](extensions/contests/n1rwj-mst/README.md) (`n1rwj-mst`) | MST sessions, name suggestions, outgoing serials, scoring, and exports |
 | [K1USN SST](extensions/contests/n1rwj-sst/README.md) (`n1rwj-sst`) | SST sessions, name/location suggestions, scoring, and exports |
 | [Weekly RTTY Test](extensions/contests/n1rwj-wrt/README.md) (`n1rwj-wrt`) | Half-hour RTTY sessions, name/QTH suggestions, callsign multipliers, and exports |
-| [RandomGram (local preview)](extensions/contests/n1rwj-randomgram/README.md) (`n1rwj-randomgram`) | Supplied TX lists, a large exchange readout, listening-only entries, keyer templates, and received-group submission exports |
+| [RandomGram](extensions/contests/n1rwj-randomgram/README.md) (`n1rwj-randomgram`) | Supplied TX lists, a large exchange readout, listening-only entries, keyer templates, and received-group submission exports |
 
 The [PSK Reporter extension](extensions/tools/n1rwj-psk-reporter/README.md)
 now builds with live MQTT reception using the published SDK and tools. It shares
@@ -24,9 +24,9 @@ testing remains pending; see the [verification record](docs/VERIFICATION.md).
 
 Contest Calendar is available starting with
 [v0.9.0](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.9.0).
-RandomGram is an unreleased local preview; build it with
-`mise run pack n1rwj-randomgram` and follow its
-[operator guide](extensions/contests/n1rwj-randomgram/README.md). A synthetic Mac
+RandomGram is available starting with
+[v0.10.0](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.10.0).
+Follow its [operator guide](extensions/contests/n1rwj-randomgram/README.md). A synthetic Mac
 session verified import, logging, the exchange panel, keyer expansion and
 exports in build 179. Mobile use and radio sending remain unverified; see the
 [verification record](docs/VERIFICATION.md).
@@ -52,7 +52,7 @@ versions; use the latest release linked above when installing.
 
 ### Contest Calendar
 
-Download and install `n1rwj-contest-calendar-0.9.0.h2kext` in a Ham2K version
+Download and install `n1rwj-contest-calendar-0.10.0.h2kext` in a Ham2K version
 supporting extension API 5. On **Home**, choose **Edit Layout → Add a Panel →
 Contest Calendar** and save the layout. Enable **Layout Customization** in app
 settings if layout editing is unavailable.
