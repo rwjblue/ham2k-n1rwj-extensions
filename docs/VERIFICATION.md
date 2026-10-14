@@ -1,5 +1,78 @@
 # Verification and compatibility
 
+## RandomGram native acceptance retry — 2026-10-14
+
+Installed and enabled the local RandomGram preview in **Ham2K Power Logger
+(Next) 26.9.0 build 179** using Mac Control, then exercised a separate operation
+named **N1RWJ RandomGram TEST — synthetic RG#999**. The operation contains
+three synthetic contacts and three event markers; no on-air contacts or keyer
+transmissions were made. The preview remains unreleased at synchronized version
+0.9.0 in the `ham2k-n1rwj-extensions-randomgram` Jujutsu workspace.
+
+The rebuilt package is `dist/n1rwj-randomgram-0.9.0.h2kext`, SHA-256
+`e1487439c6b3f757b26ec99a12edf546a6a2b7c8fff590fbd4a8e96eee613789`.
+`mise run format` and `mise run check` passed lint, strict runtime/test/task
+typechecks, **1,415 tests across 98 files**, nine official ES2020 builds and
+nine validated packages. RandomGram contributes **151 tests across five files**.
+These automated checks are separate from the native acceptance below.
+
+- A full synthetic organizer message supplied owner N1RWJ, event RG#999, a
+  declared count of four and the groups `0A9ZO`, `XYZAB`, `O01QT`, `ABC0D`.
+  Native setup derived the event number and accepted all four groups. The
+  installed RandomGram Exchange panel showed the selected literal group, with
+  a slashed zero distinguishable from O.
+- Saved two same-band contacts with K2TEST using `0A9ZO`/`VWXYZ` and
+  `XYZAB`/`LMNOP`. A repeated callsign was allowed. Reopening the first contact
+  retained its literal sent snapshot. Clearing the second contact's RX group
+  and saving removed that received exchange; reopening and restoring it
+  preserved the original TX group.
+- `RGSWL EFGHI` and `RGSWL VWXYZ` added listening notes without consuming a TX
+  item or adding contacts. The tested entry flow was to type `RGSWL` in the
+  callsign field, press a physical Space, enter the group and click the
+  on-screen Save arrow. `RGSKIP` and `RGREPORT` ran without parameters through
+  the same callsign field and Save arrow.
+- `RGSKIP` retired selected item 3 (`O01QT`). Repeating it was rejected as
+  already retired. The host did not advance the existing sequence, so item 4
+  was selected manually before saving K3TEST with `ABC0D`/`QRSTU`. Selecting
+  item 5 showed **TX list exhausted**.
+- The report and native RandomGram text export both contained the participant
+  and exactly four unique received groups: `VWXYZ`, `EFGHI`, `LMNOP`, `QRSTU`.
+  The repeated listening group was omitted with a notice. Native ADIF contained
+  exactly three contacts with the literal `STX_STRING`/`SRX_STRING` pairs above,
+  no numeric `STX`/`SRX`, and no listening or retirement rows. The private native
+  exports remain under ignored `dist/native-verification/`; they are not source
+  fixtures or published artifacts.
+- A separate **RandomGram preview** CW message set used the complete guarded
+  Liquid template, flattened to one line for the native editor. The expanded
+  message display showed `K5TEST 5NN 0A9ZO`, `K5TEST 5NN O01QT` and
+  `K5TEST 5NN ABC0D` at the corresponding positions. RST used cut numbers while
+  the code groups stayed literal; the entire message was empty beyond the
+  list. No memory or function key was activated. The original **CWT** message
+  set was restored and its original memories verified; the separate preview
+  set remains available. Multiline clipboard paste was not tested.
+
+The first native report attempt exposed a command timeout when its dialog
+remained open longer than the host's 30-second invocation budget. `RGREPORT`
+now opens the form without awaiting the operator's eventual dialog closure,
+while observing and reporting genuine form errors. Regression tests cover an
+unresolved form, normal cancellation and rejected presentation. After rebuilding
+and reinstalling, the report remained open for **136 seconds** and closed with
+Cancel without a command-failure notice.
+
+The native host can leave a **No Exchange** or **Bad Exchange** warning visible
+after valid RX entry or TX-item correction until callsign/focus changes refresh
+scoring. The panel, keyer expansion and saved exchanges were correct throughout.
+This is a host refresh gap; SDK 0.12.0 supplies no exchange-change scoring hook.
+Manual advance after retirement, listening-note summary omissions and the lack
+of a shared live-exchange getter remain the host limits recorded below.
+
+This establishes the tested Mac workflow. Phone layout/keyboard/accessibility,
+actual radio sending and multi-device allocation or recovery remain unverified.
+RandomGram changes no CWT or CQ WW runtime, shared implementation or export
+schema, so synchronization to their temporary upstream PRs does not apply.
+The earlier development record below retains its original checks and failed
+native-attempt scope.
+
 ## RandomGram development preview — 2026-10-14
 
 Implemented `n1rwj-randomgram` in the separate Jujutsu workspace

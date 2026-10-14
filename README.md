@@ -26,7 +26,10 @@ Contest Calendar is available starting with
 [v0.9.0](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.9.0).
 RandomGram is an unreleased local preview; build it with
 `mise run pack n1rwj-randomgram` and follow its
-[operator guide](extensions/contests/n1rwj-randomgram/README.md).
+[operator guide](extensions/contests/n1rwj-randomgram/README.md). A synthetic Mac
+session verified import, logging, the exchange panel, keyer expansion and
+exports in build 179. Mobile use and radio sending remain unverified; see the
+[verification record](docs/VERIFICATION.md).
 
 1. Download the bundle for each extension you want from
    [latest GitHub release](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/latest).

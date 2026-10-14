@@ -44,10 +44,12 @@ groups to determine the final score.
 
 ## Groups sent without a contact
 
-Run **`RGSKIP`** while that item is selected, or **`RGSKIP 12`** to identify it
-explicitly. It records a used-group log note and a device-local retirement hint.
+Run **`RGSKIP`** while that item is selected. In the tested Mac build 179,
+type the command in the callsign field and click the on-screen Save arrow.
+It records a used-group log note and a device-local retirement hint. The command
+also accepts **`RGSKIP 12`** to identify an item explicitly.
 **Manually change TX item to the next unused position before transmitting.**
-For example, after `RGSKIP 12`, use item 13 and check the pane before sending.
+For example, after retiring item 12, use item 13 and check the pane before sending.
 If item 13 is unavailable or already used, select a different unused item.
 Skipping item 12 leaves earlier unused items available.
 
@@ -63,6 +65,10 @@ continues from it. Deleting a saved contact does not free its committed position
 without consuming a TX group. The example is synthetic. Listening notes are
 separate from contacts and excluded from ADIF contact export.
 
+In the tested Mac build 179, enter **`RGSWL`** in the callsign field first,
+press Space, enter the group, then click the on-screen Save arrow. Allow the
+host to recognize the command prefix before entering its parameter.
+
 Choose **RandomGram submission** in Exports for your participant ID and unique
 valid received groups, one per line. The option reports invalid or repeated
 entries omitted. ADIF contact export uses literal `STX_STRING`/`SRX_STRING`
@@ -70,7 +76,9 @@ and an organizer-readable RX comment; no numeric `STX`/`SRX` is emitted.
 
 **`RGREPORT`** opens copyable submission text including listening-only groups,
 even without two-way contacts. Select/copy the multiline field, then close the
-dialog. It does not send email.
+dialog with Cancel. In the tested Mac build, enter `RGREPORT` in the callsign
+field and click the on-screen Save arrow. The report can remain open while
+you copy it. It does not send email.
 
 The inspected host export/scoring services exclude event rows before calling
 extensions. Text exports recover listening notes with one log read when invoked.
@@ -85,6 +93,11 @@ Exchange memory in **CW Keyer Messages**. It sends RST and the same literal grou
 displayed by the pane. Only RST uses `cut`; code groups are never converted to
 numbers, padded, or sent using cut-number substitutions.
 
+If the editor submits when you enter a newline, replace the template's line
+breaks with spaces before entering it. This equivalent single-line form was
+verified in Mac build 179; multiline clipboard paste has not been checked.
+Use a separate message set while trying the preview.
+
 The template guards the whole message. Missing/invalid positions, malformed
 overrides and exhausted lists render nothing. The verbose selection is necessary
 because the SDK has no live activity exchange getter. It is tested against the
@@ -97,6 +110,17 @@ Deterministic tests cover imports, metadata validation, leading zeros, correctio
 and clearing, snapshots, keyer equivalence, exhaustion, repeat contacts, listening,
 retirement persistence, exports and activation of the official ES2020 bundle.
 All fixtures are synthetic; issued user groups are not stored in the repository.
+
+Native Mac acceptance in Ham2K Power Logger (Next) 26.9.0 build 179 verified
+organizer-message import, the panel, three synthetic saved contacts, same-band
+repeats, RX clearing/restoration, listening entries, retirement, submission and
+ADIF exports, and visible keyer expansion. Literal zeros and O stayed distinct;
+cut numbers applied only to RST. No CW was transmitted. A report held open for
+136 seconds closed cleanly after the command-lifetime fix.
+
+This host build can retain a stale **No Exchange** or **Bad Exchange** warning
+after exchange edits until callsign/focus changes refresh scoring. Check the
+pane and fields; this warning did not change the saved exchange in native tests.
 
 Initial support is single-contact logging on one device. Comma-list batch saves
 allocate later positions after pre-save, so those contacts may lack a literal

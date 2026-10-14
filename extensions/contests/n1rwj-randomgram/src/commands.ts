@@ -17,9 +17,19 @@ function annotation(note: string, ref: Qson): Qson {
   }
 }
 
+function reportPresentationError(error: unknown): void {
+  const message = error instanceof Error ? error.message : String(error)
+  void host
+    .showMessage({ presentation: 'dialog', title: 'RandomGram report unavailable', text: message })
+    .catch((reportError: unknown) => {
+      host.log(`RandomGram report failed: ${message}; reporting failed: ${String(reportError)}`)
+    })
+}
+
 export function createCommands(
   retired: RetirementStore,
   showForm: (form: FormDefinition) => Promise<unknown> = host.showForm,
+  onPresentationError: (error: unknown) => void = reportPresentationError,
 ): CommandHook {
   return {
     async catalog() {
@@ -71,7 +81,11 @@ export function createCommands(
             omissions.push(
               `${submission.invalid} invalid entr${submission.invalid === 1 ? 'y' : 'ies'} omitted.`,
             )
-          await showForm({
+          // The command has a 30-second host timeout. Opening a read-only
+          // report must not wait for the operator to finish copying and close
+          // the dialog. A normal cancellation resolves null; real failures
+          // still receive an explicit, visible report.
+          void showForm({
             title: 'RandomGram received groups',
             elements: [
               {
@@ -88,7 +102,7 @@ export function createCommands(
                 value: submissionText(operation, qsos),
               },
             ],
-          })
+          }).catch(onPresentationError)
         }
         return {
           describe: 'Copy received groups for submission (including listening-only entries)',

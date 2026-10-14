@@ -64,6 +64,7 @@ function fixture(initial: Qson = {}) {
     throw new Error('A logging keystroke must not read the full log')
   })
   const showForm = vi.fn(async (_form: FormDefinition) => null)
+  const onPresentationError = vi.fn<(error: unknown) => void>()
   const ctx: HookContext = { online: false, locale: 'en', appName: 'Ham2K Logger', getQsos }
   const store = createRetirementStore(read, write)
   const hooks = createActivity(store)
@@ -71,12 +72,13 @@ function fixture(initial: Qson = {}) {
     store,
     activity: hooks.activity as ActivityHook,
     refHandler: hooks.refHandler as RefHandlerHook,
-    commands: createCommands(store, showForm),
+    commands: createCommands(store, showForm, onPresentationError),
     ctx,
     read,
     write,
     getQsos,
     showForm,
+    onPresentationError,
     settings: () => settings,
     restart: () => createRetirementStore(read, write),
   }
@@ -545,6 +547,40 @@ describe('operator commands and durable retirement', () => {
       error: expect.stringContaining('does not take'),
     })
     expect(f.showForm).not.toHaveBeenCalled()
+    expect(f.write).not.toHaveBeenCalled()
+  })
+
+  it('finishes report execution while the dialog remains open and treats cancellation as a normal close', async () => {
+    const f = fixture()
+    f.getQsos.mockResolvedValueOnce([contact({ theirGroup: 'VWXYZ' })])
+    let close: (value: null) => void = () => {
+      throw new Error('The report was not opened')
+    }
+    f.showForm.mockImplementationOnce(
+      () =>
+        new Promise<null>((resolve) => {
+          close = resolve
+        }),
+    )
+    // Await before closing: waiting for the operator here would hang the
+    // command and reproduce the native 30-second execution timeout.
+    const result = await interpret(f.commands, f.ctx, 'RGREPORT', true)
+    expect(result?.describe).toContain('Copy received groups')
+    expect(f.showForm).toHaveBeenCalledTimes(1)
+    close(null)
+    await Promise.resolve()
+    expect(f.onPresentationError).not.toHaveBeenCalled()
+    expect(f.write).not.toHaveBeenCalled()
+  })
+
+  it('surfaces a real report presentation failure instead of treating it as cancellation', async () => {
+    const f = fixture()
+    f.getQsos.mockResolvedValueOnce([contact({ theirGroup: 'VWXYZ' })])
+    const failure = new Error('The form presenter is unavailable')
+    f.showForm.mockRejectedValueOnce(failure)
+    await interpret(f.commands, f.ctx, 'RGREPORT', true)
+    await Promise.resolve()
+    expect(f.onPresentationError).toHaveBeenCalledExactlyOnceWith(failure)
     expect(f.write).not.toHaveBeenCalled()
   })
 
