@@ -1,5 +1,23 @@
 # Extension provenance and attribution
 
+## RandomGram
+
+`extensions/contests/n1rwj-randomgram/` is an independent MPL-2.0 implementation
+using the published Ham2K SDK 0.12.0 and official build tools 0.8.0. No host
+or SDK internals are copied. The existing MIT notices cover bundled SDK code.
+The [organizer overview](https://groups.io/g/RandomGram/topic/randomgram_overview/97601889)
+and event-specific organizer instructions remain authoritative.
+
+The importer follows the structure of an organizer-issued list supplied to
+the operator: owner/event/count headers, a marked TX section, and literal
+five-character groups. Tests use synthetic groups; the operator's issued
+values and private email are not distributed. The extension does not
+generate registered groups or calculate the organizer's adjudicated score.
+
+The extension, its tests and personal packaging change no CWT or CQ WW
+runtime source, shared behavior, translations or exports. This independent
+contest is exempt from synchronization to their temporary upstream PRs.
+
 ## Contest Calendar
 
 `extensions/tools/n1rwj-contest-calendar/` is an independent panel extension.

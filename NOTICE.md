@@ -10,6 +10,10 @@ MST, SST, and WRT extensions, an RBN reception panel, shared N1MM and operation-
 adapters, tests, and independent packaging. These are independent extensions;
 Ham2K and Sebastian Delmont do not maintain or endorse them.
 
+RandomGram is an independent MPL-2.0 extension using the published Ham2K SDK.
+It follows organizer instructions, and its fixtures contain synthetic groups.
+Organizer-issued private TX values are not bundled or distributed.
+
 The adapted CWT source is distributed under MPL-2.0; see [LICENSE](LICENSE).
 Source and build instructions are available at
 [ham2k-n1rwj-extensions](https://github.com/rwjblue/ham2k-n1rwj-extensions).

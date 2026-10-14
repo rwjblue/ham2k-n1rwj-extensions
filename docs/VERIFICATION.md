@@ -1,5 +1,68 @@
 # Verification and compatibility
 
+## RandomGram development preview — 2026-10-14
+
+Implemented `n1rwj-randomgram` in the separate Jujutsu workspace
+`ham2k-n1rwj-extensions-randomgram`, based on main's v0.9.0 publication record.
+The preview retains synchronized repository version 0.9.0; it has not been
+released or submitted to the catalog. Historical v0.9.0 release notes remain
+unchanged. The original working directory's unrelated changes are preserved.
+
+The extension imports full organizer-issued messages or bare group lists,
+validates metadata and the event alphabet, and preserves literal five-character
+values including leading zeros. It provides TX-item selection, explicit
+corrections, RX entry, immutable-list sent snapshots, a responsive exchange
+pane, a guarded Liquid keyer template, listening-only entries, deliberate
+retirement notes, ADIF strings and received-group submissions. Every new group
+fixture is synthetic; private issued values are absent from source and assets.
+
+`mise run format` and `mise run check` passed: lint, strict runtime/test/task
+typechecks, **1,413 tests across 98 files**, nine official ES2020 builds and
+nine official validated packages. RandomGram contributes **149 tests across
+five files**, including activation of the actual built bundle under an ES2020
+VM, hook registration, literal panel/save/keyer/ADIF agreement, durable exact
+retirement, out-of-order selection, listening entries, unavailable-log failures
+and command preview purity. These are deterministic adapter and bundle checks,
+not native app or RF tests. The RandomGram package's SHA-256 is
+`1a3f8c1c8b04297e9a9d5f06fb9469c21578ab77b55eca09e2dbfeb99cf2b091`.
+
+`mise run verify-host n1rwj-randomgram` passed against the running
+`/Applications/Ham2K Mac Logger (Next).app`, version 26.9.0 build 179. The
+installed JavaScript kernel's SHA-256 is
+`233da6f85e263a99e87401a42ed0148ebbd72bc3064f6633461292ac30ae05f1`.
+Its shared-library versions satisfy the manifest, and all seven hooks activate
+without kernel errors. This is the installed kernel evaluated under a Node VM,
+with simulated bridge responses; it does not establish native UI acceptance.
+
+Mac Control reached **Extensions & Features → Install from file** and selected
+the local bundle. Installation/enablement could not be verified: following
+the picker, the accessibility tree exposed only a `Dismiss` element and text
+input never reached the search field. Coordinate control also returned
+`noWindowsAvailable` during recovery. Rebinding and resetting the control
+session did not restore text entry. No test contact or keyer transmission was
+performed. Native phone layout, keyboard behavior, accessibility and actual
+radio sending remain unverified.
+
+Source inspection and implementation established these current host limits:
+
+- A changed sequence start is only a hint after the host has allocated items.
+  `RGSKIP` records the exact used item, but the operator must select the next
+  unused item manually. Device-local retirement state is not a synchronized
+  multi-device allocation authority.
+- Export and scoring services remove event notes before invoking extensions.
+  Text export retrieves listening entries once from the full log; `RGREPORT`
+  supplies copyable submission text even for a listening-only operation.
+  Native summaries can omit those entries.
+- There is no shared live-exchange getter. The bundled Liquid memory duplicates
+  selection logic, guarded and tested against the pure exchange resolver.
+  Installing the extension does not modify personal keyer memories.
+- Batch saves allocate later items after pre-save, so later contacts can lack
+  literal TX snapshots. Initial support is one contact at a time. A dedicated
+  always-visible mobile exchange slot still requires host support.
+
+RandomGram changes no CWT or CQ WW behavior, shared implementation, translations
+or export schema, and is exempt from synchronizing their temporary upstream PRs.
+
 ## Release 0.9.0 publication — 2026-10-07
 
 Published [v0.9.0](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.9.0)
