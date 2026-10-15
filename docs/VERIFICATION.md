@@ -1,5 +1,40 @@
 # Verification and compatibility
 
+## Release 0.10.0 publication — 2026-10-14
+
+Published [v0.10.0](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.10.0)
+from signed main commit `3c3d01c675294219220d801fe4b63bbc68fc151e` at
+23:58:38 UTC (19:58 US Eastern). GitHub verified the commit signature, and
+the release tag resolves to that same tested commit.
+
+- Local `mise run format` and `mise run release v0.10.0 --dry-run` passed
+  lint, strict typechecks, 1,415 tests across 98 files, nine official builds
+  and nine package validations. The
+  [check workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/38657216936)
+  passed for that commit.
+- The [release workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/38657304288)
+  passed both GitHub upload and catalog jobs. All nine bundles and nine
+  checksum files are archived. Downloaded GitHub assets passed
+  `mise run release:catalog v0.10.0 --dry-run`; the published body matches
+  `docs/releases/v0.10.0.md` exactly.
+- The catalog returned **approved** for `n1rwj-randomgram` 0.10.0 on
+  `stable` at 23:59:36 UTC. The eight existing extensions were skipped as
+  specified by the reviewed no-change sections. No universal dependency or
+  shared runtime changes accompany this release.
+- The [public RandomGram entry](https://catalog.ham2k.net/extensions/n1rwj-randomgram?channel=stable)
+  reports 0.10.0 as approved and current. The `stable` catalog query for API 5
+  contains one matching entry. Its 55,957-byte archive is byte-for-byte equal
+  to the GitHub bundle and published checksum, with SHA-256
+  `cc8c7130ebc434d2eb146a8e8039df0535a03597d0e89d1b77ff185bc533d415`.
+  Catalog notes match the authored RandomGram section exactly. Downloaded
+  evidence is retained under ignored `dist/catalog-verification/`.
+
+RandomGram runtime behavior is the same implementation tested in the native
+Mac acceptance below; the release changes its version and packaging. Phone
+layout, actual CW transmission and multi-device recovery remain unverified.
+RandomGram and synchronized personal release packaging do not require changes
+to the temporary CWT or CQ WW upstream PRs.
+
 ## RandomGram native acceptance retry — 2026-10-14
 
 Installed and enabled the local RandomGram preview in **Ham2K Power Logger

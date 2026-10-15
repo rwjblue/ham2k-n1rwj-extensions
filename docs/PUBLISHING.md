@@ -8,6 +8,27 @@ each submission before operators can install it from the catalog.
 
 ## Current release status
 
+[v0.10.0](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.10.0)
+was published from signed main commit `3c3d01c675294219220d801fe4b63bbc68fc151e`
+on October 14, 2026 at 19:58 US Eastern time (23:58:38 UTC).
+All nine bundles and nine checksum files are available. The
+[check workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/38657216936)
+and [release workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/38657304288)
+passed. Downloaded assets passed `mise run release:catalog v0.10.0 --dry-run`,
+and the published body matches `docs/releases/v0.10.0.md` exactly.
+
+RandomGram returned **approved** on `stable` at 23:59:36 UTC and is current
+and discoverable by API-5 hosts. Its catalog bundle and notes match the GitHub
+archive and authored section. Contest Calendar,
+CQ WW, CWT, MST, PSK Reporter, RBN, SST and WRT were skipped because their
+behavior is unchanged. The release adds organizer-issued exchange lists,
+a large exchange panel, listening entries, keyer templates and submission
+exports. Synthetic native Mac acceptance passed; mobile and actual radio
+sending remain unverified. See the [release notes](releases/v0.10.0.md) and
+[verification record](VERIFICATION.md#release-0100-publication--2026-10-14).
+
+### Previous releases
+
 [v0.9.0](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.9.0)
 was published from signed main commit `fb4f131e932f50c6f03e7c313ebef806c5fd2acb`
 on October 7, 2026 at 15:31 US Eastern time (19:31:58 UTC).
@@ -24,8 +45,6 @@ authored sections. CQ WW, CWT, MST, SST and WRT were skipped because their
 behavior is unchanged. Native Calendar UI testing remains pending. See the
 [release notes](releases/v0.9.0.md) and
 [verification record](VERIFICATION.md#release-090-publication--2026-10-07).
-
-### Previous releases
 
 [v0.8.1](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.8.1)
 was published from signed commit `af27338c4f934a523bfc4e2014945b7841e3e2cf`
