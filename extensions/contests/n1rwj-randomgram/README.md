@@ -1,9 +1,19 @@
 # N1RWJ RandomGram
 
-RandomGram event logging for Ham2K Logger, using extension API 5 and SDK 0.12.0.
-It imports organizer-issued five-character TX groups, shows the exact group
+[RandomGram](https://groups.io/g/RandomGram/topic/randomgram_overview/97601889)
+is a CW event where operators exchange five-character code groups supplied by
+the organizer. You can collect groups through contacts or by listening, then
+submit your received groups to the organizer for checking.
+
+This extension imports your issued TX list, shows the exact group
 in a large exchange pane, records RX groups, and prepares organizer submissions.
 It works offline after setup. It does not generate groups or send submissions.
+
+## Get the logger
+
+Download [Ham2K Power Logger (PoLo), Next Edition](https://ham2k.com/downloads/),
+the new Ham2K logger with installable extensions. Choose **Ham2K Power Logger -
+Next Edition** on the downloads page. This extension requires extension API 5.
 
 ## Setup and operation
 

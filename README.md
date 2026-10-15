@@ -22,9 +22,13 @@ testing remains pending; see the [verification record](docs/VERIFICATION.md).
 
 ## Install
 
+Start with [Ham2K Power Logger (PoLo), Next Edition](https://ham2k.com/downloads/),
+the new Ham2K logger with installable extensions.
+
 Contest Calendar is available starting with
 [v0.9.0](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.9.0).
-RandomGram is available starting with
+RandomGram is a CW event for exchanging organizer-issued five-character code
+groups, including listening-only participation. Its extension is available starting with
 [v0.10.0](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.10.0).
 Follow its [operator guide](extensions/contests/n1rwj-randomgram/README.md). A synthetic Mac
 session verified import, logging, the exchange panel, keyer expansion and
