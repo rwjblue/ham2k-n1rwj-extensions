@@ -1,5 +1,39 @@
 # Verification and compatibility
 
+## Release 0.11.0 publication — 2026-10-19
+
+Published [v0.11.0](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.11.0)
+from signed main commit `0ad5eb3f20388db8586c5bb5b8d0470316456dc3` at
+01:26:56 UTC on October 20 (21:26 US Eastern on October 19). GitHub verified
+the commit signature, and the release tag resolves to that tested commit.
+
+- `mise run format` and `mise run release v0.11.0 --dry-run` passed lint,
+  strict typechecks, **1,536 tests across 112 files**, and all **11 official
+  ES2020 builds and packages**, with synchronized workspace versions.
+- The [check workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/39353375558)
+  and both jobs in the
+  [release workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/39353479450)
+  passed. All 11 archives and 11 SHA-256 files are available.
+- `mise run release:catalog v0.11.0 --dry-run` downloaded the published
+  assets and validated every checksum and version. The GitHub release body
+  matches `docs/releases/v0.11.0.md` exactly.
+- The catalog reports **approved** on `stable` for BIGFOOT at 01:27:56.619 UTC
+  and Zombie at 01:27:57.884 UTC. Both are current at 0.11.0 and discoverable
+  in API-1 and API-5 listings. The other nine extensions were explicitly
+  skipped because there were no extension-specific or shared changes.
+- Downloaded catalog bundles match the corresponding GitHub assets byte for
+  byte, and inline catalog notes match the authored extracted sections exactly.
+  BIGFOOT is 51,307 bytes, SHA-256
+  `a3cfb0eee3f5cc3e3e01f5962d972a84ad4ae1032a4718eac0757c42bcf114f6`;
+  Zombie is 59,907 bytes, SHA-256
+  `1d007b1f9427aa487ed360ec3c501ddd07f34ae5b3b4888c39ff39501f6eefec`.
+
+The installed build 180 JavaScript kernel accepted all 11 extensions during
+integration verification. Native UI, multiword Zombie entry, export save/share
+behavior and on-air acceptance remain unverified. The new independent
+extensions and synchronized packaging do not change CWT or CQ WW behavior,
+so no upstream behavior synchronization was required.
+
 ## BIGFOOT and Zombie main integration — 2026-10-19
 
 Integrated BIGFOOT Hunt and Zombie Shuffle with the current main branch,
