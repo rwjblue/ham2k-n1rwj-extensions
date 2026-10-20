@@ -1,0 +1,159 @@
+# N1RWJ Zombie Shuffle
+
+Log the 2026 Zombie Shuffle in Ham2K with its four-part exchange, two-hour
+rebirth rule, call-history suggestions, score breakdown, ADIF, and a plain-text
+submission summary. This extension is independently installable as
+`n1rwj-zombie`, with activity/reference type `zombie`.
+
+This is an unreleased extension. Build its bundle from this checkout:
+
+```sh
+mise run pack n1rwj-zombie
+```
+
+Install the resulting `.h2kext` from `dist/` through Ham2K's extension settings.
+Create a dedicated operation, add **Zombie Shuffle 2026**, and configure your
+sent exchange before logging. Version 0.10.0 is the synchronized development
+version, not a claim that the existing published release contains this extension.
+
+## Event rules
+
+The [official 2026 rules](https://www.zianet.com/qrp/ZOMBIE/pg.html) specify
+October 30, **15:00 to midnight local time**, CW at **5 W or less**, on
+80, 40, 20, 15, and 10 meters. Spotting and skeds are allowed. The organizer
+allows flexible hours for Hawaii, Alaska, and DX stations. Only the confirmed
+2026 edition is supported; subsequent event dates and bonus numbers need review.
+
+Set the event's UTC offset explicitly, including daylight-saving time for
+October 30. For US Eastern daylight time, use `-04:00`. Logged timestamps remain
+UTC. The **Flexible hours** option uses the whole October 30 local calendar
+date for HI, AK, or DX. This is the extension's interpretation of the organizer's
+flexible-hours allowance.
+
+You may work the same callsign on the same band again after **two elapsed
+hours**. For example, a qualifying contact at 19:42 permits another at 21:42.
+Different bands qualify independently, including 10m and 15m even though those
+two bands share a scoring group. Deleted, ineligible, and incomplete contacts
+do not consume a qualifying rebirth slot.
+
+## Exchange and logging
+
+The on-air exchange is **RST, state/province/country, Zombie number, Zombie
+name**, such as `569 KS 002 OLD NICK`.
+
+| Part | Stored meaning |
+| --- | --- |
+| RST | Ham2K's native sent and received reports |
+| SPC | The copied state, province, or country text |
+| Zombie number | The copied numeric string, preserving leading zeros |
+| Zombie name | The full spooky name, including spaces |
+
+Your assigned number lasts for life. Stations without one may send their
+three-digit telephone area code. The number is fixed exchange text, never an
+incrementing QSO serial. In 2026, designated bonus stations send `4321`.
+The setup keeps your regular number separate from bonus-station status and
+each saved contact retains its effective sent exchange.
+
+Copy the exchange actually transmitted. SPC accepts full country names and
+unusual locations rather than SST's two-letter/DX rules. Zombie names are
+independent of ordinary callsign-directory first names. Corrections and
+intentional clearing take precedence over suggestions. Use **Wipe** between
+contacts and log one callsign at a time.
+
+The data model supports multiword names. Native keyboard behavior, including
+Space advancing between inline controls, still needs verification in Ham2K.
+
+## Call history
+
+Refresh **Zombie Shuffle call history** through Ham2K's data-file settings.
+The default source discovers the latest published Zombie file in the
+[N1MM call-history collection](https://n1mmwp.hamdocs.com/mmfiles/categories/callhistory/).
+A new file is not assumed to appear annually. The last successful download is
+retained for offline use and after a failed replacement. Refreshing data, rather
+than typing a callsign, performs network requests.
+
+Suggestions use the current operation, then copied exchanges from other
+operations in this event, then the downloaded file, and finally older Zombie
+contacts. Each field is resolved independently. A base callsign may supply a
+number or name for a portable call; a previous location requires an exact
+callsign match.
+
+The verified [ZOMBIE_004.txt](https://n1mmwp.hamdocs.com/mmfiles/zombie_004-txt/)
+was updated October 18, 2025. It contains 66 callsign entries with names,
+numbers, and locations. Four entries contain the 2025 bonus value `3333`.
+Those stations retain their name and location suggestions, while their old
+bonus number is omitted. It is never converted to the current `4321`.
+The file's revision suffix and download date do not identify an event year.
+
+Historical bonus filtering also applies to older Zombie contacts used as
+suggestions, without changing saved exchanges or explicit operator input.
+An unknown source edition is handled conservatively for known bonus values.
+See the data-file status for the source date and parsing warnings.
+
+## Scoring
+
+The formulas were checked against both official 2026
+[XLS](https://www.zianet.com/qrp/ZOMBIE/summary_sheet_2026.xls) and
+[ODS](https://www.zianet.com/qrp/ZOMBIE/summary_sheet_2026.ods) summary sheets.
+There are four groups: **80m, 40m, 20m, and combined 10m/15m**.
+
+```text
+Group score = (eligible QSOs + eligible bonus contacts) × received-number sum
+Total = sum of group scores + 666
+```
+
+The QSO count includes bonus contacts. The received-number sum includes each
+bonus contact's `4321`. SPC and names are required exchange fields but do not
+earn multipliers. Leading zeros are preserved in exchanges and interpreted
+numerically only when calculating points.
+
+For example, three valid 40m contacts sending `111`, `222`, and `4321` earn
+`(3 + 1) × (111 + 222 + 4321) = 18,616`, then the fixed **666** points produce
+**19,282** with no other contacts.
+
+Two implementation decisions are explicit:
+
+- Each eligible rebirth contact with a bonus station adds another bonus count.
+  The published wording does not clarify whether that tally is unique stations
+  or eligible contacts; the extension counts eligible contacts consistently.
+- An empty eligible log scores **zero**. The sponsor's blank spreadsheet shows
+  its fixed 666 even before any entries; this extension applies it after the
+  first qualifying contact.
+
+Incomplete exchanges (including the received CW signal report), invalid calls,
+deleted contacts, unsupported modes/bands,
+duplicates, and contacts outside the configured event window earn no points.
+Correct flagged entries before reporting a score. Setup and contact timestamps
+must be usable to establish eligibility.
+
+## Export and submission
+
+Use the operation's exports for **Zombie Shuffle ADIF** or the **Zombie Shuffle
+summary**. ADIF retains sent and received exchange text and native reports.
+The summary supplies the four group calculations and final total for review
+and copying into your submission.
+
+The sponsor requests a summary, not a full log, at `na5n@zianet.com` with Zombie
+in the subject. Submission is manual. The current rules page still prints a
+November 15, 2025 deadline; no confirmed 2026 deadline is encoded here.
+
+## Development and verification
+
+```sh
+mise run test -- extensions/contests/n1rwj-zombie/tests
+mise run typecheck
+mise run check
+mise run verify-host n1rwj-zombie
+```
+
+Unit, bundle, and installed-kernel verification do not establish native UI or
+on-air acceptance. See the repository's [verification record](../../../docs/VERIFICATION.md)
+for checks actually completed. Native installation, multiword field entry,
+the two-hour boundary while a spot remains visible, export save/share behavior,
+and on-air use remain acceptance work.
+
+The new extension consumes the existing generic N1MM and contest-history
+libraries without changing CWT or CQ WW behavior. It is exempt from those
+extensions' temporary upstream synchronization requirements. The project and
+retained shared-source notices remain MPL-2.0; SDK/build-tool MIT notices remain
+in the packaged attribution.

@@ -15,6 +15,7 @@ your signal is heard. Published extensions are available as ready-to-install
 | [K1USN SST](extensions/contests/n1rwj-sst/README.md) (`n1rwj-sst`) | SST sessions, name/location suggestions, scoring, and exports |
 | [Weekly RTTY Test](extensions/contests/n1rwj-wrt/README.md) (`n1rwj-wrt`) | Half-hour RTTY sessions, name/QTH suggestions, callsign multipliers, and exports |
 | [RandomGram](extensions/contests/n1rwj-randomgram/README.md) (`n1rwj-randomgram`) | Supplied TX lists, a large exchange readout, listening-only entries, keyer templates, and received-group submission exports |
+| [Zombie Shuffle](extensions/contests/n1rwj-zombie/README.md) (`n1rwj-zombie`) | 2026 Zombie exchanges, two-hour rebirth checks, call-history suggestions, scoring, and submission summaries; build from source until released |
 
 The [PSK Reporter extension](extensions/tools/n1rwj-psk-reporter/README.md)
 now builds with live MQTT reception using the published SDK and tools. It shares
