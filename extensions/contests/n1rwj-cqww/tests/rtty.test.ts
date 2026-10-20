@@ -15,7 +15,16 @@ import { loadExtension } from './support.ts'
 
 const cqww = await loadExtension(() => import('../src/index.ts'))
 type Qson = Record<string, JSONValue>
-const ref: Qson = { type: 'cqww', mode: 'RTTY', zone: '5', qth: 'MA' }
+const ref: Qson = {
+  type: 'cqww',
+  mode: 'RTTY',
+  zone: '5',
+  qth: 'MA',
+  categoryOperator: 'SINGLE-OP',
+  categoryPower: 'LOW',
+  categoryBand: 'ALL',
+  categoryAssisted: 'NON-ASSISTED',
+}
 const operation: Qson = { uuid: 'rtty', stationCall: 'N1RWJ', refs: [ref] }
 const ctx = { online: false } as never
 function qso(call: string, zone = '5', qth = 'MA', band = '20m', mode = 'RTTY'): Qson {
@@ -324,7 +333,7 @@ test('RTTY summary separates zones, countries and QTHs in the standard contest a
   assert.equal(summary.mults, 8)
   assert.equal(
     String(summary.longSummary).split('\n')[0],
-    '3 QSOs, 6 pts × 8 mults (3 zones, 3 countries, 2 states/provinces)',
+    '3 QSOs, 6 pts × 8 mults (3 zones, 3 countries, 2 W/VE QTHs)',
   )
   assert.ok(!String(summary.longSummary).includes('160m'))
 })
@@ -333,9 +342,9 @@ test('RTTY summary localizes each multiplier group with singular counts', () => 
   const { sheet } = run([qso('W1AW', '5', 'CT')])
   const args = { scoresheet: sheet, operation, ref, scope: 'operation' as const }
   const english = CQWWScorer.summarizeScore(args, ctx).cqww
-  assert.ok(String(english.longSummary).includes('(1 zone, 1 country, 1 state/province)'))
+  assert.ok(String(english.longSummary).includes('(1 zone, 1 country, 1 W/VE QTH)'))
   const spanish = CQWWScorer.summarizeScore(args, { online: false, locale: 'es' } as never).cqww
-  assert.ok(String(spanish.longSummary).includes('(1 zona, 1 país, 1 estado/provincia)'))
+  assert.ok(String(spanish.longSummary).includes('(1 zona, 1 país, 1 QTH W/VE)'))
 })
 
 test('RTTY summaries ignore legacy per-day counters and retain whole-contest totals', () => {
@@ -348,4 +357,19 @@ test('RTTY summaries ignore legacy per-day counters and retain whole-contest tot
   assert.equal(summary.qsos, 2)
   assert.equal(summary.points, 2)
   assert.equal(summary.mults, 6)
+})
+
+test('official single-band settings match preview settings and multi-operator entries remain all-band', () => {
+  const contact = qso('DL1ABC', '14', 'DX', '40m')
+  assert.deepEqual(run([contact], operation, { ...ref, band: '20M' }).scores[0].alerts, [
+    'invalidBand',
+  ])
+  assert.equal(
+    run([contact], operation, { ...ref, band: '20M', operator: 'MULTI-TWO' }).scores[0].value,
+    3,
+  )
+  assert.equal(
+    run([contact], operation, { ...ref, categoryBand: '20', band: '' }).scores[0].value,
+    3,
+  )
 })

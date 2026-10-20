@@ -82,3 +82,90 @@ test('a deliberately emptied zone stays empty, and the guess is not put back', a
   const patch = await decorate({ their: { call: 'W1AW' }, refs: [{ type: 'cqww', theirZone: '' }] })
   assert.deepEqual(patch, { their: { exchange: '' } })
 })
+
+test("on RTTY a W/VE station's QTH joins the exchange, and is recorded on the ref", async () => {
+  const rtty = [{ type: 'cqww', mode: 'RTTY' }]
+  const typed = await decorate(
+    {
+      mode: 'RTTY',
+      their: { call: 'W1AW' },
+      refs: [{ type: 'cqww', theirZone: '5', theirQth: 'ct' }],
+    },
+    rtty,
+  )
+  assert.equal(typed?.their?.exchange, '5 CT')
+  assert.deepEqual(typed?.refs, [{ type: 'cqww', theirZone: '5', theirQth: 'CT' }])
+
+  // A call-area hint must not become a copied exchange without confirmation.
+  const guessed = await decorate({ mode: 'RTTY', their: { call: 'VE3XYZ' } }, rtty)
+  assert.equal(guessed?.their?.exchange, '4')
+  assert.equal((guessed?.refs as Record<string, unknown>[] | undefined)?.[0]?.theirQth, '')
+
+  // Keep an explicit correction visible, even when invalid for this country.
+  const dx = await decorate(
+    { mode: 'RTTY', their: { call: 'DL1ABC' }, refs: [{ type: 'cqww', theirQth: 'MA' }] },
+    rtty,
+  )
+  assert.equal(dx?.their?.exchange, '14 MA')
+})
+
+test('setup asks for each part of the entry, undeclared until answered', async () => {
+  const controls = async (locale: string) =>
+    (
+      (await contest.runHook(
+        'activity',
+        'operationControls',
+        { operation: { stationCall: 'N0DEV', refs: [] } },
+        { ctx: { locale } },
+      )) as {
+        input: {
+          form: {
+            elements: {
+              key?: string
+              value?: string
+              options?: { value: string; label: string }[]
+            }[]
+          }
+        }
+      }[]
+    )[0].input.form.elements
+
+  const elements = await controls('en')
+  for (const key of ['operator', 'band', 'power', 'overlay']) {
+    const select = elements.find((element) => element.key === key)
+    assert.equal(select?.value, '', key)
+    assert.deepEqual(select?.options?.[0], { value: '', label: 'Not declared' })
+  }
+  const operator = elements.find((element) => element.key === 'operator')
+  assert.equal(
+    operator?.options?.find((option) => option.value === 'MULTI-ONE')?.label,
+    'Multi-Single',
+  )
+
+  const spanish = await controls('es')
+  assert.equal(
+    spanish.find((element) => element.key === 'power')?.options?.[1]?.label,
+    'Alta (1500 W)',
+  )
+})
+
+test('setup seeds legacy preview categories without replacing an explicitly cleared new answer', async () => {
+  const ref = {
+    type: 'cqww',
+    mode: 'RTTY',
+    categoryOperator: 'SINGLE-OP',
+    categoryAssisted: 'ASSISTED',
+    categoryBand: '20',
+    categoryPower: 'LOW',
+    power: '',
+  }
+  const controls = (await contest.runHook('activity', 'operationControls', {
+    operation: { stationCall: 'N0DEV', refs: [ref] },
+  })) as { input: { form: { elements: { key?: string; value?: string }[] } } }[]
+  const values = Object.fromEntries(
+    controls[0].input.form.elements.filter((x) => x.key).map((x) => [x.key, x.value]),
+  )
+  assert.equal(values.operator, 'SINGLE-OP-ASSISTED')
+  assert.equal(values.band, '20M')
+  assert.equal(values.power, '')
+})

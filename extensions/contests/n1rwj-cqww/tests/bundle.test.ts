@@ -12,7 +12,7 @@ import manifest from '../manifest.json'
 
 // Exercise the actual distributable in the ES2020 sandbox, with host-provided
 // libraries. Source-hook tests alone would miss a packaging or bridge mistake.
-test('the temporary bundle registers cqww and scores/exports RTTY without host IO', async () => {
+test('the temporary bundle registers cqww and scores/exports RTTY when profile settings are unavailable', async () => {
   const writeCabrillo = vi.fn((await import('@ham2k/lib-qson-cabrillo')).qsonToCabrillo)
   const sharedModules = Object.fromEntries(
     await Promise.all(
@@ -29,6 +29,7 @@ test('the temporary bundle registers cqww and scores/exports RTTY without host I
   const context = createContext({
     __polo: {
       sharedModules,
+      log: vi.fn(),
       defineExtension: (definition: ExtensionDefinition) => definitions.push(definition),
     },
   })

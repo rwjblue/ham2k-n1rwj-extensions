@@ -93,6 +93,7 @@ test('the activity search offers all three runnings, the nearest first, labelled
   // would change the moment the operation is edited.
   const ssb = suggestions.find((s) => s.mode === 'SSB')
   assert.ok(ssb)
+  assert.match((ssb as unknown as { name: string }).name, /2026-10-24/)
   const decorated = (await cqww.runHook('ref:cqww', 'decorateRef', {
     ref: { type: 'cqww', mode: 'SSB' },
   })) as { label: string; shortLabel: string }

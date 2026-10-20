@@ -1,5 +1,38 @@
 # Verification and compatibility
 
+## CQ WW upstream reconciliation — 2026-10-20
+
+Reconciled [CQ WW PR #2](https://github.com/ham2k/extensions/pull/2) with
+upstream's official RTTY support and entry configuration. The personal preview
+now shares dated activity suggestions, undeclared operator/band/power/overlay
+controls, operator/profile Cabrillo headers, and CW/SSB WAE-country and
+maritime-mobile scoring fixes. Existing preview category fields remain readable;
+new answers and deliberate clearing take precedence without rewriting logs.
+
+Confirmed RTTY exchanges, tentative spot multipliers, Canadian call-area
+normalization, explicit corrections/clearing, RTTY sideband recognition,
+single-band scoring and padded `RY` exports remain covered. Missing received
+exchanges do not claim points or consume duplicates. A call-area hint is not
+silently saved as a received QTH. The expanded entry header does not implement
+per-contact transmitter numbers or overlay time accounting.
+
+- Personal `mise run format` and `mise run check` passed **1,734 tests across
+  124 files**, lint, strict typechecks, and all **11 ES2020 builds/packages**.
+- Upstream full `npm run typecheck` and `npm test` passed **1,597 tests**,
+  including **95 CQ WW tests** and **106 build/pack/load checks**.
+- Runtime source and translations match across both providers. Tests cover
+  legacy settings, new-setting precedence, profile fallback, dated suggestions,
+  country scoring, and existing RTTY exchange/export/spot behavior.
+- Initial personal checks exposed the upstream console logging assumption
+  and missing profile/log seams in the test harness. These were adapted to
+  the public SDK host interface; the final full checks passed.
+
+Only CQ WW behavior changes; CWT and shared runtime/dependencies are unaffected.
+Personal identity, synchronized version **0.13.1**, temporary catalog label,
+PR link and provider-switching/official-release retirement guidance remain.
+No release or catalog submission was performed by this maintenance run.
+Validation is source and bundle coverage, not installed-app UI or on-air testing.
+
 ## Release 0.13.1 publication — 2026-10-20
 
 Published [v0.13.1](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.13.1)

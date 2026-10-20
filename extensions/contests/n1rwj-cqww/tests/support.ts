@@ -11,6 +11,7 @@ vi.mock('@ham2k/extension-sdk', async (importOriginal) => {
   const sdk = await importOriginal<typeof import('@ham2k/extension-sdk')>()
   return {
     ...sdk,
+    host: { ...sdk.host, log: vi.fn() },
     defineExtension: (definition: ExtensionDefinition) => definitions.push(definition),
   }
 })
@@ -36,11 +37,21 @@ export async function loadExtension(importer: () => Promise<unknown>) {
     })
   }
   return {
-    async runHook(category: string, method: string, args: unknown): Promise<unknown> {
+    async runHook(
+      category: string,
+      method: string,
+      args: unknown,
+      options?: { ctx?: Partial<HookContext> },
+    ): Promise<unknown> {
       const hook = hooks.get(category)?.hook as Record<string, unknown> | undefined
       const callback = hook?.[method]
       if (typeof callback !== 'function') throw new Error(`Missing ${category}.${method}`)
-      const ctx: HookContext = { online: false, locale: 'en', appName: 'Ham2K Logger' }
+      const ctx: HookContext = {
+        online: false,
+        locale: 'en',
+        appName: 'Ham2K Logger',
+        ...options?.ctx,
+      }
       return callback(args, ctx)
     },
   }

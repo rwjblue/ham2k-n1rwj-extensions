@@ -25,12 +25,18 @@ import {
   contestSummary,
 } from '@ham2k/extension-sdk'
 import { fmtInteger } from '@ham2k/lib-format-tools'
+import { compatibleEntry } from './entry.ts'
 import { tFor } from './i18n.ts'
 import { isRtty, qthForCall, qthIsValid, qthMultiplier, RTTY_BANDS, suggestedQth } from './rtty.ts'
 
 /// CQ WW is an HF contest: the WARC bands are excluded by the rules, not an
 /// oversight.
 export const VALID_BANDS = ['160m', '80m', '40m', '20m', '15m', '10m']
+
+// CQ WW uses DXCC plus WAE and African Italy in every mode.
+export function cqwwCallInfo(call: string) {
+  return annotateCallAgainstCountryFile(call, { wae: true })
+}
 
 /// A CQ zone as typed: 1-40, with or without a leading zero. Anchored and
 /// matched case-insensitively by the core, so this is just the body.
@@ -95,7 +101,7 @@ function multiplierKeys(
 export const CQWWScorer: ContestScorer<CQWWScoresheet> = {
   startScoresheet({ operation, ref }): CQWWScoresheet {
     const rtty = ref?.mode === 'RTTY'
-    const ours = annotateCallAgainstCountryFile(str(operation.stationCall), { wae: rtty })
+    const ours = cqwwCallInfo(str(operation.stationCall))
     return {
       workedByCall: {},
       exchangesByCall: {},
@@ -125,12 +131,14 @@ export const CQWWScorer: ContestScorer<CQWWScoresheet> = {
     if (!modeMatches(str(ref?.mode), mode)) {
       return { scoresheet: base, score: { value: 0, alerts: ['invalidMode'] } }
     }
+    const entry = compatibleEntry(ref)
+    const singleBand =
+      typeof entry?.operator === 'string' && entry.operator.startsWith('MULTI-')
+        ? 'ALL'
+        : entry?.band
     if (
       !(base.rtty ? RTTY_BANDS : VALID_BANDS).includes(band) ||
-      (base.rtty &&
-        ref?.categoryBand &&
-        ref.categoryBand !== 'ALL' &&
-        band !== `${ref.categoryBand}m`)
+      (base.rtty && singleBand && singleBand !== 'ALL' && band.toUpperCase() !== singleBand)
     ) {
       return { scoresheet: base, score: { value: 0, alerts: ['invalidBand'] } }
     }
@@ -150,7 +158,7 @@ export const CQWWScorer: ContestScorer<CQWWScoresheet> = {
     // guessed multiplier for a QSO whose Cabrillo line exports a dash — the
     // exact log-disagrees-with-its-own-score problem §8 exists to prevent, just
     // arrived at from the other side.
-    const theirInfo = annotateCallAgainstCountryFile(call, { wae: base.rtty })
+    const theirInfo = cqwwCallInfo(call)
     const contestRef = ((qso.refs as Record<string, JSONValue>[] | undefined) ?? []).find(
       (r) => r?.type === 'cqww',
     )
@@ -160,7 +168,7 @@ export const CQWWScorer: ContestScorer<CQWWScoresheet> = {
         : base.rtty
           ? ''
           : normalizeZone(theirInfo.cqZone)
-    const maritime = base.rtty && theirInfo.postindicators?.includes('MM')
+    const maritime = theirInfo.postindicators?.includes('MM')
     const entity = maritime ? undefined : theirInfo.entityPrefix
     const qth = base.rtty ? qthForCall(call, contestRef?.theirQth) : ''
     // An incomplete exchange cannot claim points or consume the dupe slot.
@@ -200,7 +208,7 @@ export const CQWWScorer: ContestScorer<CQWWScoresheet> = {
     if (base.ourEntity && entity && base.ourEntity === entity) {
       points = base.rtty ? 1 : 0
     } else if (
-      !maritime &&
+      !(base.rtty && maritime) &&
       base.ourContinent &&
       theirInfo.continent &&
       base.ourContinent === theirInfo.continent
@@ -238,6 +246,7 @@ export const CQWWScorer: ContestScorer<CQWWScoresheet> = {
     if (hadPreviousBand) notices.push('newBand')
     if (notices.length > 0) score.notices = notices
     if (zone) score.zone = zone
+    if (qth) score.qth = qth
 
     return { scoresheet: base, score }
   },

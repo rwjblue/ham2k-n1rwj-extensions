@@ -56,6 +56,15 @@ export function nextRunningYear(nowMillis: number, mode: CQWWMode): number {
   return endOfContest(year, mode) < nowMillis - GRACE_DAYS * DAY ? year + 1 : year
 }
 
+/// `2026-10-24` — the Saturday the next running of [mode] starts. Written out
+/// rather than localized, the same form the QSO parties use: these are the
+/// sponsor's UTC dates, and an operator checks them against the rules.
+export function nextContestDate(nowMillis: number, mode: CQWWMode): string {
+  const at = new Date(startOfContest(nextRunningYear(nowMillis, mode), mode))
+  const pad = (value: number) => `${value}`.padStart(2, '0')
+  return `${at.getUTCFullYear()}-${pad(at.getUTCMonth() + 1)}-${pad(at.getUTCDate())}`
+}
+
 /// Days until the next running of [mode], negative while it is on.
 export function daysUntilContest(nowMillis: number, mode: CQWWMode): number {
   return Math.ceil((startOfContest(nextRunningYear(nowMillis, mode), mode) - nowMillis) / DAY)

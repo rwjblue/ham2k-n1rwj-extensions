@@ -22,13 +22,17 @@ in `dist/`. GitHub release assets and catalog approval are separate; see
 
 ## Operating guide
 
-Activity search offers RTTY, SSB, and CW, ranked by their next contest
+Activity search offers RTTY, SSB, and CW, dated and ranked by their next contest
 weekend. New setup defaults to the nearest upcoming mode; existing CQ WW
 operations are not offered another suggestion that could replace their
 configured exchange. Confirm RTTY when setting up an RTTY operation.
 
 Select **RTTY** in CQ WW setup. Configure the sent CQ zone, state / Canadian
-call area / DX, and the single-operator or checklog entry category. Set the
+call area / DX, and the entry category. Operator class, band, power and overlay start
+undeclared; answer them to populate the Cabrillo headers. Existing preview
+category settings remain readable, and an explicit new answer or clearing
+takes precedence. Operators and club can be set in the operation; name, email
+and the fallback club come from the host profile. Set the
 logging mode to RTTY; rig-reported RTTY-LSB, RTTY-USB and RTTY-R are also
 recognized. Generic DATA, DATA-USB and FT8 are not treated as RTTY.
 
@@ -75,12 +79,13 @@ RTTY sideband spellings normalize to `MODE: RTTY` in contest ADIF fields.
 The [official Cabrillo guide](https://cqwwrtty.com/cabrillo.htm) describes
 submission metadata; verify your category and contact details during upload.
 
-This first RTTY implementation supports single-operator and checklog entries.
-Choose ASSISTED if you use spotting assistance. Multi-transmitter identifiers,
+The header supports the official single-operator, multi-operator and checklog
+categories. Choose Single Operator Assisted if you use spotting assistance.
+Multi-transmitter identifiers on individual contacts,
 band-change limits, Classic overlay operating-time accounting, modem/audio
 processing, and radio transmission are outside this implementation. It does
 not automatically submit logs. CW and SSB retain their existing exchanges
-and scoring rules.
+and gain upstream’s WAE-country and maritime-mobile scoring fixes.
 
 Automated tests cover pure scoring, registered hooks, exchange edits,
 CW/SSB regressions, and Cabrillo fields. These tests are not an on-air test

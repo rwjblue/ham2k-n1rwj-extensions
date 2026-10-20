@@ -20,50 +20,6 @@ const ctx = { online: false } as never
 const usOperation = { uuid: 'op', stationCall: 'N0DEV' }
 const ssbRef = { type: 'cqww', mode: 'SSB' }
 
-test('an incomplete call earns no points or multipliers until corrected', async () => {
-  const hook = contestScorer(CQWWScorer, { scope: { refTypes: ['cqww'] } })
-  const activeOperation = { ...usOperation, refs: [ssbRef] }
-  const incomplete = { ...qso('DL1A?', '20m', 'SSB', '14'), uuid: 'heard' }
-  const args = { operation: activeOperation, ref: ssbRef }
-  const pending = await hook.scoreQsos({ ...args, qsos: [incomplete] }, ctx)
-  assert.deepEqual(pending.qsoScores, {})
-  assert.partialDeepStrictEqual(pending.scoresheet, {
-    qsos: 0,
-    points: 0,
-    mults: {},
-    workedByCall: {},
-  })
-  const emptySheet = structuredClone(pending.scoresheet)
-  const corrected = { ...incomplete, their: { call: 'DL1ABC' } }
-  const preview = await hook.scoreQso?.(
-    {
-      ...args,
-      qso: corrected,
-      resumeFrom: pending.scoresheet,
-      resumeDay: pending.scoresheetDay,
-    },
-    ctx,
-  )
-  assert.ok(preview?.notices.includes('newMult'))
-  assert.equal(preview?.dupe, false)
-  assert.deepEqual(pending.scoresheet, emptySheet)
-  const saved = await hook.scoreQsos({ ...args, qsos: [corrected] }, ctx)
-  assert.equal(saved.qsoScores.heard.value, 3)
-  assert.equal(saved.operationSummary.cqww.qsos, 1)
-  assert.equal(saved.operationSummary.cqww.points, 3)
-  assert.equal(saved.operationSummary.cqww.total, 6)
-  const repeat = await hook.scoreQso?.(
-    {
-      ...args,
-      qso: corrected,
-      resumeFrom: saved.scoresheet,
-      resumeDay: saved.scoresheetDay,
-    },
-    ctx,
-  )
-  assert.equal(repeat?.dupe, true)
-})
-
 function qso(
   call: string,
   band = '20m',
@@ -246,4 +202,163 @@ test('offers no per-day summary', () => {
     ),
     {},
   )
+})
+
+// —— Countries as CQ WW counts them: DXCC plus WAE plus IG9/IH9 ——
+
+test('WAE countries and African Italy are countries of their own, on their own continent', () => {
+  const italy = { uuid: 'op', stationCall: 'I1ABC' }
+  const { scores, sheet } = run([qso('IT9ABC'), qso('IG9ABC'), qso('IH9P', '40m')], italy)
+  // Sicily is another country on our continent: 1 point, not the 0 of our own.
+  assert.equal(scores[0].value, 1)
+  // African Italy is in Africa: 3 points from Italy, and zone 33, not 15.
+  assert.equal(scores[1].value, 3)
+  assert.equal(scores[1].zone, '33')
+  assert.ok(Object.keys(sheet.mults).includes('20m|C*IT9'))
+  assert.ok(Object.keys(sheet.mults).includes('20m|C*IG9'))
+  // IH9 is the same multiplier as IG9.
+  assert.ok(Object.keys(sheet.mults).includes('40m|C*IG9'))
+})
+
+test('a maritime mobile station counts only for its zone', () => {
+  // Not "our own country" either, so not the 0 points a US station would be.
+  const { scores, sheet } = run([qso('W1ABC/MM', '20m', 'SSB', '8')])
+  assert.equal(scores[0].value, 2)
+  assert.deepEqual(Object.keys(sheet.mults), ['20m|Z8'])
+})
+
+// —— RTTY: its own points, its own bands, and a third multiplier ——
+
+const rttyRef = { type: 'cqww', mode: 'RTTY' }
+
+function rttyQso(
+  call: string,
+  band = '20m',
+  extra: Record<string, JSONValue> = {},
+): Record<string, JSONValue> {
+  return { their: { call }, band, mode: 'RTTY', refs: [{ type: 'cqww', theirZone: '5', ...extra }] }
+}
+
+test('RTTY points: 1 for our own country, 2 on our continent with no NA exception, 3 beyond', () => {
+  const { scores } = run(
+    [
+      rttyQso('W1AW', '20m', { theirQth: 'CT' }),
+      rttyQso('VE3XYZ', '20m', { theirQth: 'ON' }),
+      rttyQso('DL1ABC'),
+    ],
+    usOperation,
+    rttyRef,
+  )
+  assert.deepEqual(
+    scores.map((s) => s.value),
+    [1, 2, 3],
+  )
+
+  const euOperation = { uuid: 'op', stationCall: 'DL0ABC' }
+  const { scores: eu } = run([rttyQso('EA4XYZ')], euOperation, rttyRef)
+  assert.equal(eu[0].value, 2)
+})
+
+test('RTTY runs on five bands: no 160m', () => {
+  const { scores } = run(
+    [rttyQso('DL1ABC', '160m'), rttyQso('DL1ABC', '80m')],
+    usOperation,
+    rttyRef,
+  )
+  assert.deepEqual(scores[0].alerts, ['invalidBand'])
+  assert.equal(scores[1].value, 3)
+})
+
+test('RTTY counts each W/VE QTH once per band, from W/VE stations only', () => {
+  const { sheet } = run(
+    [
+      rttyQso('W1AW', '20m', { theirZone: '5', theirQth: 'CT' }),
+      // The received Canadian call area is explicitly copied, never inferred.
+      rttyQso('VE3XYZ', '20m', { theirQth: 'ON' }),
+      // The rules' spelling is the same multiplier as the log's.
+      rttyQso('VE8ABC', '20m', { theirQth: 'NT' }),
+      rttyQso('VE8XYZ', '40m', { theirQth: 'NWT' }),
+      // Alaska is a country multiplier only; a DX station sends no QTH.
+      rttyQso('KL7ABC', '20m', { theirQth: 'AK' }),
+      rttyQso('DL1ABC', '20m', { theirQth: 'MA' }),
+    ],
+    usOperation,
+    rttyRef,
+  )
+  const qths = Object.keys(sheet.mults)
+    .filter((key) => key.includes('|Q'))
+    .sort()
+  assert.deepEqual(qths, ['20m|QCT', '20m|QNWT', '20m|QON', '40m|QNWT'])
+})
+
+test('the RTTY summary breaks out the QTH multipliers', () => {
+  const { sheet } = run(
+    [rttyQso('W1AW', '20m', { theirZone: '5', theirQth: 'CT' })],
+    usOperation,
+    rttyRef,
+  )
+  const summary = CQWWScorer.summarizeScore(
+    { scoresheet: sheet, operation: usOperation, ref: rttyRef, scope: 'operation' },
+    ctx,
+  )
+  assert.equal(
+    (summary.cqww.longSummary as string).split('\n')[0],
+    '1 QSO, 1 pt × 3 mults (1 zone, 1 country, 1 W/VE QTH)',
+  )
+})
+
+test('a QTH means nothing on the CW and SSB weekends', () => {
+  const { sheet } = run(
+    [qso('W1AW', '20m', 'SSB', '5')].map((q) => ({
+      ...q,
+      refs: [{ type: 'cqww', theirZone: '5', theirQth: 'CT' }],
+    })),
+  )
+  assert.ok(!Object.keys(sheet.mults).some((key) => key.includes('|Q')))
+})
+
+test('an incomplete call earns no points or multipliers until corrected', async () => {
+  const hook = contestScorer(CQWWScorer, { scope: { refTypes: ['cqww'] } })
+  const activeOperation = { ...usOperation, refs: [ssbRef] }
+  const incomplete = { ...qso('DL1A?', '20m', 'SSB', '14'), uuid: 'heard' }
+  const args = { operation: activeOperation, ref: ssbRef }
+  const pending = await hook.scoreQsos({ ...args, qsos: [incomplete] }, ctx)
+  assert.deepEqual(pending.qsoScores, {})
+  assert.partialDeepStrictEqual(pending.scoresheet, {
+    qsos: 0,
+    points: 0,
+    mults: {},
+    workedByCall: {},
+  })
+  const emptySheet = structuredClone(pending.scoresheet)
+
+  const corrected = { ...incomplete, their: { call: 'DL1ABC' } }
+  const preview = await hook.scoreQso?.(
+    {
+      ...args,
+      qso: corrected,
+      resumeFrom: pending.scoresheet,
+      resumeDay: pending.scoresheetDay,
+    },
+    ctx,
+  )
+  assert.ok(preview?.notices.includes('newMult'))
+  assert.equal(preview?.dupe, false)
+  assert.deepEqual(pending.scoresheet, emptySheet)
+
+  const saved = await hook.scoreQsos({ ...args, qsos: [corrected] }, ctx)
+  assert.equal(saved.qsoScores.heard.value, 3)
+  assert.equal(saved.operationSummary.cqww.qsos, 1)
+  assert.equal(saved.operationSummary.cqww.points, 3)
+  assert.equal(saved.operationSummary.cqww.total, 6)
+  const repeat = await hook.scoreQso?.(
+    {
+      ...args,
+      qso: corrected,
+      resumeFrom: saved.scoresheet,
+      resumeDay: saved.scoresheetDay,
+    },
+    ctx,
+  )
+  assert.equal(repeat?.dupe, true)
 })

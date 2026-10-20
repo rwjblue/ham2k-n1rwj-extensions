@@ -149,3 +149,143 @@ test('the Cabrillo file comes out of the export hook', async () => {
   assert.equal(result.content.split('\n')[0].trim(), 'START-OF-LOG: 3.0')
   assert.equal(delegated.length, 0, 'a Cabrillo file is written here, not delegated')
 })
+
+test('the RTTY Cabrillo carries a QTH on both sides, DX for a station that sends none', async () => {
+  const operation = {
+    uuid: 'op-1',
+    stationCall: 'N0DEV',
+    refs: [{ type: 'cqww', mode: 'RTTY', zone: '4', qth: 'MN' }],
+  }
+  const qsos = [
+    {
+      uuid: 'r1',
+      their: { call: 'W1AW' },
+      band: '20m',
+      mode: 'RTTY',
+      freq: 14080,
+      startAtMillis: Date.UTC(2026, 8, 26, 12, 0),
+      refs: [{ type: 'cqww', theirZone: '5', theirQth: 'CT' }],
+    },
+    {
+      uuid: 'r2',
+      their: { call: 'DL1ABC' },
+      band: '20m',
+      mode: 'RTTY',
+      freq: 14085,
+      startAtMillis: Date.UTC(2026, 8, 26, 12, 1),
+      refs: [{ type: 'cqww', theirZone: '14' }],
+    },
+  ]
+  const result = (await contest.runHook('export', 'generateExport', {
+    operation,
+    qsos,
+    exportType: 'cqww-cabrillo',
+  })) as { content: string }
+  assert.ok(result.content.split('\n').some((line) => line.trim() === 'LOCATION: MN'))
+  const lines = result.content
+    .split('\n')
+    .filter((line) => line.startsWith('QSO:'))
+    .map((line) => line.split(/\s+/).slice(5).join(' '))
+  assert.deepEqual(lines, ['N0DEV 599 04 MN W1AW 599 05 CT', 'N0DEV 599 04 MN DL1ABC 599 14 DX'])
+
+  // Missing sent setup must be corrected before submission, never guessed as DX.
+  const unset = { ...operation, refs: [{ type: 'cqww', mode: 'RTTY', zone: '4' }] }
+  await assert.rejects(
+    contest.runHook('export', 'generateExport', {
+      operation: unset,
+      qsos,
+      exportType: 'cqww-cabrillo',
+    }),
+    /Configure a valid CQ zone/,
+  )
+})
+
+test('the Cabrillo header carries the declared entry and our LOCATION', async () => {
+  const header = async (operation: Record<string, unknown>) => {
+    const result = (await contest.runHook('export', 'generateExport', {
+      operation,
+      qsos: QSOS,
+      exportType: 'cqww-cabrillo',
+    })) as { content: string }
+    return result.content.split('\n').filter((line) => /^(LOCATION|CATEGORY-)/.test(line))
+  }
+
+  const declared = {
+    uuid: 'op-1',
+    stationCall: 'N0DEV',
+    refs: [
+      {
+        type: 'cqww',
+        mode: 'CW',
+        qth: 'MN',
+        operator: 'SINGLE-OP',
+        band: 'ALL',
+        power: 'HIGH',
+        overlay: 'CLASSIC',
+      },
+    ],
+  }
+  assert.deepEqual(await header(declared), [
+    'LOCATION: MN',
+    'CATEGORY-OPERATOR: SINGLE-OP',
+    'CATEGORY-ASSISTED: NON-ASSISTED',
+    'CATEGORY-BAND: ALL',
+    'CATEGORY-POWER: HIGH',
+    'CATEGORY-MODE: CW',
+    'CATEGORY-OVERLAY: CLASSIC',
+  ])
+
+  // The operators listed at setup, and the club, reach the header too.
+  const multi = {
+    uuid: 'op-4',
+    stationCall: 'N0DEV',
+    local: { operatorCall: 'N0DEV' },
+    refs: [
+      { type: 'cqww', mode: 'CW', operators: 'k1abc, w2def', club: 'Yankee Clipper Contest Club' },
+    ],
+  }
+  const content = (
+    (await contest.runHook('export', 'generateExport', {
+      operation: multi,
+      qsos: QSOS,
+      exportType: 'cqww-cabrillo',
+    })) as { content: string }
+  ).content
+  assert.ok(content.includes('\nOPERATORS: K1ABC W2DEF\n'))
+  assert.ok(content.includes('\nCLUB: Yankee Clipper Contest Club\n'))
+  // With none listed, the app's operator call stands in.
+  const solo = { ...multi, refs: [{ type: 'cqww', mode: 'CW' }] }
+  assert.ok(
+    (
+      (await contest.runHook('export', 'generateExport', {
+        operation: solo,
+        qsos: QSOS,
+        exportType: 'cqww-cabrillo',
+      })) as { content: string }
+    ).content.includes('\nOPERATORS: N0DEV\n'),
+  )
+
+  // A DX station's location is DX; a US one with none set is left out
+  // rather than claimed as DX.
+  assert.deepEqual(
+    await header({ uuid: 'op-2', stationCall: 'DL1ABC', refs: [{ type: 'cqww', mode: 'CW' }] }),
+    ['LOCATION: DX', 'CATEGORY-MODE: CW'],
+  )
+  assert.deepEqual(
+    await header({ uuid: 'op-3', stationCall: 'N0DEV', refs: [{ type: 'cqww', mode: 'CW' }] }),
+    ['CATEGORY-MODE: CW'],
+  )
+  // Hawaii is in the US: its ARRL section, as typed, never DX.
+  assert.deepEqual(
+    await header({
+      uuid: 'op-5',
+      stationCall: 'KH6ABC',
+      refs: [{ type: 'cqww', mode: 'CW', qth: 'pac' }],
+    }),
+    ['LOCATION: PAC', 'CATEGORY-MODE: CW'],
+  )
+  assert.deepEqual(
+    await header({ uuid: 'op-6', stationCall: 'KH6ABC', refs: [{ type: 'cqww', mode: 'CW' }] }),
+    ['CATEGORY-MODE: CW'],
+  )
+})
