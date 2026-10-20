@@ -168,6 +168,12 @@ requires no update to its temporary upstream PR; CQ WW's PR is also unchanged.
 
 ### Zombie Shuffle
 
+The midnight radio club artwork, native scene, rebirth watch, identity notes,
+visitor book and synthetic preview are original work by Robert Jackson,
+N1RWJ, under the repository's MPL-2.0 license. The vector art contains no
+external images, fonts, scripts or network resources. Presentation derives
+contact credit from the existing Zombie scorer.
+
 `extensions/contests/n1rwj-zombie/` is a separate implementation of the
 [2026 Zombie Shuffle rules](https://www.zianet.com/qrp/ZOMBIE/pg.html).
 The sponsor's [XLS](https://www.zianet.com/qrp/ZOMBIE/summary_sheet_2026.xls)

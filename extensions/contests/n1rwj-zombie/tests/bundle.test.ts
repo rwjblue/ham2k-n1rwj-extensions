@@ -4,6 +4,7 @@ import type {
   ActivityHook,
   DataFileDefinition,
   ExtensionDefinition,
+  PanelHook,
   RegisterHookParams,
   ScoringHook,
 } from '@ham2k/extension-sdk'
@@ -85,6 +86,23 @@ it('activates its official ES2020 bundle, scores elapsed rebirths and uses cache
   expect(result.qsoScores.early).toMatchObject({ dupe: true, value: 0 })
   expect(result.qsoScores.reborn).toMatchObject({ dupe: false, value: 7 })
   expect(result.operationSummary.zombie).toMatchObject({ qsos: 2, numberSum: 14, total: 694 })
+  expect(result.operationSummary.zombie?.longSummary).toContain('Band plots')
+  const panel = registered.get('panel')?.hook as PanelHook
+  expect((await panel.getPanels({}, { online: false }))[0]?.key).toBe('graveyard')
+  const watch = await panel.render(
+    {
+      panelKey: 'graveyard',
+      operation,
+      config: { view: 'watch' },
+      reason: 'initial',
+      qsoCount: 1,
+      clock: { nowMillis: Date.parse('2026-10-30T20:30:00Z'), realNowMillis: 1000 },
+    },
+    { online: false, getQsos: async () => [contact('first', '2026-10-30T19:30:00Z')] },
+  )
+  expect(watch.kind).toBe('markdown')
+  if (watch.kind !== 'markdown') throw new Error('Expected watch')
+  expect(watch.content).toContain('Rises in 60 min')
 
   const dataFile = registered.get('dataFile')?.hook as DataFileDefinition
   await dataFile.onLoadRawData?.({

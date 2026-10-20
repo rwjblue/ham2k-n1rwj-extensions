@@ -275,12 +275,39 @@ describe('authoritative Zombie experience', () => {
     expect(ended.visitors).toHaveLength(3)
   })
 
-  it('does not describe a future-dated eligible contact as ready before its cooldown opens', () => {
+  it('does not start a rebirth interval from a future-dated eligible contact', () => {
     const model = buildZombieExperience(operation, [qso('future', 60)], START)
+    expect(model.rebirths).toEqual([])
+    expect(model.eligibleContacts[0]?.uuid).toBe('future')
+    expect(model.visitors[0]?.lastAt).toBe(START + 60 * MINUTE)
+    expect(model.scoresheet.qsos).toBe(1)
+  })
+
+  it('keeps the current rebirth ready when a later eligible log row is still in the future', () => {
+    const model = buildZombieExperience(
+      operation,
+      [qso('past'), qso('future', 240)],
+      START + 180 * MINUTE,
+    )
     expect(model.rebirths[0]).toMatchObject({
+      lastAt: START,
+      nextAt: START + 120 * MINUTE,
+      status: 'READY',
+      remainingMillis: 0,
+    })
+    expect(model.scoresheet.qsos).toBe(2)
+    const reached = refreshZombieExperience(model, START + 240 * MINUTE)
+    expect(reached.rebirths[0]).toMatchObject({
+      lastAt: START + 240 * MINUTE,
+      nextAt: START + 360 * MINUTE,
       status: 'RESTING',
-      nextAt: START + 180 * MINUTE,
-      remainingMillis: 180 * MINUTE,
+      remainingMillis: 120 * MINUTE,
+    })
+    expect(reached.scoresheet).toBe(model.scoresheet)
+    expect(reached.eligibleContacts).toBe(model.eligibleContacts)
+    expect(refreshZombieExperience(reached, START + 360 * MINUTE).rebirths[0]).toMatchObject({
+      status: 'READY',
+      remainingMillis: 0,
     })
   })
 
@@ -327,7 +354,7 @@ describe('authoritative Zombie experience', () => {
     expect(ended.bands).toBe(original.bands)
     expect(ended.totalScore).toBe(original.totalScore)
     expect(original.sessionState).toBe('upcoming')
-    expect(original.rebirths[0]?.remainingMillis).toBe(REBIRTH_MILLIS + 1)
+    expect(original.rebirths).toEqual([])
   })
 
   it('keeps an unconfigured cached model without a rebirth queue', () => {

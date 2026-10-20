@@ -10,6 +10,7 @@ import type {
 import { contestScorer, contestSummary, operationForQso } from '@ham2k/extension-sdk'
 import { isCallsign, normalizeCall } from '../../../../packages/n1mm/src/callsign.ts'
 import { effectiveSent, received, receivedRst, validExchange, validRst } from './exchange.ts'
+import { zombieInfoMarkdown } from './info.ts'
 import {
   BANDS,
   BONUS_NUMBER,
@@ -151,15 +152,24 @@ export const ZombieScorer: ContestScorer<ZombieScoresheet> = {
     return result({ value: number, band, dupe: false, notices })
   },
   summarizeScore({ scoresheet, scope }, ctx) {
+    const totalScore = scoreTotal(scoresheet)
     return contestSummary(
       {
         key: TYPE,
         scope,
         icon: 'ghost',
         title: 'Zombie Shuffle 2026',
-        total: scoreTotal(scoresheet),
+        total: totalScore,
         arithmetic: `${scoresheet.qsos} QSOs, ${scoresheet.bonusQsos} bonus QSOs; sum of band scores + ${scoresheet.qsos > 0 ? CRUMMY_BAND_BONUS : 0}`,
-        detail: summaryText(scoresheet),
+        detail: zombieInfoMarkdown({
+          qsos: scoresheet.qsos,
+          bonusQsos: scoresheet.bonusQsos,
+          totalScore,
+          bands: SCORING_BANDS.map((band) => {
+            const tally = scoresheet.bands[band] ?? { qsos: 0, bonusQsos: 0, numberSum: 0 }
+            return { band, ...tally, score: bandScore(tally) }
+          }),
+        }),
         extra: {
           qsos: scoresheet.qsos,
           bonusQsos: scoresheet.bonusQsos,

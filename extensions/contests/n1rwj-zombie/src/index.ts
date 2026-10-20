@@ -5,7 +5,9 @@ import manifest from '../manifest.json'
 import { createActivity } from './activity.ts'
 import { createZombieData } from './data.ts'
 import { createExports } from './exports.ts'
+import { createZombieLookup } from './lookup.ts'
 import { TYPE } from './model.ts'
+import { createZombiePanel } from './panel.ts'
 import { createScoringHook } from './scorer.ts'
 
 export function createZombieHooks() {
@@ -23,6 +25,8 @@ export function createZombieHooks() {
     activity,
     refHandler,
     scoring,
+    panel: createZombiePanel(),
+    lookup: createZombieLookup(history, data.cache.current),
     ...createExports(manifest),
     dataFile: data.dataFile,
     settings: data.settings,
@@ -36,6 +40,8 @@ defineExtension({
     registerHook('activity', { key: manifest.key, hook: hooks.activity })
     registerHook(`ref:${TYPE}`, { key: manifest.key, hook: hooks.refHandler })
     registerHook('scoring', { key: TYPE, hook: hooks.scoring })
+    registerHook('panel', { key: manifest.key, hook: hooks.panel })
+    registerHook('lookup', { key: manifest.key, hook: hooks.lookup })
     registerHook('adifFields', { key: manifest.key, hook: hooks.adifFields })
     registerHook('export', { key: manifest.key, hook: hooks.exports })
     registerHook('dataFile', { key: hooks.dataFile.key, hook: hooks.dataFile })

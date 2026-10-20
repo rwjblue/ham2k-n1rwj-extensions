@@ -17,6 +17,56 @@ mise run pack n1rwj-zombie
 Create a dedicated operation, add **Zombie Shuffle 2026**, and configure your
 sent exchange before logging.
 
+## Midnight radio club (development preview)
+
+The current development checkout adds an optional **Zombie Shuffle** panel:
+a friendly graveyard, a headphone-wearing Zombie, and a warm radio shack.
+This work is not part of the published releases linked above. Build a local
+bundle with `mise run pack n1rwj-zombie` to try it.
+
+Add **Edit Layout → Add a Panel → Zombie Shuffle** to a dedicated operation.
+The scene shows your configured spooky name and number, qualifying QSO and
+bonus counts, total score, and the four scoring groups. A lantern lights the
+666-point Crummy Band bonus after the first qualifying contact. A new contact
+gets a short shuffle; an eligible rebirth gets **BACK FROM THE DEAD!**, and
+a copied `4321` bonus exchange gets sparkles and a party hat. **CQ BOO!**
+waves hello without logging, transmitting, or awarding points.
+
+The **Rebirth watch** shows when previously worked callsigns can count again
+on each actual band. It updates once per minute while visible, with exact
+eligible-at UTC times in the detailed watch. Only qualifying contacts start
+or reset a timer. 10m and 15m keep independent timers even though their score
+is combined. A contact whose next opening falls at or after local midnight
+has no further rebirth in this event. **Eligible again does not mean on air.**
+
+Panel settings offer **Graveyard scene**, **Detailed rebirth watch**, and
+**Book of the Undead**, plus a motion switch. The book retains copied names,
+leading-zero numbers, locations and band visits for qualifying contacts.
+Narrow scenes prioritize callsign, band and countdown; very short panels hide
+the mascot and greeting. System reduced motion keeps poses static. Older
+hosts without the scene environment show the detailed watch automatically.
+Opening or reopening a panel, changing its view, correcting a saved contact,
+or restoring a previously seen record does not replay an award.
+
+The native **Info** pane also gains a playful score breakdown and static
+exchange identity notes. Current fields and history hints are labeled
+separately; clearing a field suppresses its hint. Cached lookup notes never
+claim a station is active or a rebirth is ready. Native scoring continues to
+provide the current draft's duplicate and eligible-again messages.
+
+For operations with start/break setup overrides, the panel shows guidance
+instead of reconstructing a timeline the panel API does not supply. Native
+scoring, Info and exports continue to use the canonical segment timeline.
+Use a dedicated operation without such overrides for the scene and watch.
+
+`mise run zombie:preview` writes `dist/zombie-scene-preview.html`, JSON
+fixtures, and a static SVG. Its 18 synthetic states exercise celebrations,
+rebirths, the book, small panels and reduced motion without accessing your
+logger or radio. Browser text and animation are approximations of the native
+renderer. Installed-app UI and on-air acceptance remain pending. Fresh-spot
+lanterns and radio tuning are a later increment; this panel makes no radio
+or network calls.
+
 ## Event rules
 
 The [official 2026 rules](https://www.zianet.com/qrp/ZOMBIE/pg.html) specify
@@ -152,6 +202,7 @@ mise run test -- extensions/contests/n1rwj-zombie/tests
 mise run typecheck
 mise run check
 mise run verify-host n1rwj-zombie
+mise run zombie:preview
 ```
 
 Unit, bundle, and installed-kernel verification do not establish native UI or

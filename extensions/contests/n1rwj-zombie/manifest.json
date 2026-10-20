@@ -14,6 +14,8 @@
     "adifFields",
     "dataFile",
     "export",
+    "lookup",
+    "panel",
     "ref:zombie",
     "scoring",
     "settingsPanel"

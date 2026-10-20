@@ -1,5 +1,54 @@
 # Verification and compatibility
 
+## Zombie midnight radio club (development) — 2026-10-20
+
+Implemented in the separate `zombie-graveyard` Jujutsu workspace, based on
+main's synchronized 0.13.1 version. This development work has not been
+published or submitted to the catalog.
+
+The optional `graveyard` panel combines original vector artwork, a friendly
+headphone-wearing Zombie, per-band rebirth watch, four score groups, and a
+Book of the Undead. Newly logged qualifying contacts receive four seconds
+of visual feedback, with distinct rebirth/bonus messages. A greeting changes
+only visual state. Quiet initial/visible/configuration renders and retained
+record identities prevent edits, duplicates and restorations from replaying
+awards. Reduced motion keeps poses static; message expiry still works.
+
+Presentation credit comes from `scoreLog`, including native segment handling
+when supplied. Queue entries use the latest qualifying contact at or before
+the display clock, keep 10m and 15m separate, and exclude openings at/after
+event end. Minute ticks refresh cached metadata without a log read or scoring
+fold. Native Info receives an authoritative score breakdown and separately
+labeled current exchange/history notes, with explicit clearing preserved.
+Cached identity notes contain no current readiness or activity claims.
+
+- `mise run format` and `mise run check` passed lint, strict runtime/test/task
+  typechecks, **1,787 tests across 128 files**, and all **11 official ES2020
+  builds and packages**. Versions, dependencies and shared-library ranges
+  remain unchanged from main.
+- Deterministic tests cover exact rebirth boundaries, future-dated contacts,
+  invalid/incomplete/deleted records, leading zeros, clock-only refresh,
+  midnight, edits/restoration, instance isolation, static identity escaping,
+  failed-read cache invalidation, unsupported editions, and scene bounds.
+- `mise run zombie:preview` generates **18 synthetic states**, JSON and a
+  static SVG. Browser checks exercised every state, pose playback, narrow and
+  tiny panels, and reduced motion. Narrow scenes prioritize callsign, actual
+  band and countdown. Browser SVG/text are approximate, not native acceptance.
+- `mise run verify-host n1rwj-zombie` accepted all **nine hooks** in the
+  installed **Ham2K Mac Logger (Next) 26.9.0 build 180** JavaScript kernel,
+  SHA-256 `21eaa53e90efa10d8599da19b0140d2344211f5bafd6add9f55d04c4a53c507a`.
+  This uses Node VM, with simulated timer delivery.
+
+The panel API does not supply the host's canonical start/break override
+timeline. Such logs show explicit guidance instead of a guessed score/watch;
+native scoring, Info and exports retain canonical segment behavior. Fresh
+spot lanterns and radio tuning are a later increment. This panel performs no
+radio or network calls. Installed-logger UI, native animation scheduling and
+on-air acceptance remain unverified.
+
+Only Zombie and its preview/documentation changed. CWT/CQ WW behavior and
+shared runtime code are unchanged, so upstream synchronization is not needed.
+
 ## CQ WW upstream reconciliation — 2026-10-20
 
 Reconciled [CQ WW PR #2](https://github.com/ham2k/extensions/pull/2) with

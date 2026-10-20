@@ -83,24 +83,52 @@ function stateFor(session: Session | undefined, now: number): ZombieExperience['
         : 'active'
 }
 
+function rebirthsFor(
+  contacts: ZombieEligibleContact[],
+  session: Session | undefined,
+  now: number,
+): ZombieRebirth[] {
+  if (!session || now >= session.endMillis) return []
+  const lastOnBand = new Map<string, ZombieEligibleContact>()
+  for (const contact of contacts) {
+    // The live scorer only considers earlier contacts when judging a
+    // candidate. A future-dated saved row cannot postpone a rebirth now.
+    if (contact.time <= now) lastOnBand.set(keyOf(contact.call, contact.band), contact)
+  }
+  const rebirths: ZombieRebirth[] = []
+  for (const contact of lastOnBand.values()) {
+    const nextAt = contact.time + REBIRTH_MILLIS
+    // Midnight is the event's exclusive end, never an opening to advertise.
+    if (nextAt >= session.endMillis) continue
+    rebirths.push({
+      call: contact.call,
+      band: contact.band,
+      spc: contact.spc,
+      zombieNumber: contact.zombieNumber,
+      zombieName: contact.zombieName,
+      lastAt: contact.time,
+      nextAt,
+      remainingMillis: Math.max(0, nextAt - now),
+      status: now >= nextAt ? 'READY' : 'RESTING',
+    })
+  }
+  return rebirths.sort(
+    (left, right) =>
+      left.nextAt - right.nextAt ||
+      alphabetically(left.call, right.call) ||
+      BANDS.indexOf(left.band) - BANDS.indexOf(right.band),
+  )
+}
+
 /** A clock tick changes the display, never the canonical log decisions. A
  * caller loads a new experience when the operation, log or timeline changes.
- * Once midnight removes a queue, a backward clock jump needs a fresh model. */
+ * The saved eligible metadata also handles crossing a future contact's time. */
 export function refreshZombieExperience(model: ZombieExperience, now: number): ZombieExperience {
   const session = model.session
   return {
     ...model,
     sessionState: stateFor(session, now),
-    rebirths:
-      session && now < session.endMillis
-        ? model.rebirths
-            .filter((entry) => entry.nextAt < session.endMillis)
-            .map((entry) => ({
-              ...entry,
-              remainingMillis: Math.max(0, entry.nextAt - now),
-              status: now >= entry.nextAt ? 'READY' : 'RESTING',
-            }))
-        : [],
+    rebirths: rebirthsFor(model.eligibleContacts, session, now),
   }
 }
 
@@ -155,33 +183,6 @@ export function buildZombieExperience(
     })
   }
 
-  const rebirths: ZombieRebirth[] = []
-  if (session && now < session.endMillis) {
-    for (const contact of lastOnBand.values()) {
-      const nextAt = contact.time + REBIRTH_MILLIS
-      // At midnight itself the scorer rejects the next contact, so there is
-      // no rebirth to advertise at or beyond the event's exclusive end.
-      if (nextAt >= session.endMillis) continue
-      rebirths.push({
-        call: contact.call,
-        band: contact.band,
-        spc: contact.spc,
-        zombieNumber: contact.zombieNumber,
-        zombieName: contact.zombieName,
-        lastAt: contact.time,
-        nextAt,
-        remainingMillis: Math.max(0, nextAt - now),
-        status: now >= nextAt ? 'READY' : 'RESTING',
-      })
-    }
-  }
-  rebirths.sort(
-    (left, right) =>
-      left.nextAt - right.nextAt ||
-      alphabetically(left.call, right.call) ||
-      BANDS.indexOf(left.band) - BANDS.indexOf(right.band),
-  )
-
   return {
     own: effectiveSent(currentOperation, {}),
     session,
@@ -196,6 +197,6 @@ export function buildZombieExperience(
     visitors: [...visits.values()].sort(
       (left, right) => right.lastAt - left.lastAt || alphabetically(left.call, right.call),
     ),
-    rebirths,
+    rebirths: rebirthsFor(eligibleContacts, session, now),
   }
 }
