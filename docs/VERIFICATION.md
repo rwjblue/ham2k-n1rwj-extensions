@@ -1,5 +1,41 @@
 # Verification and compatibility
 
+## Release 0.11.1 publication — 2026-10-19
+
+Published [v0.11.1](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.11.1)
+from signed main commit `d650e096bf17e7db1b5ab47031de7caae9424f27` at
+02:04:42 UTC on October 20 (22:04 US Eastern on October 19). GitHub verifies
+the feature and release-preparation signatures; the tag resolves to the
+tested release commit.
+
+- `mise run format` and `mise run release v0.11.1 --dry-run` passed lint,
+  strict typechecks, **1,575 tests across 115 files**, all **11 official
+  ES2020 builds and packages**, and synchronized versions/checksums.
+- The [check workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/39356849375)
+  and both jobs in the
+  [release workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/39356948313)
+  passed. GitHub contains all 11 archives and 11 checksum files. Its release
+  body matches `docs/releases/v0.11.1.md` exactly.
+- `mise run release:catalog v0.11.1 --dry-run` downloaded and validated all
+  published assets and selected BIGFOOT and RBN alone. The other nine
+  extensions were skipped because their behavior is unchanged.
+- BIGFOOT and RBN are **approved** and current at 0.11.1 on `stable`, with
+  catalog release times of 02:05:48.723 and 02:05:51.039 UTC, respectively.
+  BIGFOOT 0.11.1 is discoverable by API-1 and API-5 hosts; RBN 0.11.1 is
+  discoverable by API-5 hosts. API-1 listings retain the older compatible RBN.
+- Downloaded catalog bundles equal the GitHub assets byte for byte, and their
+  hashes match catalog metadata and GitHub checksum files. BIGFOOT is
+  53,414 bytes, SHA-256
+  `131776033917f702d8a7cd12b4499795ac0d8ace73afb6d9042eea4a2e8161d1`;
+  RBN is 319,702 bytes, SHA-256
+  `3707e23524c6395f4038f83e9c916fcbb0f1be1e20825141fd291f19679bbfc8`.
+  Catalog notes match the corresponding authored sections exactly.
+
+BIGFOOT 0.11.1's eight declared hooks also activated in the installed build
+180 JavaScript kernel. These checks do not establish native UI or on-air
+acceptance. BIGFOOT/RBN-only behavior and personal release records do not
+require CWT or CQ WW upstream synchronization.
+
 ## Release 0.11.1 preparation — 2026-10-19
 
 Added exact-roster paw/skunk annotations for the selected 2026 event and
