@@ -1,6 +1,6 @@
 # Verification and compatibility
 
-## BIGFOOT station annotations and hunt spots (unreleased) — 2026-10-19
+## Release 0.11.1 preparation — 2026-10-19
 
 Added exact-roster paw/skunk annotations for the selected 2026 event and
 native scoring highlights for contacts that advance Mixed, CW, or the
@@ -35,7 +35,9 @@ skips batch scoring for an empty log but invalidates its prior checkpoint;
 live/spot scoring then reads the current empty log correctly.
 
 Installed-kernel checks run under Node VM; native UI and on-air use remain
-unverified. These local changes are not in the published v0.11.0 bundles.
+unverified. Version 0.11.1 is synchronized across all workspaces, and
+`docs/releases/v0.11.1.md` selects BIGFOOT and RBN alone for catalog submission.
+The preparation checks do not publish a release or catalog update.
 Only BIGFOOT and RBN behavior changed, so CWT/CQ WW upstream synchronization
 is exempt. No shared contest or private filter-protocol behavior changed.
 

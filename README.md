@@ -58,8 +58,8 @@ versions; use the latest release linked above when installing.
 
 ### BIGFOOT Hunt
 
-Download and install `n1rwj-bigfoot-0.11.0.h2kext` from the
-[v0.11.0 release](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.11.0).
+Download and install `n1rwj-bigfoot-0.11.1.h2kext` from the
+[v0.11.1 release](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.11.1).
 Create a dedicated operation and add the
 **BIGFOOT Hunt 2026** activity. Its score summary and optional panel track
 **B I G F O O T** plus the separate **W4S** Skunk Ape bonus, with Mixed,

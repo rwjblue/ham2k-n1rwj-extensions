@@ -18,8 +18,8 @@ an updated event profile; they are not inferred from the calendar.
 Check the [organizer's announcement and rules](https://w7dk.org/?view=article&id=319:3rd-annual-national-sasquatch-day-special-event&catid=185)
 for current event details.
 
-1. Download `n1rwj-bigfoot-0.11.0.h2kext` from the
-   [v0.11.0 release](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.11.0).
+1. Download `n1rwj-bigfoot-0.11.1.h2kext` from the
+   [v0.11.1 release](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.11.1).
    Install it using **Settings → Features & Extensions → Install from file**,
    then enable **BIGFOOT Hunt**. Building from source with
    `mise run pack n1rwj-bigfoot` is also supported.
@@ -66,9 +66,9 @@ when contacts are logged, edited, or deleted.
 
 ## Finding stations
 
-The current source adds station annotations and a BIGFOOT-only RBN filter;
-build and install the local BIGFOOT and RBN bundles to use these additions.
-They are not included in the published v0.11.0 downloads.
+Station annotations and the BIGFOOT-only RBN filter are available starting
+with v0.11.1. Install or update both **BIGFOOT Hunt** and **N1RWJ RBN** to
+use the filter.
 
 In a **BIGFOOT Hunt 2026** operation during the event, letter stations receive
 a paw marker and W4S receives a skunk marker. Station details identify the
