@@ -5,16 +5,17 @@ rebirth rule, call-history suggestions, score breakdown, ADIF, and a plain-text
 submission summary. This extension is independently installable as
 `n1rwj-zombie`, with activity/reference type `zombie`.
 
-This is an unreleased extension. Build its bundle from this checkout:
+Download `n1rwj-zombie-0.11.0.h2kext` from the
+[v0.11.0 release](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.11.0)
+and install it through Ham2K's extension settings. Building from source is also
+supported:
 
 ```sh
 mise run pack n1rwj-zombie
 ```
 
-Install the resulting `.h2kext` from `dist/` through Ham2K's extension settings.
 Create a dedicated operation, add **Zombie Shuffle 2026**, and configure your
-sent exchange before logging. Version 0.10.0 is the synchronized development
-version, not a claim that the existing published release contains this extension.
+sent exchange before logging.
 
 ## Event rules
 

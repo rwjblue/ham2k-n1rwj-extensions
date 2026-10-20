@@ -18,10 +18,11 @@ an updated event profile; they are not inferred from the calendar.
 Check the [organizer's announcement and rules](https://w7dk.org/?view=article&id=319:3rd-annual-national-sasquatch-day-special-event&catid=185)
 for current event details.
 
-1. Run `mise run pack n1rwj-bigfoot` from this repository. Install the generated
-   `.h2kext` file in `dist/` using **Settings → Features & Extensions → Install
-   from file**, then enable **BIGFOOT Hunt**. This new extension must be built
-   from source until it is included in a published release.
+1. Download `n1rwj-bigfoot-0.11.0.h2kext` from the
+   [v0.11.0 release](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.11.0).
+   Install it using **Settings → Features & Extensions → Install from file**,
+   then enable **BIGFOOT Hunt**. Building from source with
+   `mise run pack n1rwj-bigfoot` is also supported.
 2. Create a dedicated BIGFOOT operation and add **BIGFOOT Hunt 2026**.
    Keep its event contacts together so the activity can track and export them.
 3. Log the callsign, UTC date/time, band, actual mode, and sent/received reports
@@ -106,5 +107,5 @@ native UI or on-air verification.
 
 BIGFOOT Hunt is a standalone special-event activity. It does not change CWT
 or CQ WW behavior and does not require synchronization with either temporary
-upstream contest branch. See the repository [license](../../../../LICENSE) and
-[notices](../../../../NOTICE.md).
+upstream contest branch. See the repository [license](../../../LICENSE) and
+[notices](../../../NOTICE.md).

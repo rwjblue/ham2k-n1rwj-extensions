@@ -6,7 +6,7 @@ your signal is heard. Published extensions are available as ready-to-install
 
 | Extension | What it adds |
 | --- | --- |
-| [BIGFOOT Hunt](extensions/activities/n1rwj-bigfoot/README.md) (`n1rwj-bigfoot`) | 2026 BIGFOOT letter and Skunk Ape bonus tracking, same-mode progress, and event worksheets; build from source until released |
+| [BIGFOOT Hunt](extensions/activities/n1rwj-bigfoot/README.md) (`n1rwj-bigfoot`) | 2026 BIGFOOT letter and Skunk Ape bonus tracking, same-mode progress, and event worksheets |
 | [Contest Calendar](extensions/tools/n1rwj-contest-calendar/README.md) (`n1rwj-contest-calendar`) | Optional Home panel with upcoming contests, UTC/local times, and sponsor rules from ContestClock |
 | [RBN](extensions/tools/n1rwj-rbn/README.md) (`n1rwj-rbn`) | Reception map and sortable CW, RTTY, FT8, and FT4 reports from the Reverse Beacon Network via Vail ReRBN, using your operation's callsign and location |
 | [CQ WW (temporary)](extensions/contests/n1rwj-cqww/README.md) (`n1rwj-cqww`) | Preview of official CQ WW RTTY exchange, scoring, and export improvements |
@@ -15,7 +15,7 @@ your signal is heard. Published extensions are available as ready-to-install
 | [K1USN SST](extensions/contests/n1rwj-sst/README.md) (`n1rwj-sst`) | SST sessions, name/location suggestions, scoring, and exports |
 | [Weekly RTTY Test](extensions/contests/n1rwj-wrt/README.md) (`n1rwj-wrt`) | Half-hour RTTY sessions, name/QTH suggestions, callsign multipliers, and exports |
 | [RandomGram](extensions/contests/n1rwj-randomgram/README.md) (`n1rwj-randomgram`) | Supplied TX lists, a large exchange readout, listening-only entries, keyer templates, and received-group submission exports |
-| [Zombie Shuffle](extensions/contests/n1rwj-zombie/README.md) (`n1rwj-zombie`) | 2026 Zombie exchanges, two-hour rebirth checks, call-history suggestions, scoring, and submission summaries; build from source until released |
+| [Zombie Shuffle](extensions/contests/n1rwj-zombie/README.md) (`n1rwj-zombie`) | 2026 Zombie exchanges, two-hour rebirth checks, call-history suggestions, scoring, and submission summaries |
 
 The [PSK Reporter extension](extensions/tools/n1rwj-psk-reporter/README.md)
 now builds with live MQTT reception using the published SDK and tools. It shares
@@ -58,8 +58,9 @@ versions; use the latest release linked above when installing.
 
 ### BIGFOOT Hunt
 
-Build the new extension with `mise run pack n1rwj-bigfoot` and install its
-`.h2kext` bundle from `dist/`. Create a dedicated operation and add the
+Download and install `n1rwj-bigfoot-0.11.0.h2kext` from the
+[v0.11.0 release](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.11.0).
+Create a dedicated operation and add the
 **BIGFOOT Hunt 2026** activity. Its score summary and optional panel track
 **B I G F O O T** plus the separate **W4S** Skunk Ape bonus, with Mixed,
 CW, Phone, and Digital completion shown independently.
