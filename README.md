@@ -65,6 +65,11 @@ Create a dedicated operation and add the
 **B I G F O O T** plus the separate **W4S** Skunk Ape bonus, with Mixed,
 CW, Phone, and Digital completion shown independently.
 
+The development source also adds emoji-rich Info details and an optional
+animated forest scene with letter celebrations, a waving Bigfoot, and a
+Skunk Ape bonus card. These display additions are not in v0.11.1; see the
+guide's **Forest scene (development)** section for setup and previewing.
+
 The supported edition runs **October 13, 2026 at 00:00 UTC through October 21
 at 23:59 UTC**. The two W7O contacts must differ in band, mode, or UTC date.
 Use another band or date for an all-CW completion. This is a fixed 2026 event

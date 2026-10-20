@@ -64,6 +64,34 @@ difference do not add letters. The bonus is displayed separately and does
 not replace a missing letter. The panel refreshes from the operation log
 when contacts are logged, edited, or deleted.
 
+## Forest scene (development)
+
+The current development source upgrades the optional **BIGFOOT Hunt** panel
+to an illustrated forest with a friendly Bigfoot, glowing fireflies,
+seven letter tiles, and a separate Skunk Ape card. These additions are not
+in the published v0.11.1 downloads. Add it once with **Edit Layout → Add a
+Panel → BIGFOOT Hunt**; an existing Hunt panel keeps its saved placement.
+The built-in Info display works independently of this optional panel.
+
+CW is the default focus, with Mixed progress alongside it. Gold tiles show
+letters earned in the selected mode. A small gold dot marks a letter earned
+in Mixed but still needed in that mode. The two O tiles remain independent,
+and only a qualifying second W7O fills O₂. The Skunk Ape never replaces a
+letter.
+
+A newly earned letter makes Bigfoot hop and wave for four seconds. New
+letters sparkle, the Skunk Ape celebrates its own bonus, and completing
+BIGFOOT lights up stars. Opening the panel, switching modes, editing
+an existing contact, or logging a repeat does not replay an award. **Wave
+hello** gives Bigfoot a greeting without changing the log or earning credit;
+very short panels hide that button to preserve readable progress.
+
+Panel settings offer **Hunt mode**, **Forest scene / Detailed checklist**,
+and **Animate the forest and celebrations**. System reduced-motion settings
+also keep the scene still. The detailed checklist retains contact dates,
+bands, modes, and both O contacts' evidence. Older hosts without scene
+environment support show that checklist automatically.
+
 ## Finding stations
 
 Station annotations and the BIGFOOT-only RBN filter are available starting
@@ -141,8 +169,16 @@ mise run build n1rwj-bigfoot
 mise run pack n1rwj-bigfoot
 mise run test -- extensions/activities/n1rwj-bigfoot/tests
 mise run verify-host n1rwj-bigfoot
+mise run bigfoot:preview
 mise run check
 ```
+
+`bigfoot:preview` writes a synthetic, interactive state browser to
+`dist/bigfoot-scene-preview.html`, with companion scene JSON. It exercises
+the actual panel hook with synthetic contacts, including narrow layouts,
+both O rules, completion, greeting, and reduced motion. Its SVG text and
+pose playback approximate the native view; it never accesses your logger
+or radio.
 
 Deterministic tests exercise event boundaries, callsign and mode handling,
 letter selection, the second-O rule, scoring, panels, and exports. Bundle

@@ -12,6 +12,7 @@ import type {
 } from '@ham2k/extension-sdk'
 import { expect, it } from 'vitest'
 import type { CallFilterHook } from '../../../../packages/spot-filters/src/index.ts'
+import { bigfootPreviewEnvironment } from '../../../../scripts/bigfoot-preview.ts'
 import manifest from '../manifest.json'
 
 it('runs the complete hunt in the bundled sandbox with no network or storage adapters', async () => {
@@ -137,6 +138,42 @@ it('runs the complete hunt in the bundled sandbox with no network or storage ada
   if (content.kind !== 'markdown') throw new Error('Expected Markdown')
   expect(content.content).toContain('CW BIGFOOT complete!')
   expect(content.content).toContain('40m CW')
+  const sceneArgs = {
+    panelKey: 'hunt',
+    instanceId: 'bundled-forest',
+    operation,
+    qsoCount: qsos.length,
+    config: {},
+    environment: bigfootPreviewEnvironment(),
+    clock: { nowMillis: 100_000, realNowMillis: 100_000 },
+    reason: 'initial',
+  }
+  const forest = await panel.render(sceneArgs, ctx)
+  expect(forest).toMatchObject({ kind: 'svgScene', title: 'BIGFOOT Hunt · CW 7/7', triggers: [] })
+  if (forest.kind !== 'svgScene') throw new Error('Expected the bundled native scene')
+  expect(forest.scene.layers.find((layer) => layer.id === 'bigfoot')?.svg).toContain('<svg')
+  expect(forest.scene.values).toMatchObject({ hop: 0, bonus: 1 })
+  expect(forest.scene.strings).toBeUndefined()
+  expect(forest.scene.controls?.every((control) => control.kind === 'button')).toBe(true)
+  expect(
+    await panel.onEvent?.(
+      {
+        ...sceneArgs,
+        event: { action: 'wave', controlId: 'wave', phase: 'activate', sequence: 1 },
+      },
+      ctx,
+    ),
+  ).toMatchObject({ values: { hop: 1, wave: 1 } })
+  const greeting = await panel.render({ ...sceneArgs, reason: 'event' }, ctx)
+  expect(greeting).toMatchObject({ kind: 'svgScene', triggers: ['tick:1'] })
+  const readsBeforeTick = reads
+  expect(
+    await panel.render(
+      { ...sceneArgs, reason: 'tick', clock: { nowMillis: 104_000, realNowMillis: 104_000 } },
+      ctx,
+    ),
+  ).toMatchObject({ kind: 'svgScene', triggers: [], scene: { values: { hop: 0 } } })
+  expect(reads).toBe(readsBeforeTick)
   const exporter = registered.get('export')?.hook as ExportHook
   const worksheet = await exporter.generateExport(
     { operation, qsos, exportType: 'bigfoot-csv' },

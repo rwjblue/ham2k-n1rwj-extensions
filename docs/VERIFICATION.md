@@ -1,5 +1,66 @@
 # Verification and compatibility
 
+## BIGFOOT forest scene (unreleased) — 2026-10-20
+
+The existing `hunt` panel now returns an original vector forest scene when
+the host supplies a panel environment, preserving its saved panel key. CW
+remains the default focus, with Mixed counts, explicit O₁/O₂ tiles, a gold-dot
+legend for Mixed-only letters, and a separate W4S card. Panel settings retain
+the detailed Markdown checklist and add a motion switch. Hosts without an
+environment retain the original checklist automatically.
+
+New qualifying letters trigger a four-second, two-hop celebration with arm
+waving and letter sparkles; completion adds stars and W4S animates its own
+bonus. A manual greeting changes only visual state. Quiet initial renders,
+raw-record identity plus rules-based credit comparisons, and per-instance /
+per-operation state prevent awards for repeats, edits, deletion/restoration,
+mode changes, or reopening. Animation ticks use cached contacts and stop
+after four seconds. System reduced motion or the motion preference disables
+transitions, native opacity pulses, and animation ticks; earned feedback
+remains static until another render.
+
+The scene uses the API-1-compatible `svgScene` contract with native text,
+SVG artwork, numeric bindings, transitions, pulses, and a drawn button. It
+does not use API-5 strings, native controls, or layout fields. The manifest
+compatibility range is unchanged. Artwork contains no external images,
+fonts, DOM, scripts, or network access.
+
+- `mise run format` and `mise run check` passed: **1,604 tests across 118
+  files**, lint, strict runtime/test/task typechecks, and all **11 official
+  ES2020 builds and packages**. New controller and panel integration tests
+  cover earned feedback, a CW/Mixed split second O, finite ticks with no log
+  reads, manual greetings without credit, reduced motion, and isolation.
+  The bundled sandbox test also exercises the scene, greeting, and expiry.
+- `mise run verify-host n1rwj-bigfoot` accepted all eight hooks in the
+  installed **Ham2K Mac Logger (Next) 26.9.0, build 180** JavaScript kernel.
+- `mise run bigfoot:preview` generates **15 synthetic scene states** as an
+  interactive HTML state browser plus companion JSON. Browser checks cover
+  state selection and show no page errors. Browser SVG text and pose playback
+  are an approximation, not native rendering acceptance.
+- A temporary harness in the separate host checkout passed **45 native
+  parser/widget checks plus one movement test**, using the actual
+  `PanelContent.fromJson` and `SvgSceneView` with real bundled fonts. All 15
+  fixtures fit, including **280×300**, **320×620**, and **480×380** layouts;
+  no text clipping, broken SVGs, bounds failures, or Flutter exceptions were
+  observed. The movement test checks a stable scene key across target poses,
+  real movement, and rest after four seconds, with zero host actions.
+- The host supplies `environment.version: 1` and `instanceId` to panel render
+  calls independently of manifest API, so this scene path works for API-1
+  extensions on a scene-capable host. The native test confirms component
+  rendering and transitions, not end-to-end logger scheduling.
+
+Ignored local evidence includes `dist/bigfoot-scene-preview.html`, its JSON,
+and `dist/bigfoot-scene-demo.gif`: a **560×660**, **46-frame**, **10 fps**
+capture of the actual Flutter renderer. The GIF loops a synthetic letter
+celebration for demonstration; the live panel only animates a newly earned
+credit once. Native PNG captures include idle, narrow, compact, completion,
+and tiny states. The running app, its operation log, host dependencies, and
+tracked host source were untouched.
+
+The development bundle has not been installed in the running logger or
+published. The scene and preview tooling affect only BIGFOOT, so CWT/CQ WW
+upstream synchronization is not required.
+
 ## BIGFOOT Info display (unreleased) — 2026-10-20
 
 Enriched the built-in Info pane's two existing views without changing the

@@ -1,13 +1,16 @@
-import type { PanelHook } from '@ham2k/extension-sdk'
+import type { PanelContent, PanelHook, PanelRenderArgs } from '@ham2k/extension-sdk'
 import { bigfootRef, eventFromOperation, FORM_URL, RULES_URL, SPOTS_URL } from './activity.ts'
+import { type CelebrationFrame, createCelebrations } from './celebration.ts'
 import {
   buildProgress,
   type Contact,
   type Progress,
   type ProgressMode,
+  type Qson,
   qualifyingContacts,
   sameModeProgress,
 } from './rules.ts'
+import { huntScene } from './scene.ts'
 
 const MODE_LABELS: Record<ProgressMode, string> = {
   CW: 'CW',
@@ -74,71 +77,174 @@ export function progressMarkdown(contacts: Contact[], focus: ProgressMode): stri
     .join('\n\n')
 }
 
-export const BigfootPanel = {
-  async getPanels() {
-    return [
-      {
-        key: 'hunt',
-        title: 'BIGFOOT Hunt',
-        icon: 'paw',
-        description: 'BIGFOOT letters, qualifying W7O contacts and Skunk Ape bonus.',
-        on: ['operation', 'qsoLogged'],
-        form: [
-          {
-            type: 'field',
-            fieldType: 'select',
-            key: 'focus',
-            label: 'Checklist mode',
-            value: 'CW',
-            options: (['CW', 'MIXED', 'PHONE', 'DIGITAL'] as const).map((mode) => ({
-              value: mode,
-              label: MODE_LABELS[mode],
-            })),
-          },
-        ],
-      },
-    ]
-  },
-  async render({ operation, config }, ctx) {
-    if (!operation)
-      return {
-        kind: 'markdown',
-        title: 'BIGFOOT Hunt',
-        content: 'Open a BIGFOOT operation to see hunt progress.',
+function focusFor(config: PanelRenderArgs['config']): ProgressMode {
+  return config.focus === 'PHONE' || config.focus === 'DIGITAL' || config.focus === 'MIXED'
+    ? config.focus
+    : 'CW'
+}
+
+function clockFor(args: PanelRenderArgs) {
+  const realNow = args.clock?.realNowMillis
+  return {
+    instanceId: args.instanceId ?? args.panelKey,
+    operationId: typeof args.operation?.uuid === 'string' ? args.operation.uuid : '',
+    now: typeof realNow === 'number' && Number.isFinite(realNow) ? realNow : Date.now(),
+    reducedMotion: args.config.motion === false || args.environment?.reducedMotion === true,
+  }
+}
+
+export function createBigfootPanel(): PanelHook {
+  const celebrations = createCelebrations()
+  const snapshots = new Map<string, { contacts: Contact[]; focus: ProgressMode }>()
+  const snapshotKey = (args: PanelRenderArgs) =>
+    JSON.stringify([args.instanceId ?? args.panelKey, args.operation?.uuid])
+  function remember(key: string, value: { contacts: Contact[]; focus: ProgressMode }) {
+    snapshots.delete(key)
+    snapshots.set(key, value)
+    while (snapshots.size > 12) {
+      const first = snapshots.keys().next().value
+      if (first !== undefined) snapshots.delete(first)
+    }
+  }
+  return {
+    async getPanels() {
+      return [
+        {
+          key: 'hunt',
+          title: 'BIGFOOT Hunt',
+          icon: 'paw',
+          description: 'A forest trail with BIGFOOT letters, celebrations and the Skunk Ape bonus.',
+          on: ['operation', 'qsoLogged'],
+          form: [
+            {
+              type: 'field',
+              fieldType: 'select',
+              key: 'focus',
+              label: 'Hunt mode',
+              value: 'CW',
+              options: (['CW', 'MIXED', 'PHONE', 'DIGITAL'] as const).map((mode) => ({
+                value: mode,
+                label: MODE_LABELS[mode],
+              })),
+            },
+            {
+              type: 'field',
+              fieldType: 'select',
+              key: 'view',
+              label: 'View',
+              value: 'scene',
+              options: [
+                { value: 'scene', label: 'Forest scene' },
+                { value: 'checklist', label: 'Detailed checklist' },
+              ],
+            },
+            {
+              type: 'field',
+              fieldType: 'checkbox',
+              key: 'motion',
+              label: 'Animate the forest and celebrations',
+              value: true,
+            },
+          ],
+        },
+      ]
+    },
+    async render(args, ctx): Promise<PanelContent> {
+      const { operation, config } = args
+      if (!operation)
+        return {
+          kind: 'markdown',
+          triggers: [],
+          title: 'BIGFOOT Hunt',
+          content: 'Open a BIGFOOT operation to see hunt progress.',
+        }
+      const event = eventFromOperation(operation)
+      if (!event)
+        return {
+          kind: 'markdown',
+          triggers: [],
+          title: 'BIGFOOT Hunt',
+          content: bigfootRef(operation)
+            ? 'This event edition has no confirmed rules. Select BIGFOOT Hunt 2026 in the operation’s activities.'
+            : 'Add **BIGFOOT Hunt 2026** to this operation’s activities. Use a dedicated operation for the hunt, then log the actual event station, band, mode and reports.',
+        }
+      if (typeof operation.uuid !== 'string' || !ctx.getQsos)
+        return {
+          kind: 'markdown',
+          triggers: [],
+          title: `BIGFOOT Hunt ${event.year}`,
+          content:
+            'The operation log is unavailable. Reopen the operation in a Ham2K version with extension log access.',
+        }
+      const focus = focusFor(config)
+      // Environment is sent by scene-capable hosts. Older hosts keep the
+      // original checklist and saved panel identity without a compatibility bump.
+      const forestView = config.view !== 'checklist' && args.environment?.version === 1
+      const key = snapshotKey(args)
+      const cached = snapshots.get(key)
+      let contacts: Contact[]
+      let frame: CelebrationFrame | undefined
+      const clock = clockFor(args)
+      if (forestView && args.reason === 'tick' && cached?.focus === focus) {
+        // A bounded celebration advances from an already-read log snapshot.
+        // No per-frame or per-keystroke log/host calls are needed.
+        contacts = cached.contacts
+        frame = celebrations.frame(clock)
+      } else {
+        // Read on log/operation changes, including same-count edits/deletions.
+        let qsos: Qson[] | null
+        try {
+          qsos = await ctx.getQsos(operation.uuid)
+        } catch {
+          qsos = null
+        }
+        if (!qsos)
+          return {
+            kind: 'markdown',
+            triggers: [],
+            content:
+              'The operation log is unavailable. Reopen the operation to refresh BIGFOOT progress.',
+          }
+        contacts = qualifyingContacts(qsos, event)
+        if (forestView) {
+          remember(key, { contacts, focus })
+          frame = celebrations.update({
+            ...clock,
+            focus,
+            contacts,
+            reason: args.reason,
+            recordIds: qsos.flatMap((qso) => (typeof qso.uuid === 'string' ? [qso.uuid] : [])),
+          })
+        }
       }
-    const event = eventFromOperation(operation)
-    if (!event)
-      return {
-        kind: 'markdown',
-        title: 'BIGFOOT Hunt',
-        content: bigfootRef(operation)
-          ? 'This event edition has no confirmed rules. Select BIGFOOT Hunt 2026 in the operation’s activities.'
-          : 'Add **BIGFOOT Hunt 2026** to this operation’s activities. Use a dedicated operation for the hunt, then log the actual event station, band, mode and reports.',
-      }
-    if (typeof operation.uuid !== 'string' || !ctx.getQsos)
+      if (forestView && frame)
+        return {
+          kind: 'svgScene',
+          title: `BIGFOOT Hunt · ${MODE_LABELS[focus]} ${buildProgress(contacts)[focus].worked}/7`,
+          scene: huntScene({
+            contacts,
+            focus,
+            frame,
+            environment: args.environment,
+            motion: config.motion !== false,
+          }),
+          triggers: frame.nextTick ? ['tick:1'] : [],
+        }
       return {
         kind: 'markdown',
         title: `BIGFOOT Hunt ${event.year}`,
-        content:
-          'The operation log is unavailable. Reopen the operation in a Ham2K version with extension log access.',
+        content: progressMarkdown(contacts, focus),
+        triggers: [],
       }
-    // Read only on operation/log changes, never on a callsign keystroke. Do
-    // not cache by qsoCount: editing a band, mode or date can change credit.
-    const qsos = await ctx.getQsos(operation.uuid)
-    if (!qsos)
-      return {
-        kind: 'markdown',
-        content:
-          'The operation log is unavailable. Reopen the operation to refresh BIGFOOT progress.',
+    },
+    async onEvent(args) {
+      if (args.event.action !== 'wave' || !snapshots.has(snapshotKey(args))) {
+        throw new Error('Open the BIGFOOT forest scene to wave hello.')
       }
-    const focus =
-      config.focus === 'PHONE' || config.focus === 'DIGITAL' || config.focus === 'MIXED'
-        ? config.focus
-        : 'CW'
-    return {
-      kind: 'markdown',
-      title: `BIGFOOT Hunt ${event.year}`,
-      content: progressMarkdown(qualifyingContacts(qsos, event), focus),
-    }
-  },
-} satisfies PanelHook
+      const frame = celebrations.greet(clockFor(args))
+      return { values: { hop: frame.phase, wave: frame.phase } }
+    },
+  }
+}
+
+export const BigfootPanel = createBigfootPanel()

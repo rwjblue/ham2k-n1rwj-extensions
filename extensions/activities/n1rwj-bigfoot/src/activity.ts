@@ -1,5 +1,5 @@
 import type { ActivityHook, RefHandlerHook } from '@ham2k/extension-sdk'
-import manifest from '../manifest.json'
+import manifest from '../manifest.json' with { type: 'json' }
 import { EVENT_2026, eventForYear, type Qson } from './rules.ts'
 
 export const REF_TYPE = 'bigfoot'

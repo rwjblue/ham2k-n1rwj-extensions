@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import type { HookContext, PanelRenderArgs } from '@ham2k/extension-sdk'
+import type { HookContext, PanelContent, PanelRenderArgs } from '@ham2k/extension-sdk'
 import { test, vi } from 'vitest'
 import { BigfootPanel } from '../src/panel.ts'
 import { EVENT_2026, type Qson } from '../src/rules.ts'
@@ -22,6 +22,11 @@ function args(overrides: Partial<PanelRenderArgs> = {}): PanelRenderArgs {
   return { panelKey: 'hunt', operation, qsoCount: 1, config: {}, reason: 'operation', ...overrides }
 }
 
+function markdown(result: PanelContent) {
+  assert.equal(result.kind, 'markdown')
+  return result.content
+}
+
 async function render(qsos: Qson[], overrides: Partial<PanelRenderArgs> = {}) {
   const getQsos = vi.fn(async (_uuid: string) => qsos)
   const result = await BigfootPanel.render(args(overrides), { ...ctx, getQsos })
@@ -30,7 +35,7 @@ async function render(qsos: Qson[], overrides: Partial<PanelRenderArgs> = {}) {
 }
 
 test('panel uses operation/log refresh signals without per-keystroke triggers or ticks', async () => {
-  const [panel] = await BigfootPanel.getPanels()
+  const [panel] = await BigfootPanel.getPanels({}, ctx)
   assert.equal(panel.key, 'hunt')
   assert.deepEqual(panel.on, ['operation', 'qsoLogged'])
   assert.equal(panel.form?.[0].key, 'focus')
@@ -79,13 +84,13 @@ test('rereads the current log after same-count edits and deletions', async () =>
   const getQsos = vi.fn(async () => qsos)
   const context: HookContext = { ...ctx, getQsos }
   const first = await BigfootPanel.render(args({ qsoCount: 2 }), context)
-  assert.match(first.content, /\*\*CW 2\/7\*\*/)
+  assert.match(markdown(first), /\*\*CW 2\/7\*\*/)
   qsos = [qso(), qso('W7O', { uuid: 'second-o', band: '20m' })]
   const edited = await BigfootPanel.render(args({ qsoCount: 2 }), context)
-  assert.match(edited.content, /\*\*CW 1\/7\*\*/)
+  assert.match(markdown(edited), /\*\*CW 1\/7\*\*/)
   qsos = [qso('W7O', { deleted: true }), qso('W7O', { uuid: 'second-o', deleted: true })]
   const deleted = await BigfootPanel.render(args({ qsoCount: 2 }), context)
-  assert.match(deleted.content, /\*\*CW 0\/7\*\*/)
+  assert.match(markdown(deleted), /\*\*CW 0\/7\*\*/)
   assert.equal(getQsos.mock.calls.length, 3)
 })
 
@@ -106,15 +111,15 @@ test('a panel placed outside an operation offers guidance without accessing a lo
   const getQsos = vi.fn(async () => [qso()])
   const absent = { ...args(), operation: undefined } as unknown as PanelRenderArgs
   const result = await BigfootPanel.render(absent, { ...ctx, getQsos })
-  assert.match(result.content, /Open a BIGFOOT operation/)
+  assert.match(markdown(result), /Open a BIGFOOT operation/)
   assert.equal(getQsos.mock.calls.length, 0)
 })
 
 test('unavailable logs are distinguished from an empty operation', async () => {
   const noAccess = await BigfootPanel.render(args(), ctx)
-  assert.match(noAccess.content, /operation log is unavailable/)
+  assert.match(markdown(noAccess), /operation log is unavailable/)
   const missing = await BigfootPanel.render(args(), { ...ctx, getQsos: async () => null })
-  assert.match(missing.content, /operation log is unavailable/)
+  assert.match(markdown(missing), /operation log is unavailable/)
   const empty = await render([])
   assert.match(empty.content, /\*\*CW 0\/7\*\*/)
   assert.doesNotMatch(empty.content, /unavailable/)
