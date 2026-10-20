@@ -1,6 +1,6 @@
 {
   "name": "ham2k-n1rwj-extensions",
-  "version": "0.12.1",
+  "version": "0.13.0",
   "private": true,
   "license": "MPL-2.0",
   "description": "N1RWJ Ham2K extensions: CWT, ICWC MST, K1USN SST, Weekly RTTY Test, and reception maps",
@@ -9,11 +9,11 @@
     "node": "24.x"
   },
   "dependencies": {
-    "@ham2k/extension-sdk": "0.12.0"
+    "@ham2k/extension-sdk": "0.12.13"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.15",
-    "@ham2k/extension-tools": "0.8.0",
+    "@ham2k/extension-tools": "0.13.0",
     "@ham2k/lib-callsigns": "1.0.2",
     "@ham2k/lib-country-files": "1.0.202605301",
     "@ham2k/lib-dxcc-data": "1.0.1",

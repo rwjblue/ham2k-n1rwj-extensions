@@ -8,6 +8,7 @@
 
 import assert from 'node:assert/strict'
 import type { JSONValue } from '@ham2k/extension-sdk'
+import { contestScorer } from '@ham2k/extension-sdk'
 import { test } from 'vitest'
 import { CWTScorer } from '../../src/cwt/scorer.ts'
 
@@ -17,6 +18,45 @@ const operation = { uuid: 'op', stationCall: 'N0DEV' }
 /// Wednesday 26 August 2026, 1300-1400 UTC.
 const sessionRef = { type: 'cwt', ref: '2026-08-26-1300' }
 const DURING = Date.UTC(2026, 7, 26, 13, 30)
+
+test('an incomplete call earns nothing until corrected and does not contaminate live scoring', async () => {
+  const hook = contestScorer(CWTScorer, { scope: { refTypes: ['cwt'] } })
+  const activeOperation = { ...operation, refs: [sessionRef] }
+  const incomplete = { ...qso('W1A?'), uuid: 'heard' }
+  const args = { operation: activeOperation, ref: sessionRef }
+  const pending = await hook.scoreQsos({ ...args, qsos: [incomplete] }, ctx)
+  assert.deepEqual(pending.qsoScores, {})
+  const emptySheet = { workedByCall: {}, bands: {}, qsos: 0, points: 0 }
+  assert.deepEqual(pending.scoresheet, emptySheet)
+  assert.equal(pending.operationSummary.cwt.total, 0)
+  const corrected = { ...incomplete, their: { call: 'W1AW' } }
+  const preview = await hook.scoreQso?.(
+    {
+      ...args,
+      qso: corrected,
+      resumeFrom: pending.scoresheet,
+      resumeDay: pending.scoresheetDay,
+    },
+    ctx,
+  )
+  assert.ok(preview?.notices.includes('newMult'))
+  assert.ok(!preview?.alerts.includes('duplicate'))
+  assert.deepEqual(pending.scoresheet, emptySheet)
+  const saved = await hook.scoreQsos({ ...args, qsos: [corrected] }, ctx)
+  assert.equal(saved.qsoScores.heard.value, 1)
+  assert.equal(saved.operationSummary.cwt.qsos, 1)
+  assert.equal(saved.operationSummary.cwt.total, 1)
+  const repeat = await hook.scoreQso?.(
+    {
+      ...args,
+      qso: corrected,
+      resumeFrom: saved.scoresheet,
+      resumeDay: saved.scoresheetDay,
+    },
+    ctx,
+  )
+  assert.equal(repeat?.dupe, true)
+})
 
 function qso(
   call: string,

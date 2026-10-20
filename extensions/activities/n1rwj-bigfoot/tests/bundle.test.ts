@@ -38,9 +38,26 @@ it('runs the complete hunt in the bundled sandbox with no network or storage ada
     { timeout: 5000 },
   )
   expect(definitions).toHaveLength(1)
+  const radioCalls: { method: string; params: unknown }[] = []
   definitions[0]?.onActivation({
     registerHook: (category, hook) => registered.set(category, hook),
-    hostCall: async (method) => {
+    hostCall: async (method, params) => {
+      if (method === 'readRadio')
+        return {
+          id: 'test-radio',
+          status: 'connected',
+          stale: false,
+          problem: null,
+          frequencyHz: 14000000,
+          mode: 'CW',
+          transmitting: false,
+          canTune: true,
+          modes: ['CW'],
+        }
+      if (method === 'setRadio') {
+        radioCalls.push({ method, params })
+        return { accepted: true, state: null }
+      }
       throw new Error(`Unexpected host call: ${method}`)
     },
   })
@@ -179,6 +196,78 @@ it('runs the complete hunt in the bundled sandbox with no network or storage ada
     ),
   ).toMatchObject({ kind: 'svgScene', triggers: [], scene: { values: { hop: 0 } } })
   expect(reads).toBe(readsBeforeTick)
+  const at = Date.UTC(2026, 9, 19, 23)
+  const boardContext: HookContext = {
+    online: false,
+    getQsos: async () => [qsos[4]],
+    getSpots: async (options) => {
+      expect(options).toEqual({ filter: 'user', maxAgeMinutes: 15, annotate: false })
+      return [
+        {
+          their: { call: 'W7O' },
+          band: '20m',
+          freq: 14050,
+          mode: 'CW',
+          spot: { source: 'RBN', timeInMillis: at - 120_000 },
+        },
+        {
+          their: { call: 'W7O,W7B' },
+          band: '40m',
+          freq: 7050,
+          mode: 'CW',
+          spot: { source: 'RBN', timeInMillis: at - 60_000 },
+        },
+      ]
+    },
+  }
+  expect((await panel.getPanels({}, boardContext)).map(({ key }) => key)).toEqual(['hunt'])
+  const board = await panel.render(
+    {
+      panelKey: 'hunt',
+      instanceId: 'bundled-spots',
+      operation,
+      qsoCount: 1,
+      config: {},
+      reason: 'initial',
+      clock: { nowMillis: at, realNowMillis: at },
+    },
+    boardContext,
+  )
+  expect(board).toMatchObject({
+    kind: 'markdown',
+    triggers: ['tick:60'],
+    title: 'BIGFOOT Hunt 2026',
+  })
+  if (board.kind !== 'markdown') throw new Error('Expected bundled spots Markdown')
+  expect(board.content).toContain('**W7O**')
+  expect(board.content).toContain('**W7B** · 7050.0 kHz · 40m CW · Needed')
+  expect(board.content).toContain('7050.0 kHz')
+  expect(board.content).not.toContain('14050.0 kHz')
+  const spotSceneArgs = {
+    ...sceneArgs,
+    instanceId: 'bundled-spot-forest',
+    clock: { nowMillis: at, realNowMillis: at },
+  }
+  const integrated = await panel.render(spotSceneArgs, boardContext)
+  expect(integrated.kind).toBe('svgScene')
+  expect(radioCalls).toEqual([])
+  await panel.onEvent?.(
+    {
+      ...spotSceneArgs,
+      event: { action: 'spot:W7O', controlId: 'spot-W7O', phase: 'activate', sequence: 1 },
+    },
+    boardContext,
+  )
+  expect(radioCalls).toEqual([
+    {
+      method: 'setRadio',
+      params: {
+        id: 'test-radio',
+        frequencyHz: 7050000,
+        mode: 'CW',
+      },
+    },
+  ])
   const exporter = registered.get('export')?.hook as ExportHook
   const worksheet = await exporter.generateExport(
     { operation, qsos, exportType: 'bigfoot-csv' },

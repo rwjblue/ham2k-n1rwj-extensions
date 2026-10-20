@@ -34,10 +34,11 @@ async function render(qsos: Qson[], overrides: Partial<PanelRenderArgs> = {}) {
   return { ...result, getQsos }
 }
 
-test('panel uses operation/log refresh signals without per-keystroke triggers or ticks', async () => {
+test('one integrated panel uses operation/log/spot refresh signals without per-keystroke triggers', async () => {
+  assert.equal((await BigfootPanel.getPanels({}, ctx)).length, 1)
   const [panel] = await BigfootPanel.getPanels({}, ctx)
   assert.equal(panel.key, 'hunt')
-  assert.deepEqual(panel.on, ['operation', 'qsoLogged'])
+  assert.deepEqual(panel.on, ['operation', 'qsoLogged', 'spots'])
   assert.equal(panel.form?.[0].key, 'focus')
   assert.equal(panel.form?.[0].value, 'CW')
   const preview = panel.preview

@@ -1,4 +1,9 @@
-import type { PanelEnvironment, PanelScene, PanelSceneLayer } from '@ham2k/extension-sdk'
+import type {
+  PanelEnvironment,
+  PanelScene,
+  PanelSceneControl,
+  PanelSceneLayer,
+} from '@ham2k/extension-sdk'
 import type { CelebrationFrame } from './celebration.ts'
 import { buildProgress, type Contact, type ProgressMode } from './rules.ts'
 import {
@@ -10,6 +15,8 @@ import {
   skunkArtwork,
   sparkleArtwork,
 } from './scene-art.ts'
+import type { HuntSpotView } from './spot-view.ts'
+import type { BigfootSpotRow } from './spots.ts'
 
 const LABELS: Record<ProgressMode, string> = {
   CW: 'CW',
@@ -21,6 +28,7 @@ const INK = '#15362D'
 const CREAM = '#F3E7C6'
 const GOLD = '#E8BC68'
 const MUTED = '#ABC2AE'
+const TEAL = '#7CD9CF'
 
 function clamp(value: number | undefined, fallback: number, min: number, max: number) {
   return Number.isFinite(value) ? Math.max(min, Math.min(max, value as number)) : fallback
@@ -48,12 +56,31 @@ function forest(width: number, height: number): string {
   )
 }
 
+function antenna(needed: boolean): string {
+  const color = needed ? TEAL : MUTED
+  return svg(
+    18,
+    18,
+    `<circle cx="9" cy="9" r="8" fill="#102E27" stroke="${color}" stroke-width="1.2"/><g fill="none" stroke="${color}" stroke-width="1.3" stroke-linecap="round"><path d="M9 8v6m-2 0h4M6 5a4 4 0 0 0 0 5m6-5a4 4 0 0 1 0 5"/>${needed ? '<path d="M3.8 3a7 7 0 0 0 0 9m10.4-9a7 7 0 0 1 0 9"/>' : ''}</g><circle cx="9" cy="7" r="1.4" fill="${color}"/>`,
+  )
+}
+
+function spotLabel(row: BigfootSpotRow): string {
+  return `Tune radio to ${row.call}, ${row.frequency.toFixed(1)} kHz, ${row.band} ${row.mode}. ${row.status}`
+}
+
+function fitLine(value: string, width: number, size: number): string {
+  const maxChars = Math.max(8, Math.floor(width / (size * 0.57)))
+  return value.length > maxChars ? `${value.slice(0, maxChars - 1)}…` : value
+}
+
 export type HuntSceneInput = {
   contacts: Contact[]
   focus: ProgressMode
   frame: CelebrationFrame
   environment?: PanelEnvironment
   motion: boolean
+  spots?: HuntSpotView
 }
 
 /** A native vector document. The host owns every animation frame. */
@@ -63,6 +90,7 @@ export function huntScene({
   frame,
   environment,
   motion,
+  spots,
 }: HuntSceneInput): PanelScene {
   const width = clamp(environment?.width, 560, 280, 1200)
   const height = clamp(environment?.height, 660, 300, 1100)
@@ -73,7 +101,11 @@ export function huntScene({
   const mixed = progress.MIXED
   const reduced = !motion || environment?.reducedMotion === true
   const layers: PanelSceneLayer[] = []
+  const controls: PanelSceneControl[] = []
   const font = environment?.typography.body.fontFamily ?? 'Roboto'
+  const spotRows = spots?.status === 'ready' ? spots.rows : []
+  const lead =
+    !frame.kind && spots?.status === 'ready' ? (spots.selected ?? spotRows[0]) : undefined
 
   function art(
     id: string,
@@ -151,6 +183,7 @@ export function huntScene({
   const tileWidth = (width - padding * 2 - gap * 6) / 7
   const tileHeight = compact ? 35 : clamp(tileWidth, 48, 42, 64)
   const tileSize = Math.min(32, tileWidth * 0.62)
+  const nextO = selected.slots.findIndex((slot) => slot.call === 'W7O' && !slot.contact)
   selected.slots.forEach((slot, index) => {
     const x = padding + index * (tileWidth + gap)
     const earned = !!slot.contact
@@ -194,6 +227,30 @@ export function huntScene({
         6,
         svg(6, 6, '<circle cx="3" cy="3" r="3" fill="#E8BC68"/>'),
       )
+    }
+    const report = spotRows.find((row) => row.call === slot.call)
+    if (report && (slot.call !== 'W7O' || index === nextO)) {
+      art(
+        `spot-beacon-${index}`,
+        x + tileWidth - 13,
+        tileY - 6,
+        18,
+        18,
+        antenna(!earned && report.needed),
+      )
+      // Narrow layouts keep these as status markers: seven 32px tiles
+      // cannot be seven independently usable touch targets.
+      if (width >= 400)
+        controls.push({
+          id: `spot-${slot.call}`,
+          kind: 'button',
+          label: spotLabel(report),
+          event: `spot:${slot.call}`,
+          x: x - Math.max(0, 44 - tileWidth) / 2,
+          y: tileY - 6,
+          width: Math.max(44, tileWidth),
+          height: Math.max(44, tileHeight + 23),
+        })
     }
     if (frame.letters.includes(letter)) {
       art(`letter-sparkle-${index}`, x + tileWidth - 10, tileY - 5, 16, 16, sparkleArtwork, {
@@ -318,79 +375,241 @@ export function huntScene({
 
   const journalX = width * 0.59
   const journalWidth = width - journalX - padding
-  const headingSize = tiny ? 12 : compact ? 15 : Math.min(24, width / 22)
-  const missing = selected.slots.find((slot) => !slot.contact)
-  const headline = frame.kind
-    ? frame.label
-    : selected.complete
-      ? `${LABELS[focus]} BIGFOOT complete!`
-      : `${selected.worked} found. ${7 - selected.worked} to go.`
-  const words = headline.split(' ')
-  const lines: string[] = ['']
-  const chars = Math.max(8, Math.floor(journalWidth / (headingSize * 0.55)))
-  for (const word of words) {
-    const last = lines.length - 1
-    if (lines[last] && lines[last].length + word.length + 1 > chars) lines.push(word)
-    else lines[last] += `${lines[last] ? ' ' : ''}${word}`
-  }
-  const messageY = heroTop + (tiny ? 3 : Math.max(8, (heroHeight - 130) / 2))
-  const headlineY = messageY + (tiny ? 0 : 17)
-  const captionY = headlineY + 4 + Math.min(lines.length, 3) * headingSize * 1.25
-  const buttonY = Math.min(footerY - 43, captionY + (compact ? 4 : 27))
-  const buttonWidth = Math.min(126, journalWidth)
-  const plateY = tiny ? heroTop : messageY - 12
-  const plateBottom = tiny ? footerY - 8 : buttonY + 39
-  art(
-    'journal-card',
-    journalX - 10,
-    plateY,
-    journalWidth + 20,
-    Math.max(32, plateBottom - plateY),
-    card(journalWidth + 20, Math.max(32, plateBottom - plateY), '#15382F', '#496149', 13),
-  )
-  if (!tiny)
-    text(
-      'journal-eyebrow',
-      frame.kind ? 'A LITTLE CELEBRATION' : 'ON THE TRAIL',
-      journalX,
-      messageY,
-      journalWidth,
-      compact ? 8 : 10,
-      GOLD,
-      700,
-    )
-  lines.slice(0, 3).forEach((line, index) => {
-    text(
-      `message-${index}`,
-      line,
-      journalX,
-      headlineY + index * headingSize * 1.25,
-      journalWidth,
-      headingSize,
-      CREAM,
-      700,
-    )
-  })
-  if (!compact && !tiny)
-    text(
-      'next-target',
-      selected.complete ? 'Seven letters found.' : `Next: ${missing?.call ?? 'W7B'}`,
-      journalX,
-      captionY,
-      journalWidth,
-      11,
-      MUTED,
-    )
-  if (!tiny) {
+  if (lead) {
+    const frequency = lead.frequency.toFixed(1)
+    const brief = heroHeight < 175
+    const showNext = !brief && spotRows.length > 1 && heroHeight >= 220
+    const plateHeight = brief ? 44 : showNext ? 214 : 164
+    const plateY = heroTop + Math.max(0, (heroHeight - plateHeight) / 2)
+    const plateX = journalX - 8
+    const plateWidth = journalWidth + 16
     art(
-      'wave-button',
-      journalX,
-      buttonY,
-      buttonWidth,
-      29,
-      card(buttonWidth, 29, '#E9C87F', '#F1DA9F', 14),
+      'journal-card',
+      plateX,
+      plateY,
+      plateWidth,
+      plateHeight,
+      card(plateWidth, plateHeight, '#15382F', lead.needed ? TEAL : '#496149', 13),
     )
-    text('wave-label', 'Wave hello', journalX, buttonY + 5, buttonWidth, 12, INK, 700, 'center')
+    const buttonY = brief ? plateY : plateY + 112
+    if (brief) {
+      text(
+        'spot-call',
+        `${lead.call} ${frequency}`,
+        journalX,
+        plateY + 2,
+        journalWidth,
+        12,
+        CREAM,
+        700,
+      )
+      text(
+        'tune-label',
+        fitLine(spots?.tuneStatus ?? 'Tune radio', journalWidth, 11),
+        journalX,
+        plateY + 23,
+        journalWidth,
+        11,
+        TEAL,
+        700,
+      )
+    } else {
+      text(
+        'spot-eyebrow',
+        `${lead.band} · ${lead.needed ? 'NEEDED SPOT' : 'KNOWN SPOT'}`,
+        journalX,
+        plateY + 11,
+        journalWidth,
+        9,
+        lead.needed ? TEAL : MUTED,
+        700,
+      )
+      text(
+        'spot-call',
+        lead.call,
+        journalX,
+        plateY + 28,
+        journalWidth,
+        width < 400 ? 23 : 28,
+        CREAM,
+        800,
+      )
+      text(
+        'spot-frequency',
+        `${frequency} ${lead.mode}`,
+        journalX,
+        plateY + 66,
+        journalWidth,
+        width < 400 ? 12 : 15,
+        TEAL,
+        600,
+      )
+      const caption =
+        spots?.tuneStatus ??
+        (lead.needed
+          ? lead.call === 'W7O'
+            ? nextO === 4
+              ? 'First O needed'
+              : 'Second O needed'
+            : lead.call === 'W4S'
+              ? 'Skunk Ape needed'
+              : `${LABELS[focus]} letter needed`
+          : `No new ${LABELS[focus]} credit`)
+      text(
+        'spot-status',
+        fitLine(caption, journalWidth, 10),
+        journalX,
+        plateY + 89,
+        journalWidth,
+        10,
+        MUTED,
+      )
+      art(
+        'tune-button',
+        journalX,
+        buttonY,
+        journalWidth,
+        44,
+        card(journalWidth, 44, '#27534A', TEAL, 12),
+      )
+      text(
+        'tune-label',
+        `Tune ${frequency}`,
+        journalX,
+        buttonY + 13,
+        journalWidth,
+        11,
+        CREAM,
+        700,
+        'center',
+      )
+    }
+    controls.push({
+      id: 'tune-spot',
+      kind: 'button',
+      label: `${spotLabel(lead)}${spots?.tuneStatus ? ` ${spots.tuneStatus}` : ''}`,
+      event: 'tune-spot',
+      x: brief ? plateX : journalX,
+      y: buttonY,
+      width: brief ? plateWidth : journalWidth,
+      height: 44,
+    })
+    if (showNext) {
+      art(
+        'next-spot-button',
+        journalX,
+        plateY + 162,
+        journalWidth,
+        44,
+        card(journalWidth, 44, '#19382E', '#496149', 12),
+      )
+      text(
+        'next-spot-label',
+        'Next station',
+        journalX,
+        plateY + 175,
+        journalWidth,
+        11,
+        MUTED,
+        600,
+        'center',
+      )
+      controls.push({
+        id: 'next-spot',
+        kind: 'button',
+        label: 'Show the next spotted BIGFOOT station',
+        event: 'next-spot',
+        x: journalX,
+        y: plateY + 162,
+        width: journalWidth,
+        height: 44,
+      })
+    }
+  } else {
+    const headingSize = tiny ? 12 : compact ? 15 : Math.min(24, width / 22)
+    const missing = selected.slots.find((slot) => !slot.contact)
+    const headline = frame.kind
+      ? frame.label
+      : selected.complete
+        ? `${LABELS[focus]} BIGFOOT complete!`
+        : `${selected.worked} found. ${7 - selected.worked} to go.`
+    const words = headline.split(' ')
+    const lines: string[] = ['']
+    const chars = Math.max(8, Math.floor(journalWidth / (headingSize * 0.55)))
+    for (const word of words) {
+      const last = lines.length - 1
+      if (lines[last] && lines[last].length + word.length + 1 > chars) lines.push(word)
+      else lines[last] += `${lines[last] ? ' ' : ''}${word}`
+    }
+    const messageY = heroTop + (tiny ? 3 : Math.max(8, (heroHeight - 130) / 2))
+    const headlineY = messageY + (tiny ? 0 : 17)
+    const captionY = headlineY + 4 + Math.min(lines.length, 3) * headingSize * 1.25
+    const buttonY = Math.min(footerY - 43, captionY + (compact ? 4 : 27))
+    const buttonWidth = Math.min(126, journalWidth)
+    const plateY = tiny ? heroTop : messageY - 12
+    const plateBottom = tiny ? footerY - 8 : buttonY + 39
+    art(
+      'journal-card',
+      journalX - 10,
+      plateY,
+      journalWidth + 20,
+      Math.max(32, plateBottom - plateY),
+      card(journalWidth + 20, Math.max(32, plateBottom - plateY), '#15382F', '#496149', 13),
+    )
+    if (!tiny)
+      text(
+        'journal-eyebrow',
+        frame.kind ? 'A LITTLE CELEBRATION' : 'ON THE TRAIL',
+        journalX,
+        messageY,
+        journalWidth,
+        compact ? 8 : 10,
+        GOLD,
+        700,
+      )
+    lines.slice(0, 3).forEach((line, index) => {
+      text(
+        `message-${index}`,
+        line,
+        journalX,
+        headlineY + index * headingSize * 1.25,
+        journalWidth,
+        headingSize,
+        CREAM,
+        700,
+      )
+    })
+    if (!compact && !tiny)
+      text(
+        'next-target',
+        selected.complete ? 'Seven letters found.' : `Next: ${missing?.call ?? 'W7B'}`,
+        journalX,
+        captionY,
+        journalWidth,
+        11,
+        MUTED,
+      )
+    if (!tiny) {
+      art(
+        'wave-button',
+        journalX,
+        buttonY,
+        buttonWidth,
+        29,
+        card(buttonWidth, 29, '#E9C87F', '#F1DA9F', 14),
+      )
+      text('wave-label', 'Wave hello', journalX, buttonY + 5, buttonWidth, 12, INK, 700, 'center')
+      controls.push({
+        id: 'wave',
+        kind: 'button',
+        label: 'Wave to Bigfoot',
+        event: 'wave',
+        x: journalX,
+        y: buttonY,
+        width: buttonWidth,
+        height: 29,
+      })
+    }
   }
 
   art(
@@ -426,6 +645,27 @@ export function huntScene({
     INK,
     600,
   )
+  const bonusReport = spotRows.find((row) => row.call === 'W4S')
+  if (bonusReport) {
+    art(
+      'bonus-spot-beacon',
+      width - padding - 95,
+      footerY + 9,
+      18,
+      18,
+      antenna(!selected.bonus && bonusReport.needed),
+    )
+    controls.push({
+      id: 'spot-W4S',
+      kind: 'button',
+      label: spotLabel(bonusReport),
+      event: 'spot:W4S',
+      x: padding,
+      y: footerY,
+      width: width - padding * 2,
+      height: footerHeight,
+    })
+  }
   if (!compact)
     text(
       'o-rule',
@@ -467,19 +707,6 @@ export function huntScene({
       'skunk-hop': !reduced && frame.kind === 'bonus' ? frame.phase : 0,
     },
     layers,
-    controls: tiny
-      ? []
-      : [
-          {
-            id: 'wave',
-            kind: 'button',
-            label: 'Wave to Bigfoot',
-            event: 'wave',
-            x: journalX,
-            y: buttonY,
-            width: buttonWidth,
-            height: 29,
-          },
-        ],
+    controls,
   }
 }

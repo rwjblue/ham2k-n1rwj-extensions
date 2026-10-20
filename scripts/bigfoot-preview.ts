@@ -3,7 +3,14 @@ import { dirname, resolve } from 'node:path'
 import type { PanelContent, PanelEnvironment, PanelRenderArgs } from '@ham2k/extension-sdk'
 import { createBigfootPanel } from '../extensions/activities/n1rwj-bigfoot/src/panel.ts'
 import { huntPanelPreview } from '../extensions/activities/n1rwj-bigfoot/src/panel-preview.ts'
-import type { Qson } from '../extensions/activities/n1rwj-bigfoot/src/rules.ts'
+import {
+  EVENT_2026,
+  type Qson,
+  qualifyingContacts,
+} from '../extensions/activities/n1rwj-bigfoot/src/rules.ts'
+import { huntScene } from '../extensions/activities/n1rwj-bigfoot/src/scene.ts'
+import type { HuntSpotView } from '../extensions/activities/n1rwj-bigfoot/src/spot-view.ts'
+import type { BigfootSpotRow } from '../extensions/activities/n1rwj-bigfoot/src/spots.ts'
 import { scenePreviewSvg } from './rbn-preview.ts'
 
 export function bigfootPreviewEnvironment(
@@ -133,6 +140,65 @@ export async function bigfootPreviewFixtures(): Promise<BigfootPreviewFixture[]>
   )
   await scenario('reduced-motion', seed, [qso('W7B')], bigfootPreviewEnvironment(560, 660, true))
   await scenario('greeting', seed, [])
+  const row = (call: string, band = '20m', frequency = 14030, needed = true): BigfootSpotRow => ({
+    call,
+    label: `BIGFOOT 2026: ${call}`,
+    band,
+    mode: 'CW',
+    frequency,
+    needed,
+    at: Date.UTC(2026, 9, 20, 12),
+    status: needed
+      ? 'CW: Needed; this contact would fill it.'
+      : 'CW: This context was already worked.',
+  })
+  const rows = [row('W7O', '40m', 7050), row('W7B'), row('W7I', '20m', 14030, false), row('W4S')]
+  const spotted = (name: string, view: HuntSpotView, width = 560, height = 660) => {
+    const environment = bigfootPreviewEnvironment(width, height)
+    fixtures.push({
+      name,
+      environment,
+      content: {
+        kind: 'svgScene',
+        scene: huntScene({
+          contacts: qualifyingContacts([...seed, qso('W7B', 'mixed-b', '20m', 'SSB')], EVENT_2026),
+          focus: 'CW',
+          motion: true,
+          environment,
+          frame: {
+            kind: null,
+            label: '',
+            letters: [],
+            mode: null,
+            phase: 0,
+            hopping: false,
+            nextTick: false,
+          },
+          spots: view,
+        }),
+      },
+    })
+  }
+  spotted('spotted-desktop', { status: 'ready', rows, selected: rows[0] })
+  spotted('spotted-narrow', { status: 'ready', rows, selected: rows[0] }, 320, 620)
+  spotted('spotted-tiny', { status: 'ready', rows, selected: rows[0] }, 280, 300)
+  spotted(
+    'radio-unavailable-tiny',
+    {
+      status: 'ready',
+      rows,
+      selected: rows[0],
+      tuneStatus: 'Radio disconnected. Connect it in settings.',
+    },
+    280,
+    300,
+  )
+  spotted('spotted-same-o', {
+    status: 'ready',
+    rows: [row('W7O', '20m', 14050, false)],
+    selected: row('W7O', '20m', 14050, false),
+  })
+  spotted('spotted-bonus', { status: 'ready', rows, selected: rows[3] })
   return fixtures
 }
 

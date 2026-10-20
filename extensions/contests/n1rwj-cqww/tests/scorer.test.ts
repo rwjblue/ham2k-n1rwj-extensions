@@ -10,6 +10,7 @@
 
 import assert from 'node:assert/strict'
 import type { JSONValue } from '@ham2k/extension-sdk'
+import { contestScorer } from '@ham2k/extension-sdk'
 import { test } from 'vitest'
 import { CQWWScorer, normalizeZone } from '../src/scorer.ts'
 
@@ -18,6 +19,50 @@ const ctx = { online: false } as never
 /// A US station, so "our continent" is NA and "our country" is K.
 const usOperation = { uuid: 'op', stationCall: 'N0DEV' }
 const ssbRef = { type: 'cqww', mode: 'SSB' }
+
+test('an incomplete call earns no points or multipliers until corrected', async () => {
+  const hook = contestScorer(CQWWScorer, { scope: { refTypes: ['cqww'] } })
+  const activeOperation = { ...usOperation, refs: [ssbRef] }
+  const incomplete = { ...qso('DL1A?', '20m', 'SSB', '14'), uuid: 'heard' }
+  const args = { operation: activeOperation, ref: ssbRef }
+  const pending = await hook.scoreQsos({ ...args, qsos: [incomplete] }, ctx)
+  assert.deepEqual(pending.qsoScores, {})
+  assert.partialDeepStrictEqual(pending.scoresheet, {
+    qsos: 0,
+    points: 0,
+    mults: {},
+    workedByCall: {},
+  })
+  const emptySheet = structuredClone(pending.scoresheet)
+  const corrected = { ...incomplete, their: { call: 'DL1ABC' } }
+  const preview = await hook.scoreQso?.(
+    {
+      ...args,
+      qso: corrected,
+      resumeFrom: pending.scoresheet,
+      resumeDay: pending.scoresheetDay,
+    },
+    ctx,
+  )
+  assert.ok(preview?.notices.includes('newMult'))
+  assert.equal(preview?.dupe, false)
+  assert.deepEqual(pending.scoresheet, emptySheet)
+  const saved = await hook.scoreQsos({ ...args, qsos: [corrected] }, ctx)
+  assert.equal(saved.qsoScores.heard.value, 3)
+  assert.equal(saved.operationSummary.cqww.qsos, 1)
+  assert.equal(saved.operationSummary.cqww.points, 3)
+  assert.equal(saved.operationSummary.cqww.total, 6)
+  const repeat = await hook.scoreQso?.(
+    {
+      ...args,
+      qso: corrected,
+      resumeFrom: saved.scoresheet,
+      resumeDay: saved.scoresheetDay,
+    },
+    ctx,
+  )
+  assert.equal(repeat?.dupe, true)
+})
 
 function qso(
   call: string,

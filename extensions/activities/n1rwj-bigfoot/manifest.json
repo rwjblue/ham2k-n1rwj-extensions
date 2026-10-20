@@ -2,10 +2,11 @@
   "key": "n1rwj-bigfoot",
   "name": "BIGFOOT Hunt",
   "shortName": "BIGFOOT",
-  "version": "0.12.1",
+  "version": "0.13.0",
   "description": "🌲🐾 Hunt BIGFOOT 2026! Collect CW and Mixed letters in an animated forest, celebrate each find, and chase the 🦨 Skunk Ape bonus.",
   "category": "activity",
-  "api": 1,
+  "api": 7,
+  "requiresRadioWrite": true,
   "icon": "paw",
   "accentColor": "#496B3A",
   "keywords": [

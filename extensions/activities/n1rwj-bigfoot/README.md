@@ -18,8 +18,8 @@ an updated event profile; they are not inferred from the calendar.
 Check the [organizer's announcement and rules](https://w7dk.org/?view=article&id=319:3rd-annual-national-sasquatch-day-special-event&catid=185)
 for current event details.
 
-1. Download `n1rwj-bigfoot-0.12.1.h2kext` from the
-   [v0.12.1 release](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.12.1).
+1. Download `n1rwj-bigfoot-0.13.0.h2kext` from the
+   [v0.13.0 release](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.13.0).
    Install it using **Settings → Features & Extensions → Install from file**,
    then enable **BIGFOOT Hunt**. Building from source with
    `mise run pack n1rwj-bigfoot` is also supported.
@@ -100,6 +100,47 @@ environment support show that checklist automatically.
 
 ## Finding stations
 
+Version 0.13.0 integrates cached spots into the existing **BIGFOOT Hunt**
+forest. Your saved Hunt panel keeps its placement; there is no separate spots
+pane. Enable a logger spot source to supply reports. This version requires
+**extension API 7** and requests **radio-write permission** for click-to-tune.
+
+Teal antenna markers identify freshly spotted letters. Bright markers mean
+the report would advance your selected hunt mode; muted markers mean that
+station is already satisfied on the reported band, mode, and UTC date. Gold
+letter fills and the lower gold Mixed-only dot still represent logged credit.
+W7O marks only the next missing O; a single report never fills both slots.
+The existing Skunk Ape card shows W4S reports too.
+
+Bigfoot's journal shows a current station lead, its frequency, band, and mode.
+Select a marked letter or the journal's **Tune** button to request tuning of
+the connected logging radio. **Enter the callsign in the logger manually**;
+the SDK cannot populate that field from this panel. Tuning uses a supported
+matching radio mode when available, otherwise the status asks you to set the
+mode manually. A disconnected or unavailable radio leaves the callsign and
+frequency visible for manual operation. The panel reports request acceptance,
+which is separate from confirming the hardware's final frequency.
+
+On narrow panels, use **Next spot** in the journal to browse stations, then
+**Tune**; very short panels show one compact lead. Earned-letter celebrations
+take priority briefly. Radio changes occur only after a click, and expired
+reports cannot silently redirect a tuning click to another station.
+
+The existing **Hunt mode** setting also filters spots. Defaults are **CW**,
+the last **15 minutes**, and **Follow Spots filters**. Settings offer 5/30-minute
+windows and **All cached spots**, which bypasses native board filters only
+for this forest. It cannot restore reports excluded by the source, and it
+does not fetch new reports or change the native Spots page. The detailed
+checklist includes a compact station list for manual tuning.
+
+The newest valid report per callsign is shown. Frequencies are in kHz and
+must match the reported band. Needed status uses this operation's contacts
+and the current UTC date, including both O contacts' exact rules. Native
+worked flags do not hide a useful second O. Reports age out while visible;
+spot and log changes refresh the view without reading the log every tick.
+No matching reports means the cache has no fresh lead, not that a station is
+off air. Missing host support or temporary spot failures preserve progress.
+
 Station annotations and the BIGFOOT-only RBN filter are available starting
 with v0.11.1. Install or update both **BIGFOOT Hunt** and **N1RWJ RBN** to
 use the filter.
@@ -136,8 +177,9 @@ first contact; entering a target still shows its event notes immediately.
 Keep the [organizer's spotting page](https://w7dk.org/?view=article&id=309&catid=178)
 and [Reverse Beacon Network](https://www.reversebeacon.net/) available while
 operating. Spots can guide your hunt; confirm the callsign on air before
-logging. This extension tracks your contacts and provides those links; it
-does not retrieve a live station schedule or tune your radio.
+logging. This extension tracks your contacts, provides those links, and can
+display the logger’s cached reports in the forest and request radio tuning
+when you select a lead. It does not retrieve a live station schedule.
 
 With **N1RWJ RBN** enabled, choose **Settings → RBN → Station filter → BIGFOOT
 2026** to see only spots for the BIGFOOT 2026 station roster: W7B, W7I, W7G,

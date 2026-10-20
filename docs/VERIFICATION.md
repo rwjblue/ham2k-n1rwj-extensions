@@ -1,5 +1,80 @@
 # Verification and compatibility
 
+## BIGFOOT integrated spots (v0.13.0 preparation) — 2026-10-20
+
+Cached station leads are integrated into the existing Hunt forest, preserving
+its saved panel key. Teal letter/bonus beacons and Bigfoot's journal show the
+newest valid report per callsign; the selected hunt mode and native Spots
+filters apply by default over 15 minutes. Settings offer all cached reports
+and 5/30-minute windows. No separate spots panel is registered. Gold earned
+letters and Mixed-only dots are unchanged; only the next missing O is marked.
+
+The journal and sufficiently large letter tiles request radio tuning on an
+explicit click. The adapter reads the selected radio, pins its identity, converts
+kHz to Hz, and requests only supported suitable modes. Otherwise it requests
+frequency alone with manual-mode guidance. Missing/disconnected/stale radios,
+transmission in progress, identity changes, and refused commands have explicit
+feedback. SDK request acceptance does not establish final hardware tuning.
+The SDK cannot populate the logger draft, so callsign entry remains manual.
+BIGFOOT now declares **API 7** and **requiresRadioWrite**; other API levels and
+all shared-library compatibility ranges are preserved.
+
+Exact-roster matching splits merged calls and excludes malformed, mismatched
+frequency/band, stale, future, and unsupported reports. Latest-per-call choice
+precedes hunt-mode filtering, so a mode change cannot resurrect an old frequency.
+Needed status uses this operation's contacts and the app's current UTC date,
+including both O rules. Spot age uses the display clock; animation uses real time.
+Spot/minute refreshes reuse the successful log snapshot, animation ticks reuse
+the held board, and log/operation changes invalidate cached contacts before
+asynchronous reads. Generation guards discard late responses. Expiry cannot
+silently redirect a displayed Tune action to another station; same-target
+refreshes during tuning preserve the result. No logger write, network fetch,
+PTT, or keying is added.
+
+- `mise run format` and `mise run release v0.13.0 --dry-run` passed **1,682
+  tests across 122 files**, lint, three strict TypeScript projects, and all
+  **11 official ES2020 builds/packages** with synchronized versions/checksums.
+  Coverage includes UTC midnight, mode families, exact O credit, malformed data,
+  host options, ageing, corrections/deletions, placement isolation, races,
+  explicit radio actions, readiness/refusal paths, radio identity, supported
+  modes, unit conversion, geometry, and reduced motion.
+- The complete bundled sandbox renders integrated spots and exercises the
+  actual SDK readRadio/setRadio bridge with simulated responses. There are
+  **37 injected radio-adapter cases** and **10 direct scene cases**.
+- `mise run verify-host n1rwj-bigfoot` accepted all eight hooks in installed
+  **Ham2K Mac Logger (Next) 26.9.0 build 180**, kernel SHA-256
+  `21eaa53e90efa10d8599da19b0140d2344211f5bafd6add9f55d04c4a53c507a`.
+  This evaluates the installed JavaScript kernel under a Node VM; it does not
+  drive the installed app or a radio.
+- `mise run bigfoot:preview` produces **21 synthetic states**, including
+  desktop/narrow/tiny spots, unavailable radio, W7O, and W4S. The preview task
+  bundles the updated SDK's sandbox JSON imports for Node. Browser previews
+  at **560×660** and **280×300** show readable leads and 44px tune targets.
+
+- An external harness using cached **Flutter 3.44.9** and the actual host
+  `PanelContent.fromJson` / `PanelSceneView` passed **64 parser, widget, and
+  movement checks across all 21 fixtures**, with normal and reduced motion.
+  Native desktop/narrow/tiny, disconnected, repeated-O, and W4S screenshots
+  show readable calls/frequencies, 44px controls, and no overflow or clipping.
+  The tiny outcome line deliberately ellipsizes; its accessible label retains
+  the full message. Host dependency lock/config hashes are unchanged.
+
+The root SDK moves **0.12.0 → 0.12.13** and tools **0.8.0 → 0.13.0**. These
+universal dependency changes select all eleven extensions for catalog release.
+The SDK's incomplete-call scoring behavior has matching CWT/CQ WW regressions.
+SDK pins, tests, and relevant docs are pushed to verified upstream PR source
+branches: [CWT PR #1](https://github.com/ham2k/extensions/pull/1),
+`codex/cwt-call-history` at `e5af61d3dc887f6d2cd7ae76a81e7967791a160f`, and
+[CQ WW PR #2](https://github.com/ham2k/extensions/pull/2), `codex/cqww-rtty`
+at `a3cae6b266f3a7b7647599459515e6a1ffc0c6a1`. GitHub verifies both signatures.
+CWT passes **133 extension tests**, typecheck/build/package and **100 bundle
+checks**; CQ WW passes **69 extension tests**, typecheck/build/package and
+**101 bundle checks**. Other upstream consumers retain their locked SDKs.
+BIGFOOT-only UI and personal release packaging are exempt from synchronization.
+
+The running logger, operation log, and radio were not modified. Installed-app
+and on-air acceptance remain unverified.
+
 ## Release 0.12.1 publication — 2026-10-20
 
 Published [v0.12.1](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.12.1)
