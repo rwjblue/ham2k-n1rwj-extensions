@@ -10,6 +10,15 @@ import { test } from 'vitest'
 import { bigfootPreviewEnvironment } from '../../../../scripts/bigfoot-preview.ts'
 import { createBigfootPanel } from '../src/panel.ts'
 import type { Qson } from '../src/rules.ts'
+import type { BigfootRadioAvailability } from '../src/spot-radio.ts'
+
+const ready = async (): Promise<BigfootRadioAvailability> => ({
+  status: 'ready',
+  message: 'CAT control is ready.',
+})
+function createReadyPanel(tuneSpot?: Parameters<typeof createBigfootPanel>[0]) {
+  return createBigfootPanel(tuneSpot, ready)
+}
 
 const now = Date.UTC(2026, 9, 20, 12)
 const operation = { uuid: 'hunt', refs: [{ type: 'bigfoot', ref: '2026' }] }
@@ -55,7 +64,7 @@ function event(action: string, overrides: Partial<PanelRenderArgs> = {}) {
 
 test('fresh station leads share the forest, deduplicate calls and tune only on an explicit action', async () => {
   const calls: string[] = []
-  const panel = createBigfootPanel(async (row) => {
+  const panel = createReadyPanel(async (row) => {
     calls.push(row.call)
     return { tuned: true, message: 'Tune requested' }
   })
@@ -69,7 +78,7 @@ test('fresh station leads share the forest, deduplicate calls and tune only on a
   }
   const initial = await panel.render(args(), ctx)
   assert.match(words(initial), /W7[BI]/)
-  assert.deepEqual(initial.triggers, ['tick:60'])
+  assert.deepEqual(initial.triggers, ['tick:5'])
   assert.deepEqual(calls, [])
   assert.equal(document(initial).controls?.filter((c) => c.event === 'spot:W7I').length, 1)
   assert.ok(panel.onEvent)
@@ -86,7 +95,7 @@ test('fresh station leads share the forest, deduplicate calls and tune only on a
 test('spot and minute refreshes reuse the log while animation ticks reuse the held board', async () => {
   let logReads = 0
   let boardReads = 0
-  const panel = createBigfootPanel()
+  const panel = createReadyPanel()
   const ctx: HookContext = {
     online: false,
     getQsos: async () => {
@@ -116,7 +125,7 @@ test('spot and minute refreshes reuse the log while animation ticks reuse the he
 
 test('expired reports and events from a previous operation cannot tune', async () => {
   const calls: string[] = []
-  const panel = createBigfootPanel(async (row) => {
+  const panel = createReadyPanel(async (row) => {
     calls.push(row.call)
     return { tuned: true, message: 'requested' }
   })
@@ -135,7 +144,7 @@ test('expired reports and events from a previous operation cannot tune', async (
 })
 
 test('same-count corrections invalidate credit before failed spots reads and recover on a tick', async () => {
-  const panel = createBigfootPanel()
+  const panel = createReadyPanel()
   let qsos: Qson[] = []
   let fail = false
   const ctx: HookContext = {
@@ -173,7 +182,7 @@ test('missing and failed spots keep the forest and progress usable', async () =>
       throw new Error('temporary')
     },
   ]) {
-    const panel = createBigfootPanel()
+    const panel = createReadyPanel()
     const result = await panel.render(args(), { online: false, getQsos: async () => [], getSpots })
     assert.equal(result.kind, 'svgScene')
     assert.ok(document(result).controls?.some((c) => c.event === 'wave'))
@@ -182,7 +191,7 @@ test('missing and failed spots keep the forest and progress usable', async () =>
 })
 
 test('a late failed refresh cannot discard a newer board or log snapshot', async () => {
-  const panel = createBigfootPanel()
+  const panel = createReadyPanel()
   let rejectOld: (error: Error) => void = () => assert.fail('Not started')
   const old = panel.render(args(), {
     online: false,
@@ -205,7 +214,7 @@ test('a late failed refresh cannot discard a newer board or log snapshot', async
 
 test('expiry never retargets an already displayed tune button to another station', async () => {
   const calls: string[] = []
-  const panel = createBigfootPanel(async (row) => {
+  const panel = createReadyPanel(async (row) => {
     calls.push(row.call)
     return { tuned: true, message: 'requested' }
   })
@@ -228,7 +237,7 @@ test('expiry never retargets an already displayed tune button to another station
 })
 
 test('a newer phone report does not resurrect an older CW frequency in a CW hunt', async () => {
-  const panel = createBigfootPanel()
+  const panel = createReadyPanel()
   const result = await panel.render(args(), {
     online: true,
     getQsos: async () => [],
@@ -246,7 +255,7 @@ test('a newer phone report does not resurrect an older CW frequency in a CW hunt
 test('a normal spot refresh during tuning preserves the result for the same selected station', async () => {
   let complete: (value: { tuned: boolean; message: string }) => void = () =>
     assert.fail('Not started')
-  const panel = createBigfootPanel(
+  const panel = createReadyPanel(
     () =>
       new Promise((resolve) => {
         complete = resolve
@@ -261,4 +270,147 @@ test('a normal spot refresh during tuning preserves the result for the same sele
   await tuning
   const result = await panel.render(args({ reason: 'event' }), ctx)
   assert.match(words(result), /Radio is disconnected/)
+})
+
+test('manual station selection keeps the frequency visible without tuning, including stale Tune events', async () => {
+  const calls: string[] = []
+  const panel = createBigfootPanel(
+    async (row) => {
+      calls.push(row.call)
+      return { tuned: true, message: 'unexpected' }
+    },
+    async () => ({ status: 'manual', message: 'Radio is disconnected.' }),
+  )
+  const ctx = {
+    online: true,
+    getQsos: async () => [],
+    getSpots: async () => [report('W7B'), report('W7I', now - 120000, 7040)],
+  }
+  const initial = await panel.render(args(), ctx)
+  assert.match(words(initial), /Manual tuning/)
+  assert.ok(
+    !document(initial).controls?.some(
+      (c) => c.event === 'tune-spot' || c.event?.startsWith('spot:'),
+    ),
+  )
+  assert.ok(document(initial).controls?.some((c) => c.event === 'select-spot:W7I'))
+  assert.ok(panel.onEvent)
+  await panel.onEvent(event('select-spot:W7I'), ctx)
+  const selected = await panel.render(args({ reason: 'event' }), ctx)
+  assert.match(words(selected), /W7I/)
+  assert.match(words(selected), /7040\.0/)
+  await panel.onEvent(event('tune-spot'), ctx)
+  await panel.onEvent(event('spot:W7B'), ctx)
+  assert.deepEqual(calls, [])
+})
+
+test('visible CAT polling follows real time and updates connection controls without extra board or log reads', async () => {
+  let radio: BigfootRadioAvailability = { status: 'connecting', message: 'Radio is connecting.' }
+  let radioReads = 0
+  let logReads = 0
+  let boardReads = 0
+  const panel = createBigfootPanel(undefined, async () => {
+    radioReads++
+    return radio
+  })
+  const ctx = {
+    online: true,
+    getQsos: async () => {
+      logReads++
+      return []
+    },
+    getSpots: async () => {
+      boardReads++
+      return [report()]
+    },
+  }
+  const initial = await panel.render(args(), ctx)
+  assert.match(words(initial), /Connecting…/)
+  assert.deepEqual(initial.triggers, ['tick:5'])
+  radio = await ready()
+  const beforePoll = await panel.render(
+    args({ reason: 'tick', clock: { nowMillis: now, realNowMillis: now + 1000 } }),
+    ctx,
+  )
+  assert.match(words(beforePoll), /Connecting…/)
+  assert.equal(radioReads, 1)
+  const connected = await panel.render(
+    args({ reason: 'tick', clock: { nowMillis: now, realNowMillis: now + 5000 } }),
+    ctx,
+  )
+  assert.ok(document(connected).controls?.some((c) => c.event === 'tune-spot'))
+  radio = { status: 'manual', message: 'Radio is disconnected.' }
+  const disconnected = await panel.render(
+    args({ reason: 'tick', clock: { nowMillis: now, realNowMillis: now + 10000 } }),
+    ctx,
+  )
+  assert.match(words(disconnected), /Manual tuning/)
+  assert.ok(!document(disconnected).controls?.some((c) => c.event === 'tune-spot'))
+  assert.equal(radioReads, 3)
+  assert.equal(logReads, 1)
+  assert.equal(boardReads, 1)
+})
+
+test('CAT availability reads are limited to native forests with fresh station leads', async () => {
+  for (const overrides of [
+    { config: { view: 'checklist' } },
+    { environment: undefined },
+    { operation: undefined },
+  ]) {
+    const panel = createBigfootPanel(undefined, async () => assert.fail('Unexpected radio read'))
+    const result = await panel.render(args(overrides), {
+      online: true,
+      getQsos: async () => [],
+      getSpots: async () => [report()],
+    })
+    assert.ok(!result.triggers?.includes('tick:5'))
+  }
+  const panel = createBigfootPanel(undefined, async () => assert.fail('Unexpected radio read'))
+  const empty = await panel.render(args(), {
+    online: true,
+    getQsos: async () => [],
+    getSpots: async () => [],
+  })
+  assert.deepEqual(empty.triggers, ['tick:60'])
+})
+
+test('a failed availability read leaves manual station information usable', async () => {
+  const panel = createBigfootPanel(undefined, async () => {
+    throw new Error('read failed')
+  })
+  const result = await panel.render(args(), {
+    online: true,
+    getQsos: async () => [],
+    getSpots: async () => [report()],
+  })
+  assert.match(words(result), /Manual tuning/)
+  assert.match(words(result), /W7I/)
+  assert.match(words(result), /7050\.0/)
+  assert.ok(!document(result).controls?.some((c) => c.event === 'tune-spot'))
+})
+
+test('a late radio response cannot overwrite a newer disconnected snapshot', async () => {
+  let complete: (value: BigfootRadioAvailability) => void = () => assert.fail('Read not started')
+  let started: () => void = () => assert.fail('No waiter')
+  const began = new Promise<void>((resolve) => {
+    started = resolve
+  })
+  let reads = 0
+  const panel = createBigfootPanel(undefined, () => {
+    if (++reads === 1)
+      return new Promise((resolve) => {
+        complete = resolve
+        started()
+      })
+    return Promise.resolve({ status: 'manual', message: 'Radio is disconnected.' })
+  })
+  const ctx = { online: true, getQsos: async () => [], getSpots: async () => [report()] }
+  const older = panel.render(args(), ctx)
+  await began
+  await panel.render(args({ reason: 'spots' }), ctx)
+  complete(await ready())
+  await older
+  const latest = await panel.render(args({ reason: 'tick' }), ctx)
+  assert.match(words(latest), /Manual tuning/)
+  assert.ok(!document(latest).controls?.some((c) => c.event === 'tune-spot'))
 })

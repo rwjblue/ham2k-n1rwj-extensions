@@ -39,13 +39,14 @@ it('runs the complete hunt in the bundled sandbox with no network or storage ada
   )
   expect(definitions).toHaveLength(1)
   const radioCalls: { method: string; params: unknown }[] = []
+  let radioConnected = true
   definitions[0]?.onActivation({
     registerHook: (category, hook) => registered.set(category, hook),
     hostCall: async (method, params) => {
       if (method === 'readRadio')
         return {
           id: 'test-radio',
-          status: 'connected',
+          status: radioConnected ? 'connected' : 'disconnected',
           stale: false,
           problem: null,
           frequencyHz: 14000000,
@@ -268,6 +269,20 @@ it('runs the complete hunt in the bundled sandbox with no network or storage ada
       },
     },
   ])
+  // The displayed ready snapshot cannot authorize a write after CAT drops.
+  radioConnected = false
+  await panel.onEvent?.(
+    {
+      ...spotSceneArgs,
+      event: { action: 'tune-spot', controlId: 'tune-spot', phase: 'activate', sequence: 2 },
+    },
+    boardContext,
+  )
+  expect(radioCalls).toHaveLength(1)
+  const manual = await panel.render({ ...spotSceneArgs, reason: 'event' }, boardContext)
+  if (manual.kind !== 'svgScene') throw new Error('Expected the disconnected forest')
+  expect(manual.scene.layers.some((layer) => layer.text?.literal === 'Manual tuning')).toBe(true)
+  expect(manual.scene.controls?.some((control) => control.event === 'tune-spot')).toBe(false)
   const exporter = registered.get('export')?.hook as ExportHook
   const worksheet = await exporter.generateExport(
     { operation, qsos, exportType: 'bigfoot-csv' },

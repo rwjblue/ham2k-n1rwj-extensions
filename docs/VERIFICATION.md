@@ -1,5 +1,51 @@
 # Verification and compatibility
 
+## BIGFOOT CAT availability (v0.13.1 preparation) — 2026-10-20
+
+The existing forest reads the selected CAT radio before offering Tune. A
+connected, fresh, usable radio shows Tune; connection in progress shows
+Connecting…; disconnected, unavailable, stale, transmitting, and untunable
+states show Manual tuning. Callsign/frequency remain visible, and letter or
+bonus controls use selection-only events when CAT is unavailable. The journal
+status is static text without a hidden tuning hit target.
+
+Read-only availability checks run at most once per five real seconds while
+the native forest has a fresh station lead, including while using the app's
+time-travel clock. They reuse held log/board snapshots. Native visibility gates
+pause renders while the pane/app is hidden and refresh on return. No dedicated
+radio-change trigger exists, so spot updates alone cannot replace this polling.
+Generation guards discard late radio responses; per-placement/operation state
+prevents cross-panel leakage. A cached manual state rejects old tuning events.
+Ready clicks retain the adapter's fresh radio read, pinned identity, readiness
+checks, and supported-mode selection. The event's authoritative render rereads
+availability after a tuning attempt.
+
+- `mise run format` and `mise run release v0.13.1 --dry-run` passed **1,708
+  tests across 122 files**, lint, three strict TypeScript projects, and all
+  **11 official ES2020 builds/packages** with matching synchronized versions.
+- Coverage includes **53 radio adapter/availability cases**, **15 direct scene
+  cases**, real-clock polling without repeated log/spot reads, manual selection
+  without commands, late availability reads, and actual bundled SDK behavior
+  when a connection drops between displaying Tune and clicking it.
+- One first full-suite run, concurrent with native QA, timed out at five seconds
+  in the unchanged RBN bundle test. All three RBN bundle cases passed in the
+  targeted rerun, and the subsequent full release check passed unchanged.
+- `mise run verify-host n1rwj-bigfoot` accepted all eight hooks in installed
+  **Ham2K Mac Logger (Next) 26.9.0 build 180**'s JavaScript kernel under Node VM.
+- The cached Flutter **3.44.9** native host harness passed **76 parser, widget,
+  and movement checks across 25 fixtures**, with normal/reduced motion. A
+  further **59 geometry/status assertions** verify in-bounds 44×44 controls,
+  static unavailable status, and no tuning events in manual/connecting states.
+  Native narrow/tiny ready/manual/connecting captures are readable without
+  clipping or overlap. Host dependency lock/config hashes are unchanged.
+
+Only BIGFOOT runtime/UI and personal release packaging change. SDK/tools,
+shared runtime workspaces, manifest API 7, and radio-write permission remain
+unchanged. This is exempt from CWT/CQ WW upstream synchronization. The authored
+`docs/releases/v0.13.1.md` selects BIGFOOT alone for catalog submission; other
+extensions advance only in the synchronized GitHub archive. No installed-app
+or real-radio operation was performed, so on-air acceptance remains unverified.
+
 ## Release 0.13.0 publication — 2026-10-20
 
 Published [v0.13.0](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.13.0)

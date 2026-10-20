@@ -18,8 +18,8 @@ an updated event profile; they are not inferred from the calendar.
 Check the [organizer's announcement and rules](https://w7dk.org/?view=article&id=319:3rd-annual-national-sasquatch-day-special-event&catid=185)
 for current event details.
 
-1. Download `n1rwj-bigfoot-0.13.0.h2kext` from the
-   [v0.13.0 release](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.13.0).
+1. Download `n1rwj-bigfoot-0.13.1.h2kext` from the
+   [v0.13.1 release](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.13.1).
    Install it using **Settings → Features & Extensions → Install from file**,
    then enable **BIGFOOT Hunt**. Building from source with
    `mise run pack n1rwj-bigfoot` is also supported.
@@ -113,13 +113,22 @@ W7O marks only the next missing O; a single report never fills both slots.
 The existing Skunk Ape card shows W4S reports too.
 
 Bigfoot's journal shows a current station lead, its frequency, band, and mode.
-Select a marked letter or the journal's **Tune** button to request tuning of
-the connected logging radio. **Enter the callsign in the logger manually**;
+When CAT control is connected and ready, select a marked letter or the
+journal's **Tune** button to request tuning of the logging radio. **Enter the callsign in the logger manually**;
 the SDK cannot populate that field from this panel. Tuning uses a supported
 matching radio mode when available, otherwise the status asks you to set the
 mode manually. A disconnected or unavailable radio leaves the callsign and
 frequency visible for manual operation. The panel reports request acceptance,
 which is separate from confirming the hardware's final frequency.
+
+Starting with **0.13.1**, the forest checks CAT availability before showing
+Tune. It shows **Connecting…** while the radio connects and **Manual tuning**
+when no usable CAT connection is available, including stale readings or a
+radio that is transmitting. Callsign and frequency stay visible, and marked
+letters select a station without tuning in these states. Availability refreshes
+every five seconds while a fresh lead is visible; the host pauses these checks
+when the panel or app is hidden. Radio state is checked again on an actual
+tuning click, so a connection loss cannot rely on the earlier UI snapshot.
 
 On narrow panels, use **Next spot** in the journal to browse stations, then
 **Tune**; very short panels show one compact lead. Earned-letter celebrations

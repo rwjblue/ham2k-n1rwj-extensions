@@ -9,6 +9,7 @@ import {
   qualifyingContacts,
 } from '../extensions/activities/n1rwj-bigfoot/src/rules.ts'
 import { huntScene } from '../extensions/activities/n1rwj-bigfoot/src/scene.ts'
+import type { BigfootRadioAvailability } from '../extensions/activities/n1rwj-bigfoot/src/spot-radio.ts'
 import type { HuntSpotView } from '../extensions/activities/n1rwj-bigfoot/src/spot-view.ts'
 import type { BigfootSpotRow } from '../extensions/activities/n1rwj-bigfoot/src/spots.ts'
 import { scenePreviewSvg } from './rbn-preview.ts'
@@ -70,6 +71,10 @@ export type BigfootPreviewFixture = {
 
 export async function bigfootPreviewFixtures(): Promise<BigfootPreviewFixture[]> {
   const fixtures: BigfootPreviewFixture[] = []
+  const readyRadio: BigfootRadioAvailability = {
+    status: 'ready',
+    message: 'The synthetic logging radio is connected.',
+  }
   const qso = (call: string, id = call, band = '20m', mode = 'CW'): Qson => ({
     uuid: id,
     their: { call },
@@ -84,7 +89,10 @@ export async function bigfootPreviewFixtures(): Promise<BigfootPreviewFixture[]>
     addition: Qson[],
     environment = bigfootPreviewEnvironment(),
   ) {
-    const panel = createBigfootPanel()
+    const panel = createBigfootPanel(
+      async () => ({ tuned: false, message: 'Synthetic preview: no radio action was sent.' }),
+      async () => readyRadio,
+    )
     let qsos = initial
     const ctx = { online: false, getQsos: async () => qsos }
     const args: PanelRenderArgs = {
@@ -179,16 +187,21 @@ export async function bigfootPreviewFixtures(): Promise<BigfootPreviewFixture[]>
       },
     })
   }
-  spotted('spotted-desktop', { status: 'ready', rows, selected: rows[0] })
-  spotted('spotted-narrow', { status: 'ready', rows, selected: rows[0] }, 320, 620)
-  spotted('spotted-tiny', { status: 'ready', rows, selected: rows[0] }, 280, 300)
+  spotted('spotted-desktop', { status: 'ready', rows, selected: rows[0], radio: readyRadio })
+  spotted(
+    'spotted-narrow',
+    { status: 'ready', rows, selected: rows[0], radio: readyRadio },
+    320,
+    620,
+  )
+  spotted('spotted-tiny', { status: 'ready', rows, selected: rows[0], radio: readyRadio }, 280, 300)
   spotted(
     'radio-unavailable-tiny',
     {
       status: 'ready',
       rows,
       selected: rows[0],
-      tuneStatus: 'Radio disconnected. Connect it in settings.',
+      radio: { status: 'manual', message: 'Radio disconnected. Set the frequency manually.' },
     },
     280,
     300,
@@ -197,8 +210,55 @@ export async function bigfootPreviewFixtures(): Promise<BigfootPreviewFixture[]>
     status: 'ready',
     rows: [row('W7O', '20m', 14050, false)],
     selected: row('W7O', '20m', 14050, false),
+    radio: readyRadio,
   })
-  spotted('spotted-bonus', { status: 'ready', rows, selected: rows[3] })
+  spotted('spotted-bonus', { status: 'ready', rows, selected: rows[3], radio: readyRadio })
+  spotted('radio-disconnected', {
+    status: 'ready',
+    rows,
+    selected: rows[0],
+    radio: {
+      status: 'manual',
+      message: 'The logging radio is disconnected. Set its frequency manually.',
+    },
+  })
+  spotted('radio-connecting', {
+    status: 'ready',
+    rows,
+    selected: rows[0],
+    radio: {
+      status: 'connecting',
+      message: 'The logging radio is connecting. Wait for CAT to be ready.',
+    },
+  })
+  spotted(
+    'radio-connecting-tiny',
+    {
+      status: 'ready',
+      rows,
+      selected: rows[0],
+      radio: {
+        status: 'connecting',
+        message: 'The logging radio is connecting. Wait for CAT to be ready.',
+      },
+    },
+    280,
+    300,
+  )
+  spotted(
+    'radio-manual-narrow',
+    {
+      status: 'ready',
+      rows,
+      selected: rows[0],
+      radio: {
+        status: 'manual',
+        message: 'No logging radio is selected. Set the frequency manually.',
+      },
+    },
+    320,
+    620,
+  )
   return fixtures
 }
 

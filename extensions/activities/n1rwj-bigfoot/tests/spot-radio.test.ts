@@ -1,6 +1,6 @@
 import type { PanelRadioResult, PanelRadioSet, PanelRadioState } from '@ham2k/extension-sdk'
 import { describe, expect, it, vi } from 'vitest'
-import { tuneBigfootSpot } from '../src/spot-radio.ts'
+import { readBigfootRadioAvailability, tuneBigfootSpot } from '../src/spot-radio.ts'
 import type { BigfootSpotRow } from '../src/spots.ts'
 
 function spot(overrides: Partial<BigfootSpotRow> = {}): BigfootSpotRow {
@@ -46,6 +46,65 @@ function dependencies(state: PanelRadioState | null = radio()) {
     ),
   }
 }
+
+describe('BIGFOOT radio availability', () => {
+  it.each([false, null])(
+    'reports a ready connected radio with transmitting=%s',
+    async (transmitting) => {
+      const deps = dependencies(radio({ transmitting }))
+      expect(await readBigfootRadioAvailability(deps)).toEqual({
+        status: 'ready',
+        message: 'Radio is ready to tune.',
+      })
+      expect(deps.readRadio).toHaveBeenCalledExactlyOnceWith()
+      expect(deps.setRadio).not.toHaveBeenCalled()
+    },
+  )
+
+  it.each([
+    { state: null, message: 'No logging radio is selected.' },
+    { state: radio({ id: null }), message: 'No logging radio is selected.' },
+    { state: radio({ id: '' }), message: 'No logging radio is selected.' },
+    { state: radio({ status: 'disconnected' }), message: 'Radio is disconnected.' },
+    { state: radio({ status: 'disconnecting' }), message: 'Radio is disconnecting.' },
+    { state: radio({ status: 'error' }), message: 'Radio is unavailable.' },
+    { state: radio({ stale: true }), message: 'Radio reading is stale.' },
+    { state: radio({ problem: 'Driver unavailable' }), message: 'Radio is unavailable.' },
+    { state: radio({ transmitting: true }), message: 'Radio is transmitting.' },
+    { state: radio({ canTune: false }), message: 'Radio is not ready to tune.' },
+  ])('reports manual operation when unavailable: $message', async ({ state, message }) => {
+    const deps = dependencies(state)
+    expect(await readBigfootRadioAvailability(deps)).toEqual({ status: 'manual', message })
+    expect(deps.readRadio).toHaveBeenCalledExactlyOnceWith()
+    expect(deps.setRadio).not.toHaveBeenCalled()
+  })
+
+  it.each(['logging-radio', null])('reports an in-progress connection with id=%s', async (id) => {
+    const deps = dependencies(radio({ id, status: 'connecting', canTune: false }))
+    expect(await readBigfootRadioAvailability(deps)).toEqual({
+      status: 'connecting',
+      message: 'Radio is connecting.',
+    })
+    expect(deps.setRadio).not.toHaveBeenCalled()
+  })
+
+  it('handles a missing host API without attempting a command', async () => {
+    expect(await readBigfootRadioAvailability({})).toEqual({
+      status: 'manual',
+      message: 'Radio access is unavailable.',
+    })
+  })
+
+  it('handles rejected reads without exposing host errors', async () => {
+    const deps = dependencies()
+    deps.readRadio.mockRejectedValueOnce(new Error('readRadio blocked: no grant'))
+    expect(await readBigfootRadioAvailability(deps)).toEqual({
+      status: 'manual',
+      message: 'Radio access is unavailable.',
+    })
+    expect(deps.setRadio).not.toHaveBeenCalled()
+  })
+})
 
 describe('BIGFOOT spot radio tuning', () => {
   it('requests CW frequency in whole Hz using the captured logging radio identity', async () => {

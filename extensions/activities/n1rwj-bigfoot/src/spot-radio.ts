@@ -4,10 +4,42 @@ import type { BigfootSpotRow } from './spots.ts'
 
 export type BigfootSpotRadioDependencies = Partial<Pick<typeof host, 'readRadio' | 'setRadio'>>
 
+export type BigfootRadioAvailability = {
+  status: 'ready' | 'connecting' | 'manual'
+  message: string
+}
+
 export interface BigfootSpotRadioResult {
   /** The host accepted the request; this is not hardware confirmation. */
   tuned: boolean
   message: string
+}
+
+/** Read the current logging radio without connecting, tuning, or transmitting. */
+export async function readBigfootRadioAvailability(
+  dependencies: Partial<Pick<typeof host, 'readRadio'>> = host,
+): Promise<BigfootRadioAvailability> {
+  const manual = (message: string): BigfootRadioAvailability => ({ status: 'manual', message })
+  if (typeof dependencies.readRadio !== 'function') return manual('Radio access is unavailable.')
+
+  let radio: PanelRadioState | null
+  try {
+    radio = await dependencies.readRadio()
+  } catch {
+    return manual('Radio access is unavailable.')
+  }
+  if (radio?.status === 'connecting')
+    return { status: 'connecting', message: 'Radio is connecting.' }
+  if (!radio || typeof radio.id !== 'string' || !radio.id)
+    return manual('No logging radio is selected.')
+  if (radio.status === 'disconnecting') return manual('Radio is disconnecting.')
+  if (radio.status === 'disconnected') return manual('Radio is disconnected.')
+  if (radio.status !== 'connected') return manual('Radio is unavailable.')
+  if (radio.stale) return manual('Radio reading is stale.')
+  if (radio.problem) return manual('Radio is unavailable.')
+  if (radio.transmitting === true) return manual('Radio is transmitting.')
+  if (radio.canTune !== true) return manual('Radio is not ready to tune.')
+  return { status: 'ready', message: 'Radio is ready to tune.' }
 }
 
 function modeFor(row: BigfootSpotRow, radio: PanelRadioState): string | undefined {

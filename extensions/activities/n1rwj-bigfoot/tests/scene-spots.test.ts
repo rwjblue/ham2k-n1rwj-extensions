@@ -43,7 +43,13 @@ function report(call = 'W7O', patch: Partial<BigfootSpotRow> = {}): BigfootSpotR
 }
 
 function view(rows = [report()], patch: Partial<HuntSpotView> = {}): HuntSpotView {
-  return { status: 'ready', rows, selected: rows[0], ...patch }
+  return {
+    status: 'ready',
+    rows,
+    selected: rows[0],
+    radio: { status: 'ready', message: 'The logging radio is connected.' },
+    ...patch,
+  }
 }
 
 function render(
@@ -249,5 +255,129 @@ test('empty, unsupported and unavailable spots preserve the original forest and 
   for (const status of ['empty', 'unsupported', 'unavailable'] as const) {
     const current = render(view([report()], { status }))
     assert.deepEqual(current, baseline)
+  }
+})
+
+test('missing radio availability fails closed without offering a tuning action', () => {
+  const current = render(
+    view([report(), report('W4S')], { radio: undefined, tuneStatus: 'Radio tune requested.' }),
+  )
+  assert.match(text(current), /Manual tuning/)
+  assert.doesNotMatch(text(current), /Radio tune requested|Tune radio|Tune 7050/)
+  assert.ok(!current.controls?.some((control) => control.id === 'tune-spot'))
+  assert.equal(
+    current.controls?.find((control) => control.id === 'spot-W7O')?.event,
+    'select-spot:W7O',
+  )
+  assert.equal(
+    current.controls?.find((control) => control.id === 'spot-W4S')?.event,
+    'select-spot:W4S',
+  )
+  assert.ok(
+    current.controls
+      ?.filter((control) => control.id.startsWith('spot-'))
+      .every((control) => control.label.startsWith('Show ')),
+  )
+})
+
+test('connecting and manual radios keep spot selection while advertising no radio actions', () => {
+  for (const radio of [
+    { status: 'connecting', message: 'The logging radio is connecting. Wait for CAT to be ready.' },
+    { status: 'manual', message: 'The logging radio is disconnected. Set its frequency manually.' },
+  ] as const) {
+    const current = render(view([report(), report('W7B'), report('W4S')], { radio }))
+    assert.match(text(current), radio.status === 'connecting' ? /Connecting…/ : /Manual tuning/)
+    assert.ok(text(current).includes(radio.message))
+    assert.ok(!current.controls?.some((control) => control.id === 'tune-spot'))
+    assert.ok(!current.layers.some((layer) => layer.id === 'tune-button'))
+    for (const call of ['W7O', 'W7B', 'W4S']) {
+      const control = current.controls?.find((candidate) => candidate.id === `spot-${call}`)
+      assert.equal(control?.event, `select-spot:${call}`)
+      assert.ok(control?.label.startsWith(`Show ${call}, `))
+    }
+    assert.equal(
+      current.controls?.find((control) => control.id === 'next-spot')?.event,
+      'next-spot',
+    )
+    assert.ok(current.controls?.every((control) => !/\bTune\b/.test(control.label)))
+  }
+})
+
+test('tiny disconnected and connecting journals retain call and frequency without becoming buttons', () => {
+  for (const [status, label] of [
+    ['manual', 'Manual tuning'],
+    ['connecting', 'Connecting…'],
+  ] as const) {
+    const current = render(
+      view([report()], { radio: { status, message: 'Radio unavailable.' } }),
+      [],
+      280,
+      300,
+    )
+    assert.match(text(current), /W7O 7050\.0/)
+    assert.equal(current.layers.find((layer) => layer.id === 'tune-label')?.text?.literal, label)
+    assert.deepEqual(current.controls, [])
+    assert.ok(!current.layers.some((layer) => layer.id === 'tune-button'))
+    const journal = current.layers.find((layer) => layer.id === 'journal-card')
+    assert.equal(journal?.height, 44)
+  }
+})
+
+test('radio availability changes preserve progress and restore tune controls only when ready', () => {
+  const qsos = [qso('W7B', 'mixed-b', '20m', 'SSB'), qso('W7O')]
+  const rows = [report(), report('W7B'), report('W4S')]
+  const ready = render(view(rows), qsos)
+  for (const status of ['connecting', 'manual'] as const) {
+    const changed = render(
+      view(rows, { radio: { status, message: 'Radio connection changed.' } }),
+      qsos,
+    )
+    for (const id of [
+      'tile-0',
+      'tile-4',
+      'mixed-dot-0',
+      'primary-score-text',
+      'mixed-score-text',
+      'bonus-status',
+    ])
+      assert.deepEqual(
+        changed.layers.find((layer) => layer.id === id),
+        ready.layers.find((layer) => layer.id === id),
+      )
+    assert.deepEqual(changed.values, ready.values)
+    assert.ok(
+      !changed.controls?.some(
+        (control) => control.event === 'tune-spot' || control.event?.startsWith('spot:'),
+      ),
+    )
+  }
+  assert.deepEqual(render(view(rows), qsos), ready)
+})
+
+test('manual and connecting scenes retain bounded selection targets across narrow and large layouts', () => {
+  for (const [width, height] of [
+    [280, 300],
+    [320, 620],
+    [400, 320],
+    [560, 660],
+    [800, 300],
+  ]) {
+    for (const status of ['manual', 'connecting'] as const) {
+      const current = render(
+        view([report(), report('W7B'), report('W4S')], {
+          radio: { status, message: 'No logging radio is selected. Set the frequency manually.' },
+        }),
+        [qso('W7O')],
+        width,
+        height,
+      )
+      for (const control of current.controls ?? []) {
+        const { x = 0, y = 0, width: w = 0, height: h = 0 } = control
+        assert.ok(x >= 0 && y >= 0 && x + w <= width && y + h <= height)
+        assert.ok(w >= 44 && h >= 44)
+        assert.ok(control.event === 'next-spot' || control.event?.startsWith('select-spot:'))
+      }
+      if (width < 400) assert.ok(!current.controls?.some((control) => /^spot-W7/.test(control.id)))
+    }
   }
 })

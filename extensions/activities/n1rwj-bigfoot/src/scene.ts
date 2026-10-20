@@ -65,13 +65,24 @@ function antenna(needed: boolean): string {
   )
 }
 
-function spotLabel(row: BigfootSpotRow): string {
-  return `Tune radio to ${row.call}, ${row.frequency.toFixed(1)} kHz, ${row.band} ${row.mode}. ${row.status}`
+function spotLabel(row: BigfootSpotRow, canTune: boolean): string {
+  return `${canTune ? 'Tune radio to' : 'Show'} ${row.call}, ${row.frequency.toFixed(1)} kHz, ${row.band} ${row.mode}. ${row.status}`
 }
 
 function fitLine(value: string, width: number, size: number): string {
   const maxChars = Math.max(8, Math.floor(width / (size * 0.57)))
   return value.length > maxChars ? `${value.slice(0, maxChars - 1)}…` : value
+}
+
+function wrapLines(value: string, width: number, size: number): string[] {
+  const maxChars = Math.max(8, Math.floor(width / (size * 0.57)))
+  const lines: string[] = ['']
+  for (const word of value.split(/\s+/).filter(Boolean)) {
+    const last = lines.length - 1
+    if (lines[last] && lines[last].length + word.length + 1 > maxChars) lines.push(word)
+    else lines[last] += `${lines[last] ? ' ' : ''}${word}`
+  }
+  return lines
 }
 
 export type HuntSceneInput = {
@@ -106,6 +117,12 @@ export function huntScene({
   const spotRows = spots?.status === 'ready' ? spots.rows : []
   const lead =
     !frame.kind && spots?.status === 'ready' ? (spots.selected ?? spotRows[0]) : undefined
+  const radio = spots?.radio ?? {
+    status: 'manual',
+    message: 'Radio access is unavailable. Set the radio manually.',
+  }
+  const canTune = radio.status === 'ready'
+  const radioLabel = radio.status === 'connecting' ? 'Connecting…' : 'Manual tuning'
 
   function art(
     id: string,
@@ -143,7 +160,14 @@ export function huntScene({
     input: [0, 1] as [number, number],
     output: [start, end] as [number, number],
   })
-  art('base', 0, 0, width, height, card(width, height, '#102E27', '#375746', 18))
+  art(
+    'base',
+    0,
+    0,
+    width,
+    height,
+    svg(width, height, `<rect width="${width}" height="${height}" fill="#102E27"/>`),
+  )
 
   const titleSize = compact ? 25 : width < 400 ? 29 : 36
   text(
@@ -244,8 +268,8 @@ export function huntScene({
         controls.push({
           id: `spot-${slot.call}`,
           kind: 'button',
-          label: spotLabel(report),
-          event: `spot:${slot.call}`,
+          label: spotLabel(report, canTune),
+          event: `${canTune ? 'spot' : 'select-spot'}:${slot.call}`,
           x: x - Math.max(0, 44 - tileWidth) / 2,
           y: tileY - 6,
           width: Math.max(44, tileWidth),
@@ -320,7 +344,7 @@ export function huntScene({
   const footerY = height - padding - footerHeight
   const heroHeight = Math.max(40, footerY - heroTop - 8)
   const tiny = heroHeight < 95
-  art('forest', 2, heroTop, width - 4, heroHeight + 20, forest(width - 4, heroHeight + 20))
+  art('forest', 0, heroTop, width, heroHeight + 20, forest(width, heroHeight + 20))
 
   const bodyHeight = Math.max(50, Math.min(250, heroHeight * 0.94, width * 0.57))
   const scale = bodyHeight / 220
@@ -377,9 +401,11 @@ export function huntScene({
   const journalWidth = width - journalX - padding
   if (lead) {
     const frequency = lead.frequency.toFixed(1)
-    const brief = heroHeight < 175
-    const showNext = !brief && spotRows.length > 1 && heroHeight >= 220
-    const plateHeight = brief ? 44 : showNext ? 214 : 164
+    const reasons = wrapLines(radio.message, journalWidth, 10)
+    const detailHeight = canTune ? 164 : Math.max(164, 112 + reasons.length * 13 + 10)
+    const brief = heroHeight < Math.max(175, detailHeight)
+    const showNext = !brief && spotRows.length > 1 && heroHeight >= detailHeight + 56
+    const plateHeight = brief ? 44 : detailHeight + (showNext ? 50 : 0)
     const plateY = heroTop + Math.max(0, (heroHeight - plateHeight) / 2)
     const plateX = journalX - 8
     const plateWidth = journalWidth + 16
@@ -405,7 +431,7 @@ export function huntScene({
       )
       text(
         'tune-label',
-        fitLine(spots?.tuneStatus ?? 'Tune radio', journalWidth, 11),
+        fitLine(canTune ? (spots?.tuneStatus ?? 'Tune radio') : radioLabel, journalWidth, 11),
         journalX,
         plateY + 23,
         journalWidth,
@@ -444,17 +470,18 @@ export function huntScene({
         TEAL,
         600,
       )
-      const caption =
-        spots?.tuneStatus ??
-        (lead.needed
-          ? lead.call === 'W7O'
-            ? nextO === 4
-              ? 'First O needed'
-              : 'Second O needed'
-            : lead.call === 'W4S'
-              ? 'Skunk Ape needed'
-              : `${LABELS[focus]} letter needed`
-          : `No new ${LABELS[focus]} credit`)
+      const caption = canTune
+        ? (spots?.tuneStatus ??
+          (lead.needed
+            ? lead.call === 'W7O'
+              ? nextO === 4
+                ? 'First O needed'
+                : 'Second O needed'
+              : lead.call === 'W4S'
+                ? 'Skunk Ape needed'
+                : `${LABELS[focus]} letter needed`
+            : `No new ${LABELS[focus]} credit`))
+        : radioLabel
       text(
         'spot-status',
         fitLine(caption, journalWidth, 10),
@@ -464,41 +491,56 @@ export function huntScene({
         10,
         MUTED,
       )
-      art(
-        'tune-button',
-        journalX,
-        buttonY,
-        journalWidth,
-        44,
-        card(journalWidth, 44, '#27534A', TEAL, 12),
-      )
-      text(
-        'tune-label',
-        `Tune ${frequency}`,
-        journalX,
-        buttonY + 13,
-        journalWidth,
-        11,
-        CREAM,
-        700,
-        'center',
-      )
+      if (canTune) {
+        art(
+          'tune-button',
+          journalX,
+          buttonY,
+          journalWidth,
+          44,
+          card(journalWidth, 44, '#27534A', TEAL, 12),
+        )
+        text(
+          'tune-label',
+          `Tune ${frequency}`,
+          journalX,
+          buttonY + 13,
+          journalWidth,
+          11,
+          CREAM,
+          700,
+          'center',
+        )
+      } else {
+        reasons.forEach((line, index) => {
+          text(
+            `radio-reason-${index}`,
+            line,
+            journalX,
+            plateY + 112 + index * 13,
+            journalWidth,
+            10,
+            MUTED,
+          )
+        })
+      }
     }
-    controls.push({
-      id: 'tune-spot',
-      kind: 'button',
-      label: `${spotLabel(lead)}${spots?.tuneStatus ? ` ${spots.tuneStatus}` : ''}`,
-      event: 'tune-spot',
-      x: brief ? plateX : journalX,
-      y: buttonY,
-      width: brief ? plateWidth : journalWidth,
-      height: 44,
-    })
+    if (canTune)
+      controls.push({
+        id: 'tune-spot',
+        kind: 'button',
+        label: `${spotLabel(lead, true)}${spots?.tuneStatus ? ` ${spots.tuneStatus}` : ''}`,
+        event: 'tune-spot',
+        x: brief ? plateX : journalX,
+        y: buttonY,
+        width: brief ? plateWidth : journalWidth,
+        height: 44,
+      })
     if (showNext) {
       art(
         'next-spot-button',
         journalX,
-        plateY + 162,
+        plateY + detailHeight - 2,
         journalWidth,
         44,
         card(journalWidth, 44, '#19382E', '#496149', 12),
@@ -507,7 +549,7 @@ export function huntScene({
         'next-spot-label',
         'Next station',
         journalX,
-        plateY + 175,
+        plateY + detailHeight + 11,
         journalWidth,
         11,
         MUTED,
@@ -520,7 +562,7 @@ export function huntScene({
         label: 'Show the next spotted BIGFOOT station',
         event: 'next-spot',
         x: journalX,
-        y: plateY + 162,
+        y: plateY + detailHeight - 2,
         width: journalWidth,
         height: 44,
       })
@@ -658,8 +700,8 @@ export function huntScene({
     controls.push({
       id: 'spot-W4S',
       kind: 'button',
-      label: spotLabel(bonusReport),
-      event: 'spot:W4S',
+      label: spotLabel(bonusReport, canTune),
+      event: `${canTune ? 'spot' : 'select-spot'}:W4S`,
       x: padding,
       y: footerY,
       width: width - padding * 2,

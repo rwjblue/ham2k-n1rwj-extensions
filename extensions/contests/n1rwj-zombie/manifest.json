@@ -2,7 +2,7 @@
   "key": "n1rwj-zombie",
   "name": "N1RWJ Zombie Shuffle",
   "shortName": "Zombie Shuffle",
-  "version": "0.13.0",
+  "version": "0.13.1",
   "description": "Zombie Shuffle CW exchanges, two-hour rebirths, scoring, call history, ADIF and score summaries.",
   "category": "contest",
   "icon": "ghost",

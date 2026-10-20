@@ -18,7 +18,11 @@ import {
   sameModeProgress,
 } from './rules.ts'
 import { huntScene } from './scene.ts'
-import { tuneBigfootSpot } from './spot-radio.ts'
+import {
+  type BigfootRadioAvailability,
+  readBigfootRadioAvailability,
+  tuneBigfootSpot,
+} from './spot-radio.ts'
 import type { HuntSpotView } from './spot-view.ts'
 import { buildSpotRows } from './spots.ts'
 
@@ -132,6 +136,8 @@ type Snapshot = {
   tuneStatus?: string
   tunedTo?: string
   tuning?: boolean
+  radio?: BigfootRadioAvailability
+  radioAt?: number
 }
 
 function spotView(state: Snapshot, args: PanelRenderArgs): HuntSpotView {
@@ -161,6 +167,7 @@ function spotView(state: Snapshot, args: PanelRenderArgs): HuntSpotView {
     status: state.spotStatus === 'ready' && !rows.length ? 'empty' : state.spotStatus,
     rows,
     selected,
+    radio: state.radio,
     tuneStatus:
       selected && state.tunedTo === `${selected.call}|${selected.frequency}|${selected.mode}`
         ? state.tuneStatus
@@ -184,7 +191,10 @@ function spotsMarkdown(view: HuntSpotView): string {
   ].join('\n\n')
 }
 
-export function createBigfootPanel(tuneSpot = tuneBigfootSpot): PanelHook {
+export function createBigfootPanel(
+  tuneSpot = tuneBigfootSpot,
+  readRadioAvailability = readBigfootRadioAvailability,
+): PanelHook {
   const celebrations = createCelebrations()
   const snapshots = new Map<string, Snapshot>()
   const placements = new Map<string, string>()
@@ -383,11 +393,31 @@ export function createBigfootPanel(tuneSpot = tuneBigfootSpot): PanelHook {
         state.spotStatus = 'unsupported'
       }
       const spots = spotView(state, args)
+      const watchRadio = forestView && spots.rows.length > 0
+      if (
+        watchRadio &&
+        (state.radioAt === undefined ||
+          clock.now < state.radioAt ||
+          clock.now - state.radioAt >= 5_000)
+      ) {
+        let radio: BigfootRadioAvailability
+        try {
+          radio = await readRadioAvailability()
+        } catch {
+          radio = { status: 'manual', message: 'Radio access is unavailable.' }
+        }
+        if (generation !== state.generation) return { kind: 'markdown', content: '' }
+        state.radio = radio
+        state.radioAt = clock.now
+      }
+      spots.radio = state.radio
       const triggers: PanelContent['triggers'] = frame?.nextTick
         ? ['tick:1']
-        : inEvent && spots.status !== 'unsupported'
-          ? ['tick:60']
-          : []
+        : watchRadio
+          ? ['tick:5']
+          : inEvent && spots.status !== 'unsupported'
+            ? ['tick:60']
+            : []
       if (forestView && frame)
         return {
           kind: 'svgScene',
@@ -437,7 +467,9 @@ export function createBigfootPanel(tuneSpot = tuneBigfootSpot): PanelHook {
           ? view.selected
           : action.startsWith('spot:')
             ? view.rows.find((row) => row.call === action.slice(5))
-            : undefined
+            : action.startsWith('select-spot:')
+              ? view.rows.find((row) => row.call === action.slice(12))
+              : undefined
       if (
         !row ||
         view.status !== 'ready' ||
@@ -449,6 +481,11 @@ export function createBigfootPanel(tuneSpot = tuneBigfootSpot): PanelHook {
       if (state.tuning) return { values: {} }
       state.selectedCall = row.call
       state.selectedKey = `${row.call}|${row.frequency}|${row.mode}`
+      if (action.startsWith('select-spot:') || state.radio?.status !== 'ready') {
+        state.tuneStatus = undefined
+        return { values: {} }
+      }
+      state.tuneStatus = undefined
       state.tunedTo = state.selectedKey
       state.tuning = true
       const targetKey = state.selectedKey
@@ -461,6 +498,7 @@ export function createBigfootPanel(tuneSpot = tuneBigfootSpot): PanelHook {
         if (stillSelected()) state.tuneStatus = 'Radio unavailable. Tune manually.'
       } finally {
         state.tuning = false
+        if (stillSelected()) state.radioAt = undefined
       }
       return { values: {} }
     },
