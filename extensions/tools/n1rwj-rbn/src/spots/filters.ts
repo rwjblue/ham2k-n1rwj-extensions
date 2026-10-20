@@ -1,5 +1,5 @@
 import { hooks } from '@ham2k/extension-sdk'
-// Temporary consumer of contest history, removable with native relevance filtering.
+// Temporary consumer of station lists, removable with native relevance filtering.
 // RBN owns reception data, never contest rules. See packages/spot-filters/README.md.
 import {
   callFilterCategory,
@@ -33,7 +33,7 @@ export async function matchFilter(
 ): Promise<Set<string>> {
   const unique = [...new Set(calls)]
   const selected = new Set<string>()
-  // Even an empty batch checks that the provider still has its file.
+  // Even an empty batch checks that the selected provider remains available.
   for (let offset = 0; offset === 0 || offset < unique.length; offset += maxFilterCalls) {
     const batch = unique.slice(offset, offset + maxFilterCalls)
     const replies = await bridge.invokeOne(
@@ -47,7 +47,7 @@ export async function matchFilter(
     const result = reply?.ok ? readMatches(reply.value, batch) : undefined
     if (!result?.available)
       throw new Error(
-        result?.reason || 'The selected call-history filter is unavailable. No spots shown.',
+        result?.reason || 'The selected station filter is unavailable. No spots shown.',
       )
     for (const call of result.calls) selected.add(call)
   }

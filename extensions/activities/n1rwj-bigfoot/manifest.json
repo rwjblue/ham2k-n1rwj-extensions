@@ -9,7 +9,16 @@
   "icon": "paw",
   "accentColor": "#496B3A",
   "keywords": ["bigfoot", "sasquatch", "special event", "cw", "ssb", "skunk ape"],
-  "hooks": ["activity", "ref:bigfoot", "panel", "scoring", "export", "adifFields"],
+  "hooks": [
+    "activity",
+    "ref:bigfoot",
+    "panel",
+    "scoring",
+    "lookup",
+    "spotCallFilter:v1",
+    "export",
+    "adifFields"
+  ],
   "domains": [],
   "relevance": {
     "interests": ["cw", "phone", "digital"]

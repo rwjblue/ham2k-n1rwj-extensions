@@ -3,6 +3,7 @@ import { contestScorer, tally } from '@ham2k/extension-sdk'
 import { eventFromOperation } from './activity.ts'
 import type { BigfootEvent, Contact, EventMode } from './rules.ts'
 import { buildProgress, eventForYear, qualifyingContacts } from './rules.ts'
+import { targetStatus } from './targets.ts'
 
 // Only eligible, distinct event contacts cross the checkpoint bridge. Reports
 // and the rest of each QSO belong to the log, not the scoring cache.
@@ -23,7 +24,7 @@ function utcDate(at: number): string {
   return new Date(at).toISOString().slice(0, 10)
 }
 
-function contactsIn(scoresheet: BigfootScoresheet): Contact[] {
+function contactsFromScoresheet(scoresheet: BigfootScoresheet): Contact[] {
   return Object.entries(scoresheet.contactsByCall).flatMap(([call, contacts]) =>
     contacts.map(([uuid, band, mode, at]) => ({
       uuid,
@@ -70,18 +71,29 @@ export const BigfootScorer: ContestScorer<BigfootScoresheet> = {
       }
     }
 
+    // Only this station's history is needed to decide whether it fills a slot.
+    // The host renders newMult on native spot rows; a new context alone is not
+    // enough once this station's mixed and same-mode slots are complete.
+    const status = targetStatus(
+      event,
+      contactsFromScoresheet({ contactsByCall: { [contact.call]: priors } }),
+      qso,
+    )
+    const needed =
+      status?.mixed.wouldAdvance || status?.cw.wouldAdvance || status?.mode?.wouldAdvance
+    const notices = [...(notice ? [notice] : []), ...(needed ? ['newMult'] : [])]
     const packed: PackedContact = [contact.uuid, contact.band, contact.mode, contact.at]
     if (scoresheet.contactsByCall[contact.call]) priors.push(packed)
     else scoresheet.contactsByCall[contact.call] = [packed]
 
     const score: QsoScoreVerdict = { value: 1, dupe: false }
-    if (notice) score.notices = [notice]
+    if (notices.length) score.notices = notices
     return { scoresheet, score }
   },
 
   summarizeScore({ scoresheet, operation, ref, scope }): Record<string, ScoreTally> {
     if (scope === 'day' || !eventForScoring(operation, ref)) return {}
-    const progress = buildProgress(contactsIn(scoresheet))
+    const progress = buildProgress(contactsFromScoresheet(scoresheet))
     const mixed = progress.MIXED
     const checklist = mixed.slots
       .map((slot, index) => {

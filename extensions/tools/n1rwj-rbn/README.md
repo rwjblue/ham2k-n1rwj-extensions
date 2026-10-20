@@ -45,11 +45,15 @@ Open **Settings → RBN → Spots — Who I might hear** to choose:
   Turn it off when hunting individual stations, for example during CWT, to keep
   spots separately selectable and enable the RBN logging control. The choice
   survives restarts and applies on the next Spots refresh, including cached reports.
-- **Call-history filter:** **All calls** is the default, with no history filter.
-  Choose CWT, MST, or SST explicitly when you want that call-history filter.
-  A selected missing extension or file
+- **Station filter:** **All calls** is the default. Choose CWT, MST, or SST for
+  its downloaded call-history file, or **BIGFOOT 2026** for the station roster
+  bundled with BIGFOOT Hunt. These choices appear when their extensions are
+  enabled. A selected missing extension or unavailable data
   produces no spots, with an explanation in RBN settings. An explicit choice
   survives restarts; filters do not switch automatically with the operation.
+  A roster's availability does not mean its stations are active or still needed.
+  BIGFOOT includes worked and unworked targets and remains selectable outside
+  its event dates. Choose **All calls** to stop filtering reused event calls.
 - **Spot mode:** All (default), CW, RTTY, FT8, or FT4. Choose **All** to
   receive all four supported modes and use the native Spots page's mode filter.
   The host currently groups RTTY, FT8, and FT4 under **Digital**; choose RTTY
@@ -86,8 +90,8 @@ Open **Settings → RBN → Spots — Who I might hear** to choose:
 **Reset all spot settings**, at the top of that section, restores **All calls**,
 allow merging, All modes, no CW speed limits, all skimmers and grid regions, the local/last
 receiver-continent selection, and no distance limit or origin. The defaults are
-listed beside the reset control. Resets remain available even when call-history
-extensions have not loaded. Previously saved call-history choices are preserved
+listed beside the reset control. Resets remain available even when station-filter
+extensions have not loaded. Previously saved station-filter choices are preserved
 until you change or reset them.
 
 Each filter also has a reset button naming its default. **Reset CW speed range**
@@ -117,7 +121,7 @@ Regions use the cached RBN directory grid first, then the report grid; unknown
 locations are excluded when a region or distance limit is selected. Locations are approximate,
 and reception by a nearby skimmer does not guarantee reception at your station.
 These receiver filters remain RBN responsibilities when native contest-relevance
-filtering replaces the temporary call-history bridge. The logger's native
+filtering replaces the temporary station-filter bridge. The logger's native
 continent filter applies to the spotted station, independently of these controls.
 
 Reports cover ten minutes on 160, 80, 40, 30, 20, 17, 15, 12, and 10 meters.
@@ -154,7 +158,7 @@ after at least a minute or the service's longer rate-limit delay. Restarting the
 app clears the in-memory Spots cache and cannot resolve an unavailable service.
 
 When comparing with the RBN website, choose **All calls** to remove the
-CWT/MST/SST call-history restriction and compare the same ten-minute window,
+selected history-file or event-roster restriction and compare the same ten-minute window,
 band, and mode. A six-hour website view includes older reports; repeated
 reports for the same station, band, and mode collapse to one spot here.
 
@@ -179,8 +183,13 @@ references can still show the callsign, and QSON retains the references.
 CWT, MST, and SST provide membership from their cached call-history files via
 [the shared filter contract](../../../packages/spot-filters/README.md).
 They do not fetch reception reports or expose exchange data. File membership
-does not prove participation in the current contest. Band, age, mode, and
-source controls in the native Spots panel further narrow these results.
+does not prove participation in the current contest. BIGFOOT Hunt uses that
+same contract for its fixed 2026 roster without a history download or operation
+log lookup. RBN owns no event target lists or award rules. Neither provider
+kind automatically selects a filter or hides already-worked targets. Band,
+age, mode, and source controls in the native Spots panel further narrow these
+results. RBN supplies CW, RTTY, FT8, and FT4 reports; use the organizer's
+spotting page when looking for BIGFOOT SSB stations.
 
 ## Install and open the panel
 
@@ -467,7 +476,7 @@ coverage boundary, and no recent reports do not establish a transmitter problem.
 CW, RTTY, FT8, and FT4 reports are included without a mode filter. WSPR is not
 provided by this source.
 These My Signal reports are independent of the native RBN Spots source and
-its call-history, mode, skimmer, continent, grid-region, and distance filters.
+its station, mode, skimmer, continent, grid-region, and distance filters.
 
 ## Try it without transmitting
 

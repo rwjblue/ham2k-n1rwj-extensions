@@ -23,13 +23,13 @@ export function settingsDefinition(
   status: string,
   health: HealthNotice | null = null,
 ): FormDefinition {
-  const historyLabel = 'All calls'
+  const stationLabel = 'All calls'
   const continentLabel =
     defaultContinents.map((code) => continents[code]).join(', ') || 'All continents'
   const choices = [
     { label: 'All calls', value: allCalls },
     ...selected.providers.map((provider) => ({
-      label: provider.label + (provider.available ? '' : ' (file unavailable)'),
+      label: provider.label + (provider.available ? '' : ' (unavailable)'),
       value: provider.key,
     })),
   ]
@@ -76,7 +76,7 @@ export function settingsDefinition(
       reset('resetAllSpotSettings', 'Reset all spot settings'),
       {
         type: 'markdown',
-        text: `Reset defaults: allow merging; ${historyLabel}; All modes; no CW speed limits; all skimmers and grid regions; ${continentLabel}; no distance limit or origin grid. Receiver-continent defaults use the local suggestion, then your last selection. All settings below apply only to RBN Spots, across operations.`,
+        text: `Reset defaults: allow merging; ${stationLabel}; All modes; no CW speed limits; all skimmers and grid regions; ${continentLabel}; no distance limit or origin grid. Receiver-continent defaults use the local suggestion, then your last selection. All settings below apply only to RBN Spots, across operations.`,
       },
       {
         type: 'field',
@@ -91,12 +91,12 @@ export function settingsDefinition(
         type: 'field',
         fieldType: 'select',
         key: 'spotCallFilter',
-        label: 'Call-history filter',
-        description: `Default: ${historyLabel}.`,
+        label: 'Station filter',
+        description: `Default: ${stationLabel}. Choose a provider explicitly to match its history file or fixed event roster. The selection applies across operations; availability does not mean a station is active or still needed.`,
         options: choices,
         value: selected.key,
       },
-      reset('resetSpotCallFilter', `Reset call-history filter — ${historyLabel}`),
+      reset('resetSpotCallFilter', `Reset station filter — ${stationLabel}`),
       {
         type: 'field',
         fieldType: 'select',

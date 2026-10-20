@@ -1,4 +1,7 @@
+import type { JSONValue } from '@ham2k/extension-sdk'
 import { expect, it, vi } from 'vitest'
+import type { MatchRequest } from '../../../../../packages/spot-filters/src/index.ts'
+import { BigfootSpotFilter } from '../../../../activities/n1rwj-bigfoot/src/spot-filter.ts'
 import { createReceiverData } from '../../src/data/receivers.ts'
 import { createRbnTransport } from '../../src/data/transport.ts'
 import { discoverFilters, matchFilter } from '../../src/spots/filters.ts'
@@ -318,12 +321,105 @@ it('ignores default hints from older providers and resets history to all calls',
   expect(form.elements).toContainEqual(
     expect.objectContaining({
       key: 'spotCallFilter',
+      label: 'Station filter',
       value: 'none',
-      description: 'Default: All calls.',
+      description: expect.stringContaining('Default: All calls.'),
     }),
   )
   await runtime.settings.resetSpotCallFilter({}, { online: true })
   expect(preferences).toEqual({ spotCallFilter: 'none' })
+})
+
+it('offers a fixed event roster explicitly and preserves its selection across restarts or removal', async () => {
+  let installed = true
+  let preferences: Record<string, JSONValue> = {}
+  const ctx = { online: false }
+  const invokeOne = vi.fn(async (_category, key, _method, args) =>
+    installed && key === 'n1rwj-bigfoot'
+      ? [
+          {
+            key,
+            ok: true,
+            value: await BigfootSpotFilter.matchCalls(args as MatchRequest, ctx),
+          },
+        ]
+      : [],
+  )
+  const runtime = () =>
+    createRbnSpots({
+      // The roster remains available before the supported event window.
+      now: () => now,
+      lookup: () => undefined,
+      getSettings: async () => ({ extensions: { 'extension_n1rwj-rbn': preferences } }),
+      setSettings: async (values) => {
+        preferences = { ...preferences, ...values }
+      },
+      bridge: {
+        invokeAll: async () =>
+          installed
+            ? [
+                {
+                  key: 'n1rwj-bigfoot',
+                  ok: true,
+                  value: await BigfootSpotFilter.describe({}, ctx),
+                },
+              ]
+            : [],
+        invokeOne,
+      },
+      fetch: async () => ({
+        status: 200,
+        body: JSON.stringify({
+          spots: ['K1ABC', 'W7B', 'W7O', 'W4S', 'W3S', 'W7T/P'].map((callsign) =>
+            row({ callsign }),
+          ),
+        }),
+      }),
+    })
+  const first = runtime()
+  const form = await first.settings.getDefinition({ panelKey: 'n1rwj-rbn' }, ctx)
+  expect(form.elements).toContainEqual(
+    expect.objectContaining({
+      key: 'spotCallFilter',
+      label: 'Station filter',
+      value: 'none',
+      description: expect.stringContaining('fixed event roster'),
+      options: [
+        { label: 'All calls', value: 'none' },
+        { label: 'BIGFOOT 2026', value: 'n1rwj-bigfoot' },
+      ],
+    }),
+  )
+  expect(await first.spots.fetchSpots({}, { online: true })).toHaveLength(6)
+  expect(preferences).toEqual({})
+  expect(invokeOne).not.toHaveBeenCalled()
+  await first.settings.onChangeField(
+    {
+      panelKey: 'n1rwj-rbn',
+      fieldKey: 'spotCallFilter',
+      value: 'n1rwj-bigfoot',
+      state: {},
+    },
+    ctx,
+  )
+  expect(preferences).toEqual({ spotCallFilter: 'n1rwj-bigfoot' })
+  for (const instance of [first, runtime()]) {
+    expect(
+      (await instance.spots.fetchSpots({}, { online: true })).map((spot) => spot.their.call),
+    ).toEqual(['W7B', 'W7O', 'W4S'])
+  }
+  installed = false
+  const missing = runtime()
+  expect(await missing.spots.fetchSpots({}, { online: true })).toEqual([])
+  const unavailable = await missing.settings.getDefinition({ panelKey: 'n1rwj-rbn' }, ctx)
+  expect(unavailable.elements).toContainEqual(
+    expect.objectContaining({ key: 'spotCallFilter', value: 'n1rwj-bigfoot' }),
+  )
+  expect(JSON.stringify(unavailable)).toContain('selected station-filter extension is unavailable')
+  expect(preferences).toEqual({ spotCallFilter: 'n1rwj-bigfoot' })
+  await missing.settings.resetSpotCallFilter({}, ctx)
+  expect(preferences).toEqual({ spotCallFilter: 'none' })
+  expect(await missing.spots.fetchSpots({}, { online: true })).toHaveLength(6)
 })
 
 it('defaults to all calls and keeps resets usable when call-history discovery fails', async () => {

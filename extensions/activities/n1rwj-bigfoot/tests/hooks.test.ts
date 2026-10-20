@@ -38,6 +38,8 @@ test('activation registers the promised hooks without host access', async () => 
   assert.deepEqual([...registered.keys()].sort(), [...manifest.hooks].sort())
   assert.equal(registered.get('activity')?.hook, BigfootActivity)
   assert.equal(registered.get('ref:bigfoot')?.hook, BigfootRefHandler)
+  assert.equal(registered.get('lookup')?.priority, 110)
+  assert.ok(registered.has('spotCallFilter:v1'))
   assert.equal(hostCall.mock.calls.length, 0)
 })
 

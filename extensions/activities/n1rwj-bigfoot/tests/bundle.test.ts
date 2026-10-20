@@ -5,11 +5,13 @@ import type {
   ExportHook,
   ExtensionDefinition,
   HookContext,
+  LookupHook,
   PanelHook,
   RegisterHookParams,
   ScoringHook,
 } from '@ham2k/extension-sdk'
 import { expect, it } from 'vitest'
+import type { CallFilterHook } from '../../../../packages/spot-filters/src/index.ts'
 import manifest from '../manifest.json'
 
 it('runs the complete hunt in the bundled sandbox with no network or storage adapters', async () => {
@@ -43,7 +45,12 @@ it('runs the complete hunt in the bundled sandbox with no network or storage ada
   })
   expect([...registered.keys()].sort()).toEqual([...manifest.hooks].sort())
   expect(manifest.domains).toEqual([])
-  const operation = { uuid: 'hunt', stationCall: 'N1RWJ', refs: [{ type: 'bigfoot', ref: '2026' }] }
+  const operation = {
+    uuid: 'hunt',
+    createdAtMillis: Date.UTC(2026, 9, 19),
+    stationCall: 'N1RWJ',
+    refs: [{ type: 'bigfoot', ref: '2026' }],
+  }
   const qsos = ['W7B', 'W7I', 'W7G', 'W7F', 'W7O', 'W7O', 'W7T', 'W4S'].map((call, index) => ({
     uuid: `qso-${index}`,
     their: { call, sent: '599' },
@@ -52,15 +59,68 @@ it('runs the complete hunt in the bundled sandbox with no network or storage ada
     mode: 'CW',
     startAtMillis: Date.UTC(2026, 9, 19, 22, index),
   }))
-  const ctx: HookContext = { online: false, getQsos: async () => qsos }
+  let reads = 0
+  const ctx: HookContext = {
+    online: false,
+    getQsos: async () => {
+      reads += 1
+      return qsos
+    },
+  }
   const activity = registered.get('activity')?.hook as ActivityHook
   expect(await activity.suggest?.({ operation, searchTerm: 'BIGFOOT' }, ctx)).toMatchObject([
     { type: 'bigfoot', ref: '2026' },
   ])
   const scoring = registered.get('scoring')?.hook as ScoringHook
-  const result = await scoring.scoreQsos({ operation, qsos }, ctx)
+  const lookup = registered.get('lookup')?.hook as LookupHook
+  const filter = registered.get('spotCallFilter:v1')?.hook as CallFilterHook
+  const descriptor = await filter.describe({}, ctx)
+  expect(descriptor).toMatchObject({
+    label: 'BIGFOOT 2026',
+    available: true,
+    defaultSelected: false,
+  })
+  expect(
+    await filter.matchCalls({ version: 1, calls: ['W7B', 'W7O', 'W4S', 'W3S', 'W1AW'] }, ctx),
+  ).toMatchObject({ calls: ['W7B', 'W7O', 'W4S'] })
+  // Native lookup omits uuid; station markers need no operation log access.
+  const { uuid: _uuid, ...operationData } = operation
+  await scoring.scoreQsos({ operation, qsos: [qsos[4]], checkpointKey: 'one-o' }, ctx)
+  const candidate = { ...qsos[4], uuid: 'candidate', band: '40m' }
+  const args = { operation: operationData, qso: candidate, callInfo: { call: 'W7O' } }
+  expect(await lookup.lookupCall(args, ctx)).toMatchObject([
+    { call: 'W7O', emoji: '🐾', note: '🐾 BIGFOOT 2026: O (two contacts)' },
+  ])
+  const spots = await scoring.scoreCandidates?.(
+    {
+      operation,
+      resumeKey: 'one-o',
+      candidates: [
+        { key: 'needed', qso: candidate },
+        { key: 'repeat', qso: { ...candidate, band: '20m' } },
+        { key: 'unrelated', qso: { ...candidate, their: { call: 'W1AW' } } },
+      ],
+    },
+    ctx,
+  )
+  expect(spots?.needed.notices).toContain('newMult')
+  expect(spots?.repeat.dupe).toBe(true)
+  expect(spots?.repeat.notices).not.toContain('newMult')
+  expect(spots?.unrelated.notices).not.toContain('newMult')
+  expect(reads).toBe(0)
+  const result = await scoring.scoreQsos({ operation, qsos, checkpointKey: 'complete' }, ctx)
   expect(result.operationSummary.bigfoot?.total).toBe(7)
   expect(result.operationSummary.bigfoot?.longSummary).toContain('CW 7/7')
+  const complete = await scoring.scoreCandidates?.(
+    {
+      operation,
+      resumeKey: 'complete',
+      candidates: [{ key: 'o', qso: { ...candidate, band: '30m' } }],
+    },
+    ctx,
+  )
+  expect(complete?.o.notices).not.toContain('newMult')
+  expect(reads).toBe(0)
   const panel = registered.get('panel')?.hook as PanelHook
   const content = await panel.render(
     { panelKey: 'hunt', operation, qsoCount: 8, config: {}, reason: 'operation' },

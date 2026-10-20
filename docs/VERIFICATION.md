@@ -1,5 +1,44 @@
 # Verification and compatibility
 
+## BIGFOOT station annotations and hunt spots (unreleased) — 2026-10-19
+
+Added exact-roster paw/skunk annotations for the selected 2026 event and
+native scoring highlights for contacts that advance Mixed, CW, or the
+candidate's actual-mode progress. The second W7O requires a different band,
+canonical actual mode, or UTC date; completing Mixed on SSB does not hide
+the independent CW opportunities. W4S remains a separate bonus.
+
+RBN now calls its optional list selector **Station filter**. Choosing
+**BIGFOOT 2026** limits RBN Spots to the seven published calls, including
+worked targets. All calls remains the default, selection is explicit and
+persists across operations, and removing a selected provider fails closed.
+The bundled roster requires no history download and implies no live schedule.
+
+- `mise run format` and `mise run check` passed: **1,575 tests across 115
+  files**, lint, strict runtime/test/task typechecks, and all **11 official
+  ES2020 builds and packages**.
+- Source and bundle tests cover target markers, event guards, explicit
+  callsign corrections/clearing, second-O eligibility, independent same-mode
+  credit, held checkpoints, unrelated calls, edits, last-contact deletion,
+  provider registration, exact roster filtering, selection persistence, and
+  unavailable-provider behavior.
+- `mise run verify-host n1rwj-bigfoot` accepted all eight declared hooks in
+  the installed **Ham2K Mac Logger (Next) 26.9.0, build 180** kernel, SHA-256
+  `21eaa53e90efa10d8599da19b0140d2344211f5bafd6add9f55d04c4a53c507a`.
+
+Host-source review confirms that native Spots caches station markers and
+the logging UI caches lookup notes within a compose session. Progress is
+therefore supplied through native scoring (`newMult`, displayed as **New
+Mult**) and the BIGFOOT panel. Lookup annotations contain stable target
+identity and the second-O rule, with no added log or network reads. The host
+skips batch scoring for an empty log but invalidates its prior checkpoint;
+live/spot scoring then reads the current empty log correctly.
+
+Installed-kernel checks run under Node VM; native UI and on-air use remain
+unverified. These local changes are not in the published v0.11.0 bundles.
+Only BIGFOOT and RBN behavior changed, so CWT/CQ WW upstream synchronization
+is exempt. No shared contest or private filter-protocol behavior changed.
+
 ## Release 0.11.0 publication — 2026-10-19
 
 Published [v0.11.0](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.11.0)

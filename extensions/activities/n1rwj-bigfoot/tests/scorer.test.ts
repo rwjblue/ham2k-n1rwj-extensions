@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import type { JSONValue } from '@ham2k/extension-sdk'
 import { contestScorer } from '@ham2k/extension-sdk'
 import { test } from 'vitest'
-import { EVENT_2026 } from '../src/rules.ts'
+import { EVENT_2026, type Qson } from '../src/rules.ts'
 import { BigfootScorer, bigfootScoringHook } from '../src/scorer.ts'
 
 const ctx = { online: false }
@@ -63,10 +63,11 @@ test('counts a second O only after a different band, actual mode or UTC date', a
   ])
   assert.equal(result.operationSummary.bigfoot.total, 2)
   assert.deepEqual(result.qsoScores.dupe, { value: 0, dupe: true, alerts: ['duplicate'] })
-  assert.deepEqual(result.qsoScores.o2.notices, ['newBand'])
-  assert.deepEqual(result.qsoScores.phone.notices, ['newMode'])
+  assert.deepEqual(result.qsoScores.o1.notices, ['newMult'])
+  assert.deepEqual(result.qsoScores.o2.notices, ['newBand', 'newMult'])
+  assert.deepEqual(result.qsoScores.phone.notices, ['newMode', 'newMult'])
   assert.equal(result.qsoScores['phone-dupe'].dupe, true)
-  assert.deepEqual(result.qsoScores['other-digital'].notices, ['newMode'])
+  assert.deepEqual(result.qsoScores['other-digital'].notices, ['newMode', 'newMult'])
   assert.deepEqual(result.qsoScores['next-day'].notices, ['newDay'])
   assert.ok(result.operationSummary.bigfoot.longSummary?.includes('CW 2/7'))
   assert.ok(result.operationSummary.bigfoot.longSummary?.includes('Phone 1/7'))
@@ -150,7 +151,7 @@ test('live and spot scoring reuse a held checkpoint without a per-keystroke log 
     liveContext,
   )
   assert.equal(fresh?.dupe, false)
-  assert.deepEqual(fresh?.notices, ['newDay'])
+  assert.deepEqual(fresh?.notices, ['newDay', 'newMult'])
   const candidates = await hook.scoreCandidates?.(
     {
       operation,
@@ -163,11 +164,106 @@ test('live and spot scoring reuse a held checkpoint without a per-keystroke log 
     },
     liveContext,
   )
-  assert.deepEqual(candidates?.['new-band'].notices, ['newBand'])
+  assert.deepEqual(candidates?.['new-band'].notices, ['newBand', 'newMult'])
   assert.equal(candidates?.['same-context'].dupe, true)
   assert.equal(reads, 0)
   // Neither live judgement becomes a logged contact inside the checkpoint.
   assert.deepEqual(before.scoresheet, {
     contactsByCall: { W7O: [['first', '20m', 'CW', during]] },
   })
+})
+
+test('highlights missing letters and bonus without highlighting completed same-mode targets', async () => {
+  const result = await score([
+    qso('first-b', 'W7B'),
+    qso('another-b', 'W7B', '40m'),
+    qso('phone-b', 'W7B', '20m', 'SSB'),
+    qso('first-bonus', 'W4S'),
+    qso('another-bonus', 'W4S', '40m'),
+    qso('unrelated', 'W3S'),
+  ])
+  assert.deepEqual(result.qsoScores['first-b'].notices, ['newMult'])
+  assert.deepEqual(result.qsoScores['another-b'].notices, ['newBand'])
+  assert.deepEqual(result.qsoScores['phone-b'].notices, ['newMode', 'newMult'])
+  assert.deepEqual(result.qsoScores['first-bonus'].notices, ['newMult'])
+  assert.deepEqual(result.qsoScores['another-bonus'].notices, ['newBand'])
+  assert.deepEqual(result.qsoScores.unrelated, { value: 0 })
+})
+
+test('CW spots still highlight both needed O contacts after mixed-mode completion on SSB', async () => {
+  const hook = contestScorer(BigfootScorer, { scope: { refTypes: ['bigfoot'] } })
+  const logged = [qso('phone-one', 'W7O', '20m', 'USB'), qso('phone-two', 'W7O', '40m', 'LSB')]
+  await hook.scoreQsos({ operation, ref, qsos: logged, checkpointKey: 'phone-pair' }, ctx)
+  const first = await hook.scoreCandidates?.(
+    {
+      operation,
+      ref,
+      resumeKey: 'phone-pair',
+      candidates: [{ key: 'cw', qso: qso('cw-one', 'W7O') }],
+    },
+    ctx,
+  )
+  assert.ok(first?.cw.notices.includes('newMult'))
+  await hook.scoreQsos(
+    {
+      operation,
+      ref,
+      qsos: [...logged, qso('cw-one', 'W7O')],
+      checkpointKey: 'one-cw',
+    },
+    ctx,
+  )
+  const second = await hook.scoreCandidates?.(
+    {
+      operation,
+      ref,
+      resumeKey: 'one-cw',
+      candidates: [
+        { key: 'same', qso: qso('same', 'W7O') },
+        { key: 'second', qso: qso('cw-two', 'W7O', '40m') },
+      ],
+    },
+    ctx,
+  )
+  assert.equal(second?.same.dupe, true)
+  assert.ok(!second?.same.notices.includes('newMult'))
+  assert.ok(second?.second.notices.includes('newMult'))
+})
+
+test('live needed status follows edits and deletion of the last contact without a batch rescore', async () => {
+  const hook = contestScorer(BigfootScorer, { scope: { refTypes: ['bigfoot'] } })
+  let logged: Qson[] = [qso('first', 'W7O')]
+  const liveContext = { online: false, getQsos: async () => logged }
+  const judge = () =>
+    hook.scoreCandidates?.(
+      {
+        operation,
+        ref,
+        candidates: [{ key: 'o', qso: qso('candidate', 'W7O') }],
+      },
+      liveContext,
+    )
+  assert.equal((await judge())?.o.dupe, true)
+  const editing = await hook.scoreQso?.(
+    {
+      operation,
+      ref,
+      qso: qso('first', 'W7O'),
+      excludeUuid: 'first',
+    },
+    liveContext,
+  )
+  assert.equal(editing?.dupe, false)
+  assert.ok(editing?.notices.includes('newMult'))
+  logged = [qso('first', 'W7O', '40m')]
+  const edited = (await judge())?.o
+  assert.equal(edited?.dupe, false)
+  assert.ok(edited?.notices.includes('newMult'))
+  assert.ok(edited?.notices.includes('newBand'))
+  // The native host skips scoreQsos on an empty log. Its live path drops
+  // the invalid checkpoint and reads the current log instead.
+  logged = []
+  const deleted = (await judge())?.o
+  assert.equal(deleted?.dupe, false)
+  assert.deepEqual(deleted?.notices, ['newMult'])
 })

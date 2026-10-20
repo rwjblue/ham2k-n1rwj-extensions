@@ -66,11 +66,48 @@ when contacts are logged, edited, or deleted.
 
 ## Finding stations
 
+The current source adds station annotations and a BIGFOOT-only RBN filter;
+build and install the local BIGFOOT and RBN bundles to use these additions.
+They are not included in the published v0.11.0 downloads.
+
+In a **BIGFOOT Hunt 2026** operation during the event, letter stations receive
+a paw marker and W4S receives a skunk marker. Station details identify the
+letter or bonus; W7O's note explains the two-contact rule. These annotations
+use the exact published callsigns and do not change exchanges or station
+identity information.
+
+Native Spots highlights a target when that band, mode, and UTC date would
+advance Mixed, CW, or the spot's actual-mode progress. A second W7O on the
+same band, actual mode, and UTC date remains a duplicate; another eligible
+band or UTC date can fill the second O on CW. A worked Mixed target can still
+be highlighted when needed for a same-mode completion. The host calls this
+highlight **New Mult**. The BIGFOOT panel shows the detailed CW, Mixed, and
+same-mode progress, including the first and second O evidence. Needed
+highlights recalculate through native scoring when the spot context or log
+changes, including edits and deletion of the last contact.
+
+The compact marker identifies the station; it does not change to show needed
+status because the native Spots panel caches these markers. Use the highlight
+or BIGFOOT panel for progress.
+
 Keep the [organizer's spotting page](https://w7dk.org/?view=article&id=309&catid=178)
 and [Reverse Beacon Network](https://www.reversebeacon.net/) available while
 operating. Spots can guide your hunt; confirm the callsign on air before
 logging. This extension tracks your contacts and provides those links; it
 does not retrieve a live station schedule or tune your radio.
+
+With **N1RWJ RBN** enabled, choose **Settings → RBN → Station filter → BIGFOOT
+2026** to see only spots for the BIGFOOT 2026 station roster: W7B, W7I, W7G,
+W7F, W7O, W7T, and W4S. **All calls** remains RBN's default. Choose **CW**
+under **Spot mode** for a CW hunt, or keep **All** for RBN's supported modes.
+RBN does not supply SSB reports; use the organizer's spotting page for those.
+
+The BIGFOOT 2026 station roster is bundled, so the filter needs no history
+download. Its availability means the roster is installed, not that its stations
+are currently active. It includes worked and unworked targets. Your selection
+persists across operations and remains available outside the event dates; it
+does not automatically follow the active operation or select itself. Disable
+the filter when you want other calls, because short event calls can be reused.
 
 ## Export and certificate
 

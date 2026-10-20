@@ -130,14 +130,14 @@ export function createRbnSpots(options: Options) {
       const key = typeof raw.spotCallFilter === 'string' ? raw.spotCallFilter : allCalls
       const discovered = await discoverFilters(online, options.bridge).catch((error: unknown) => {
         if (!forSettings && key !== allCalls) throw error
-        status = 'Call-history filters could not be loaded. Retry after enabling the extension.'
+        status = 'Station filters could not be loaded. Retry after enabling the extension.'
         return { providers: [], failed: true }
       })
       const provider = discovered.providers.find((entry) => entry.key === key)
       const unavailable =
         key !== allCalls && !provider?.available
           ? provider?.reason ||
-            'The selected call-history extension is unavailable. Enable it or choose another filter.'
+            'The selected station-filter extension is unavailable. Enable it or choose another filter.'
           : ''
       return {
         raw,

@@ -89,10 +89,11 @@ See the [calendar guide](extensions/tools/n1rwj-contest-calendar/README.md).
 
 ### RBN and My Signal
 
-RBN also supplies native Spots, with optional CWT/MST/SST call-history filters,
+RBN also supplies native Spots, with optional CWT/MST/SST call-history filters
+and a BIGFOOT 2026 station filter,
 skimmer selection, receiver continents/grid regions, and a distance limit in
 miles from your chosen grid in **Settings → RBN**. **All calls** is the default;
-choose the CWT call-history filter explicitly when you want it.
+choose a **Station filter** explicitly when you want it.
 
 The My Signal panel requires a Ham2K version with native SVG panel support.
 If it shows **App update needed**, update Ham2K before using the panel.
