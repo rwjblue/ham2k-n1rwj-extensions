@@ -18,8 +18,8 @@ an updated event profile; they are not inferred from the calendar.
 Check the [organizer's announcement and rules](https://w7dk.org/?view=article&id=319:3rd-annual-national-sasquatch-day-special-event&catid=185)
 for current event details.
 
-1. Download `n1rwj-bigfoot-0.11.1.h2kext` from the
-   [v0.11.1 release](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.11.1).
+1. Download `n1rwj-bigfoot-0.12.0.h2kext` from the
+   [v0.12.0 release](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.12.0).
    Install it using **Settings → Features & Extensions → Install from file**,
    then enable **BIGFOOT Hunt**. Building from source with
    `mise run pack n1rwj-bigfoot` is also supported.
@@ -64,14 +64,15 @@ difference do not add letters. The bonus is displayed separately and does
 not replace a missing letter. The panel refreshes from the operation log
 when contacts are logged, edited, or deleted.
 
-## Forest scene (development)
+## Forest scene
 
-The current development source upgrades the optional **BIGFOOT Hunt** panel
+Version 0.12.0 upgrades the optional **BIGFOOT Hunt** panel
 to an illustrated forest with a friendly Bigfoot, glowing fireflies,
-seven letter tiles, and a separate Skunk Ape card. These additions are not
-in the published v0.11.1 downloads. Add it once with **Edit Layout → Add a
+seven letter tiles, and a separate Skunk Ape card. Add it once with
+**Edit Layout → Add a
 Panel → BIGFOOT Hunt**; an existing Hunt panel keeps its saved placement.
 The built-in Info display works independently of this optional panel.
+Leave the scene visible while hunting to see celebrations as contacts count.
 
 CW is the default focus, with Mixed progress alongside it. Gold tiles show
 letters earned in the selected mode. A small gold dot marks a letter earned
@@ -118,8 +119,7 @@ The compact marker identifies the station; it does not change to show needed
 status because the native Spots panel caches these markers. Use the highlight
 or BIGFOOT panel for progress.
 
-The current development source also enriches the built-in **Info** pane with
-emoji; these additions are not in the published v0.11.1 downloads. While
+Version 0.12.0 also enriches the built-in **Info** pane with emoji. While
 entering an event callsign, its Notes show 🌲🐾 event identity, 🔤 letter or
 🦨 bonus details, and W7O's ⭕/🔁 two-contact rule. With the call field idle,
 the scored hunt summary shows 📻 CW and 🧩 Mixed counts, ✅ worked/🔎 needed

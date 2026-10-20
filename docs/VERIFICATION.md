@@ -1,6 +1,6 @@
 # Verification and compatibility
 
-## BIGFOOT forest scene (unreleased) — 2026-10-20
+## BIGFOOT forest scene (v0.12.0 preparation) — 2026-10-20
 
 The existing `hunt` panel now returns an original vector forest scene when
 the host supplies a panel environment, preserving its saved panel key. CW
@@ -57,11 +57,11 @@ credit once. Native PNG captures include idle, narrow, compact, completion,
 and tiny states. The running app, its operation log, host dependencies, and
 tracked host source were untouched.
 
-The development bundle has not been installed in the running logger or
-published. The scene and preview tooling affect only BIGFOOT, so CWT/CQ WW
-upstream synchronization is not required.
+These checks preceded v0.12.0 publication and did not install the development
+bundle in the running logger. The scene and preview tooling affect only
+BIGFOOT, so CWT/CQ WW upstream synchronization is not required.
 
-## BIGFOOT Info display (unreleased) — 2026-10-20
+## BIGFOOT Info display (v0.12.0 preparation) — 2026-10-20
 
 Enriched the built-in Info pane's two existing views without changing the
 panel layout or extension API. Target notes now include 🌲🐾 event identity,
