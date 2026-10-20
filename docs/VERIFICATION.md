@@ -1,5 +1,45 @@
 # Verification and compatibility
 
+## Release 0.13.0 publication — 2026-10-20
+
+Published [v0.13.0](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.13.0)
+from signed main commit `a81b0015608811fbae171f0f74dca072b89014b2` at
+**15:17:04 UTC** (11:17 US Eastern). GitHub verifies the signature as valid;
+the release tag resolves to the tested commit. The release body exactly
+matches the authored `docs/releases/v0.13.0.md`.
+
+- Local format and release dry-run checks passed **1,682 tests across 122
+  files**, lint, three strict TypeScript projects, all **11 official ES2020
+  builds/packages**, and synchronized versions/checksums. The preparation
+  record below details **64 native component checks across 21 fixtures** and
+  installed build-180 JavaScript-kernel verification.
+- The [check workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/39446865405)
+  passed; both upload and catalog jobs in the
+  [release workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/39446976763)
+  passed. GitHub has all **11 archives and 11 checksum files**. Downloaded
+  assets passed `mise run release:catalog v0.13.0 --dry-run`; independently
+  downloaded bytes match their sidecars, GitHub digests, and sizes.
+- All eleven catalog submissions returned **approved** on `stable` at about
+  **15:18 UTC**. Root SDK/tools dependency updates select every consumer;
+  release-note extraction includes each extension's own section and the
+  universal shared section.
+
+- Public readback confirms all eleven **0.13.0** versions are current and
+  approved on `stable`, released between **15:18:10.957 and 15:18:30.452 UTC**.
+  Every catalog archive matches its GitHub archive byte for byte, and every
+  scoped release note matches the authored extension/shared extraction.
+  API-7 discovery lists BIGFOOT **0.13.0**; API-1 discovery retains compatible
+  **0.12.1** instead. BIGFOOT's new archive is **71,999 bytes**, SHA-256
+  `4d382a0d5a24c121ce40220b4cdfa813ad450ed0cf7437bb2a03544b96403424`.
+
+BIGFOOT's radio requests require API 7 and radio-write permission. Callsign
+entry remains manual. Component/kernel tests and simulated radio responses
+are separate from installed-app and on-air radio acceptance, which remain
+unverified. The running logger, operation log, radio, host source, and host
+dependencies were untouched. CWT/CQ WW SDK coverage is synchronized to their
+verified official PR source branches; BIGFOOT UI and personal packaging are
+exempt from that synchronization.
+
 ## BIGFOOT integrated spots (v0.13.0 preparation) — 2026-10-20
 
 Cached station leads are integrated into the existing Hunt forest, preserving
