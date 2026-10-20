@@ -20,6 +20,7 @@ import {
   text,
 } from './model.ts'
 import { operationSession, sessionFor } from './schedule.ts'
+import { zombieSpcSuggestion } from './spc.ts'
 
 type Manifest = { key: string; icon: string; accentColor: string }
 
@@ -134,6 +135,7 @@ export function createActivity(
     async loggingControls({ operation, qso }, ctx) {
       if (!refOf(operation)) return []
       const hints = await history.suggestions(operation, qso ?? {}, ctx, file())
+      const spc = hints.spc || zombieSpcSuggestion(object(qso?.their))
       const control = (
         field: string,
         label: string,
@@ -162,7 +164,7 @@ export function createActivity(
         },
       })
       return [
-        control('theirSpc', 'State / province / country (_ = space)', 'SPC', 10, hints.spc),
+        control('theirSpc', 'State / province / country (_ = space)', 'SPC', 10, spc),
         control('theirZombieNumber', 'Zombie number', 'Zombie #', 20, hints.zombieNumber, true),
         control('theirZombieName', 'Zombie name (_ = space)', 'Name', 30, hints.zombieName),
       ]

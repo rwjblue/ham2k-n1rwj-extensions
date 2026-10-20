@@ -7,6 +7,7 @@ import {
   DEFAULT_SOURCE,
   sourceValidationError,
 } from '../../../../packages/n1mm/src/source.ts'
+import { zombieAboutDefinition, zombieAboutPanel } from './about.ts'
 import { parseZombieHistory, type ZombieHistoryFile } from './history.ts'
 
 export interface ZombieSnapshot {
@@ -191,6 +192,7 @@ export function createZombieData(manifest = { key: 'n1rwj-zombie', icon: 'ghost'
     kind: 'dynamic',
     async getPanels() {
       return [
+        zombieAboutPanel(manifest),
         {
           key: manifest.key,
           title: 'Zombie Shuffle call history',
@@ -199,7 +201,8 @@ export function createZombieData(manifest = { key: 'n1rwj-zombie', icon: 'ghost'
         },
       ]
     },
-    async getDefinition() {
+    async getDefinition({ panelKey }) {
+      if (panelKey === zombieAboutPanel(manifest).key) return zombieAboutDefinition()
       await cache.load()
       const selected = await savedSource()
       const loaded = cache.current()
@@ -232,13 +235,13 @@ export function createZombieData(manifest = { key: 'n1rwj-zombie', icon: 'ghost'
         ],
       }
     },
-    async validateField({ fieldKey, value }) {
-      return fieldKey === 'source' && typeof value === 'string'
+    async validateField({ panelKey, fieldKey, value }) {
+      return panelKey === manifest.key && fieldKey === 'source' && typeof value === 'string'
         ? sourceValidationError(value)
         : null
     },
-    async onChangeField({ fieldKey, value }) {
-      if (fieldKey !== 'source' || typeof value !== 'string') return
+    async onChangeField({ panelKey, fieldKey, value }) {
+      if (panelKey !== manifest.key || fieldKey !== 'source' || typeof value !== 'string') return
       const error = sourceValidationError(value)
       if (error) throw new Error(error)
       await host.setSettings({ source: value.trim() })

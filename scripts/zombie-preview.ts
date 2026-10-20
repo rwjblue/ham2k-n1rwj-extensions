@@ -3,6 +3,7 @@ import { dirname, resolve } from 'node:path'
 import type { PanelContent, PanelEnvironment, PanelRenderArgs } from '@ham2k/extension-sdk'
 import type { Qson } from '../extensions/contests/n1rwj-zombie/src/model.ts'
 import { createZombiePanel } from '../extensions/contests/n1rwj-zombie/src/panel.ts'
+import { zombiePanelPreview } from '../extensions/contests/n1rwj-zombie/src/panel-preview.ts'
 import { scenePreviewSvg } from './rbn-preview.ts'
 
 const EVENT_START = Date.UTC(2026, 9, 30, 19)
@@ -360,11 +361,10 @@ select.onchange=()=>{stop();show(Number(select.value))};document.getElementById(
 </script></body></html>`
   const path = resolve(output)
   const stem = path.replace(/\.html?$/i, '')
-  const resting = fixtures.findIndex((fixture) => fixture.name === 'resting')
   await mkdir(dirname(path), { recursive: true })
   await writeFile(path, document)
   await writeFile(`${stem}.json`, JSON.stringify({ fixtures }, null, 2))
-  await writeFile(`${stem}-panel.svg`, previews[resting])
+  await writeFile(`${stem}-panel.svg`, zombiePanelPreview)
   if (fixtureFile) {
     await mkdir(dirname(resolve(fixtureFile)), { recursive: true })
     await writeFile(fixtureFile, JSON.stringify({ fixtures }, null, 2))

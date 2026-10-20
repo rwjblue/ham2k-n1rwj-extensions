@@ -6,7 +6,9 @@ import {
   type ZombieExperience,
 } from './experience.ts'
 import { EVENT_REF, object, type Qson, RULES_URL, refOf, text } from './model.ts'
+import { zombiePanelPreview } from './panel-preview.ts'
 import { rebirthLabel, zombieScene } from './scene.ts'
+import { eventCountdownLabel } from './schedule.ts'
 
 function markdown(value: string): string {
   return value
@@ -19,7 +21,7 @@ function markdown(value: string): string {
 function utc(at: number): string {
   return `${new Date(at).toISOString().slice(11, 16)} UTC`
 }
-export function zombieWatchMarkdown(model: ZombieExperience): string {
+export function zombieWatchMarkdown(model: ZombieExperience, now: number): string {
   const rows = model.rebirths.map(
     (row) =>
       `| ${markdown(row.zombieName)} · ${row.call} | ${row.band} | ${rebirthLabel(row)} · ${utc(row.nextAt)} |`,
@@ -33,6 +35,7 @@ export function zombieWatchMarkdown(model: ZombieExperience): string {
   return [
     '## 🪦 Rebirth watch',
     title,
+    eventCountdownLabel(model.session, now),
     rows.length
       ? ['| Zombie | Band | Eligible again |', '| :--- | :--- | :--- |', ...rows].join('\n')
       : 'No rebirths available. A qualifying contact starts a two-hour watch when there is time to return before the event ends.',
@@ -89,6 +92,7 @@ export function createZombiePanel(): PanelHook {
           key: 'graveyard',
           title: 'Zombie Shuffle',
           icon: 'ghost',
+          preview: zombiePanelPreview,
           description: 'A friendly graveyard, per-band rebirth watch, and Book of the Undead.',
           on: ['operation', 'qsoLogged'],
           form: [
@@ -219,6 +223,7 @@ export function createZombiePanel(): PanelHook {
           scene: zombieScene({
             experience: model,
             frame,
+            now,
             environment: args.environment,
             motion: args.config.motion !== false,
           }),
@@ -228,7 +233,7 @@ export function createZombiePanel(): PanelHook {
         kind: 'markdown',
         title: 'Zombie Shuffle',
         content:
-          args.config.view === 'book' ? zombieBookMarkdown(model) : zombieWatchMarkdown(model),
+          args.config.view === 'book' ? zombieBookMarkdown(model) : zombieWatchMarkdown(model, now),
         triggers: args.config.view === 'book' ? [] : triggers,
       }
     },

@@ -1,12 +1,14 @@
 # N1RWJ Zombie Shuffle
 
+![Zombie Shuffle midnight radio club](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/download/v0.14.1/zombie-shuffle.png)
+
 Log the 2026 Zombie Shuffle in Ham2K with its four-part exchange, two-hour
 rebirth rule, call-history suggestions, score breakdown, ADIF, and a plain-text
 submission summary. This extension is independently installable as
 `n1rwj-zombie`, with activity/reference type `zombie`.
 
-Download `n1rwj-zombie-0.14.0.h2kext` from the
-[v0.14.0 release](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.14.0)
+Download `n1rwj-zombie-0.14.1.h2kext` from the
+[v0.14.1 release](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.14.1)
 and install it through Ham2K's extension settings. Building from source is also
 supported:
 
@@ -29,6 +31,15 @@ bonus counts, total score, and the four scoring groups. A lantern lights the
 gets a short shuffle; an eligible rebirth gets **BACK FROM THE DEAD!**, and
 a copied `4321` bonus exchange gets sparkles and a party hat. **CQ BOO!**
 waves hello without logging, transmitting, or awarding points.
+
+The event timer counts down to the start, then local midnight, using the
+event-day UTC offset and flexible-hours setting from setup. It refreshes once
+per minute in the scene and detailed watch. The backdrop fills the host's
+square panel surface, and the panel selector has an original illustrated preview.
+
+Open **Settings → Extensions → Zombie Shuffle · About** for an offline event
+overview and illustration, plus links to the official rules, summary sheets
+and this guide.
 
 The **Rebirth watch** shows when previously worked callsigns can count again
 on each actual band. It updates once per minute while visible, with exact
@@ -108,6 +119,11 @@ unusual locations rather than SST's two-letter/DX rules. Zombie names are
 independent of ordinary callsign-directory first names. Corrections and
 intentional clearing take precedence over suggestions. Use **Wipe** between
 contacts and log one callsign at a time.
+
+When Zombie history has no SPC, an untouched SPC field can default from the
+host's callsign lookup: a known state/province for US or Canadian stations,
+or a country for DX. A portable call does not borrow an unconfirmed home-QTH
+state. An ordinary directory name never supplies a spooky name or Zombie number.
 
 The inline controls use **Space** to advance focus. In SPC or Zombie name,
 type **`_` for a space**: `NEW_ZEALAND` becomes `NEW ZEALAND`, and `OLD_NICK`
@@ -202,6 +218,11 @@ mise run check
 mise run verify-host n1rwj-zombie
 mise run zombie:preview
 ```
+
+To regenerate the offline About illustration and `dist/zombie-shuffle.png`,
+run `mise run zombie:about-art` with ImageMagick 7 and `chrome-headless-shell`
+available, or set `ZOMBIE_ART_CHROME` to its executable path. The generator
+uses a fresh temporary browser profile and the original picker SVG.
 
 Unit, bundle, and installed-kernel verification do not establish native UI or
 on-air acceptance. See the repository's [verification record](../../../docs/VERIFICATION.md)

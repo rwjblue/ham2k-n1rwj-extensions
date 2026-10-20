@@ -50,6 +50,7 @@ describe('Zombie native scene', () => {
       const scene = zombieScene({
         experience: buildZombieExperience(operation, [contact], now),
         frame: quiet,
+        now,
         environment: environment(width ?? 560, height ?? 660),
         motion: true,
       })
@@ -69,18 +70,22 @@ describe('Zombie native scene', () => {
   }
   it('uses copied identity, actual-band readiness, and four score groups', () => {
     const model = buildZombieExperience(operation, [contact], now)
-    const scene = zombieScene({ experience: model, frame: quiet, motion: true })
+    const scene = zombieScene({ experience: model, frame: quiet, now, motion: true })
     const texts = scene.layers.flatMap((layer) => (layer.text?.literal ? [layer.text.literal] : []))
     expect(texts).toContain('COUNT ROB  ·  #002')
     expect(texts).toContain('ELIGIBLE NOW')
     expect(texts).toContain('40m · #007')
     expect(texts).toContain('10m/15m')
+    expect(texts).toContain('Ends in 6h 15m')
+    expect(scene.layers[0]).toMatchObject({ id: 'background', x: 0, y: 0, width: 560, height: 660 })
+    expect(scene.layers[0]?.svg).toContain('<rect width="560" height="660" fill="#211A35"/>')
     expect(scene.values?.participation).toBe(1)
   })
   it('respects motion settings while preserving static earned feedback', () => {
     const model = buildZombieExperience(operation, [contact], now)
     const scene = zombieScene({
       experience: model,
+      now,
       frame: { kind: 'rebirth', label: 'BACK FROM THE DEAD!', phase: 1, nextTick: true },
       environment: environment(560, 660, true),
       motion: true,

@@ -51,3 +51,22 @@ export function operationSession(operation: Qson): Session | undefined {
 export function sessionLabel(session: Session): string {
   return `Zombie Shuffle ${LOCAL_DATE}, ${session.flexibleHours ? '00:00' : '15:00'}–24:00 (UTC${session.utcOffset})`
 }
+
+export function eventCountdownLabel(session: Session | undefined, now: number): string {
+  if (!session || !Number.isFinite(now)) return 'Set event-day UTC offset'
+  if (now >= session.endMillis) return 'The shuffle has ended'
+  const upcoming = now < session.startMillis
+  const remaining = (upcoming ? session.startMillis : session.endMillis) - now
+  // The panel refreshes once a minute. Round up so it never announces a
+  // boundary before the configured local operating window actually reaches it.
+  const minutes = Math.ceil(remaining / 60_000)
+  const days = Math.floor(minutes / (24 * 60))
+  const hours = Math.floor((minutes % (24 * 60)) / 60)
+  const rest = minutes % 60
+  const duration = days
+    ? `${days}d ${hours}h ${rest}m`
+    : hours
+      ? `${hours}h ${rest}m`
+      : `${minutes}m`
+  return `${upcoming ? 'Starts' : 'Ends'} in ${duration}`
+}

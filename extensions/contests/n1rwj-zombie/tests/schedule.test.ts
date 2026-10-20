@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { operationSession, sessionFor, sessionLabel, validUtcOffset } from '../src/schedule.ts'
+import {
+  eventCountdownLabel,
+  operationSession,
+  sessionFor,
+  sessionLabel,
+  validUtcOffset,
+} from '../src/schedule.ts'
 
 describe('confirmed 2026 local operating hours', () => {
   it('uses an explicit event-day offset and a half-open 15:00–midnight window', () => {
@@ -31,5 +37,31 @@ describe('confirmed 2026 local operating hours', () => {
     expect(session.startMillis).toBe(Date.UTC(2026, 9, 30, 10))
     expect(session.endMillis).toBe(Date.UTC(2026, 9, 31, 10))
     expect(sessionLabel(session)).toContain('00:00–24:00')
+  })
+
+  it('counts down to the configured start and end without reaching either early', () => {
+    const session = sessionFor('2026', '-04:00')
+    if (!session) throw new Error('Expected the event session')
+    expect(eventCountdownLabel(session, session.startMillis - 10 * 86_400_000 - 134 * 60_000)).toBe(
+      'Starts in 10d 2h 14m',
+    )
+    expect(eventCountdownLabel(session, session.startMillis - 1)).toBe('Starts in 1m')
+    expect(eventCountdownLabel(session, session.startMillis)).toBe('Ends in 9h 0m')
+    expect(eventCountdownLabel(session, session.endMillis - 1)).toBe('Ends in 1m')
+    expect(eventCountdownLabel(session, session.endMillis)).toBe('The shuffle has ended')
+    expect(eventCountdownLabel(session, session.endMillis + 86_400_000)).toBe(
+      'The shuffle has ended',
+    )
+  })
+
+  it('uses event setup rather than the device timezone and waits for missing setup', () => {
+    const now = Date.UTC(2026, 9, 30, 19)
+    expect(eventCountdownLabel(sessionFor('2026', '-04:00'), now)).toBe('Ends in 9h 0m')
+    expect(eventCountdownLabel(sessionFor('2026', '-10:00'), now)).toBe('Starts in 6h 0m')
+    expect(eventCountdownLabel(sessionFor('2026', '-10:00', true), now)).toBe('Ends in 15h 0m')
+    expect(eventCountdownLabel(undefined, now)).toBe('Set event-day UTC offset')
+    expect(eventCountdownLabel(sessionFor('2026', '-04:00'), Number.NaN)).toBe(
+      'Set event-day UTC offset',
+    )
   })
 })

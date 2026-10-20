@@ -127,6 +127,7 @@ describe('Zombie graveyard panel', () => {
     const descriptors = await panel.getPanels({}, { online: false })
     expect(descriptors).toHaveLength(1)
     expect(descriptors[0]).toMatchObject({ key: 'graveyard', on: ['operation', 'qsoLogged'] })
+    expect(descriptors[0]?.preview).toMatch(/^<svg /)
     expect(descriptors[0]?.form).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -200,6 +201,23 @@ describe('Zombie graveyard panel', () => {
       ctx,
     )
     expect(markdown(ready)).toContain('ELIGIBLE NOW')
+    expect(getQsos).toHaveBeenCalledExactlyOnceWith('graveyard-operation')
+  })
+
+  it('refreshes the event countdown through start and end using cached log state', async () => {
+    const panel = createZombiePanel()
+    const getQsos = vi.fn(async () => [])
+    const ctx = { online: false, getQsos }
+    const before = await panel.render(at(START - 60_000, 10_000), ctx)
+    expect(text(before)).toContain('Starts in 1m')
+    expect(before.triggers).toEqual(['tick:60'])
+    const started = await panel.render(at(START, 70_000, { reason: 'tick' }), ctx)
+    expect(text(started)).toContain('Ends in 9h 0m')
+    const ending = await panel.render(at(END - 60_000, 80_000, { reason: 'tick' }), ctx)
+    expect(text(ending)).toContain('Ends in 1m')
+    const ended = await panel.render(at(END, 90_000, { reason: 'tick' }), ctx)
+    expect(text(ended)).toContain('The shuffle has ended')
+    expect(ended.triggers).toEqual([])
     expect(getQsos).toHaveBeenCalledExactlyOnceWith('graveyard-operation')
   })
 
@@ -411,7 +429,7 @@ describe('Zombie watch and Book formatting', () => {
     expect(book).toContain('**#0002**')
     expect(book).not.toContain('<script>')
     expect(book).not.toContain('[link](x)')
-    const watch = zombieWatchMarkdown(model)
+    const watch = zombieWatchMarkdown(model, START)
     expect(watch).toContain('\\*Igor\\* &lt;script&gt;')
     expect(watch).toContain('Eligible again does not mean currently on air')
   })

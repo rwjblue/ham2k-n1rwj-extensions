@@ -103,6 +103,50 @@ afterEach(() => {
 })
 
 describe('Zombie N1MM data', () => {
+  it('opens the read-only About page offline separately from history settings', async () => {
+    const data = createZombieData()
+    const panels = await data.settings.getPanels?.({}, { online: false })
+    expect(panels).toEqual([
+      {
+        key: 'n1rwj-zombie_about',
+        title: 'Zombie Shuffle · About',
+        icon: 'ghost',
+        dataFilesSection: false,
+      },
+      {
+        key: 'n1rwj-zombie',
+        title: 'Zombie Shuffle call history',
+        icon: 'ghost',
+        dataFilesSection: true,
+      },
+    ])
+    const form = await data.settings.getDefinition(
+      { panelKey: 'n1rwj-zombie_about' },
+      { online: false },
+    )
+    expect(form.title).toBe('Zombie Shuffle')
+    expect(form.elements).toContainEqual(
+      expect.objectContaining({
+        type: 'link',
+        key: 'officialRules',
+        url: 'https://www.zianet.com/qrp/ZOMBIE/pg.html',
+      }),
+    )
+    expect(host.getSettings).not.toHaveBeenCalled()
+  })
+  it('does not accept history-source edits through the read-only About panel', async () => {
+    const save = vi.spyOn(host, 'setSettings').mockResolvedValue(undefined)
+    const data = createZombieData()
+    const args = {
+      panelKey: 'n1rwj-zombie_about',
+      fieldKey: 'source',
+      value: 'invalid',
+      state: {},
+    }
+    expect(await data.settings.validateField?.(args, { online: false })).toBeNull()
+    await data.settings.onChangeField(args, { online: false })
+    expect(save).not.toHaveBeenCalled()
+  })
   it('maps the published 66 entries and blanks only its four obsolete bonus assignments', () => {
     const file = parseZombieHistory(published2025)
     expect(file).toMatchObject({
@@ -281,9 +325,11 @@ describe('Zombie N1MM data', () => {
     })
     const data = createZombieData()
     data.dataFile.onLoadRawData?.(snapshot)
-    expect(await data.settings.getPanels?.({}, { online: false })).toEqual([
-      expect.objectContaining({ key: 'n1rwj-zombie', dataFilesSection: true }),
-    ])
+    expect(await data.settings.getPanels?.({}, { online: false })).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ key: 'n1rwj-zombie', dataFilesSection: true }),
+      ]),
+    )
     if (typeof data.dataFile.url !== 'function') throw new Error('Expected configured source')
     expect(await data.dataFile.url({}, { online: false })).toBe(ZOMBIE_DEFAULT_SOURCE)
     const form = await data.settings.getDefinition({ panelKey: 'n1rwj-zombie' }, { online: false })

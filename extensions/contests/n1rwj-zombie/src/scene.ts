@@ -10,6 +10,7 @@ import {
   zombieLeftArmArtwork,
   zombieRightArmArtwork,
 } from './scene-art.ts'
+import { eventCountdownLabel } from './schedule.ts'
 
 const CREAM = '#F6EAD3'
 const MUTED = '#C6B8D8'
@@ -45,6 +46,7 @@ export function rebirthLabel(row: ZombieRebirth): string {
 export function zombieScene(input: {
   experience: ZombieExperience
   frame: ZombieCelebrationFrame
+  now: number
   environment?: PanelEnvironment
   motion: boolean
 }): PanelScene {
@@ -107,7 +109,16 @@ export function zombieScene(input: {
     },
     transitionMs: reduced ? 0 : 650,
   }
-  art('background', 0, 0, width, height, card(width, height, '#211A35', '#665279', 18))
+  // The host panel surface is square. Fill every corner, just as BIGFOOT does,
+  // while keeping the smaller cards rounded inside this opaque backdrop.
+  art(
+    'background',
+    0,
+    0,
+    width,
+    height,
+    svg(width, height, `<rect width="${width}" height="${height}" fill="#211A35"/>`),
+  )
   text('eyebrow', 'MIDNIGHT RADIO CLUB · OCT 30, 2026', pad, 12, inner, 9, MUTED, 700)
   text('title', 'ZOMBIE SHUFFLE', pad, 27, inner, compact || width < 400 ? 23 : 29, CREAM, 800)
   text(
@@ -120,7 +131,17 @@ export function zombieScene(input: {
     GREEN,
     600,
   )
-  const statsY = compact ? 78 : 92
+  text(
+    'event-countdown',
+    eventCountdownLabel(model.session, input.now),
+    pad,
+    compact ? 75 : 86,
+    inner,
+    compact ? 10 : 11,
+    GOLD,
+    600,
+  )
+  const statsY = compact ? 96 : 113
   const statsH = compact ? 29 : 39
   const statW = (inner - 14) / 3
   for (const [index, [title, value]] of [
