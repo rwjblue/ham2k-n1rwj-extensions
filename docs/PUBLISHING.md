@@ -8,6 +8,30 @@ each submission before operators can install it from the catalog.
 
 ## Current release status
 
+[v0.14.0](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.14.0)
+was published from signed main commit `4ab275e93e5fd0e8520348595142b77d514b845f`
+on October 20, 2026 at **13:22 US Eastern (17:22:34 UTC)**. All **11 bundles
+and 11 checksum files** are available. The
+[check workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/39465246487)
+and both jobs in the
+[release workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/39465526319)
+passed. Downloaded assets passed `mise run release:catalog v0.14.0 --dry-run`,
+and the published body exactly matches `docs/releases/v0.14.0.md`.
+
+CQ WW and Zombie are **approved** and current at **0.14.0** on `stable`, with
+release times **17:23:35.614** and **17:23:37.005 UTC**, respectively. Both
+are discoverable on API-1 and API-7 hosts; their catalog bundles and scoped
+notes match GitHub. The other nine extensions were skipped because their
+behavior and dependencies are unchanged.
+
+Zombie adds the midnight radio club scene, per-band rebirth watch, visitor
+book and richer Info. CQ WW includes the already-synchronized upstream entry
+and scoring reconciliation. Native UI and on-air acceptance remain unverified.
+See the [release notes](releases/v0.14.0.md) and
+[verification record](VERIFICATION.md#release-0140-publication--2026-10-20).
+
+### Previous releases
+
 [v0.13.1](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.13.1)
 was published from signed main commit `038642cd57b71709c0f9a5c860a2c6483a2b35f9`
 on October 20, 2026 at 11:56 US Eastern time (15:56:16 UTC). All **11 bundles
@@ -29,8 +53,6 @@ refreshes availability every five seconds while a fresh station lead is visible.
 API 7 and radio-write permission requirements are unchanged. See the
 [release notes](releases/v0.13.1.md) and
 [verification record](VERIFICATION.md#release-0131-publication--2026-10-20).
-
-### Previous releases
 
 [v0.13.0](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.13.0)
 was published from signed main commit `a81b0015608811fbae171f0f74dca072b89014b2`

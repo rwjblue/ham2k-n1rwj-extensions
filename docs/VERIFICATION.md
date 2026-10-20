@@ -1,5 +1,45 @@
 # Verification and compatibility
 
+## Release 0.14.0 publication — 2026-10-20
+
+Published [v0.14.0](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.14.0)
+from signed main commit `4ab275e93e5fd0e8520348595142b77d514b845f` at
+**17:22:34 UTC (13:22 US Eastern)**. GitHub verifies the signature, and the
+tag resolves to the tested release commit. Its body exactly matches the
+authored `docs/releases/v0.14.0.md`.
+
+- `mise run format` and `mise run release v0.14.0 --dry-run` passed lint,
+  strict runtime/test/task typechecks, **1,813 tests across 130 files**, and
+  all **11 official ES2020 builds/packages**, with synchronized versions and
+  valid checksums. The rebased stack preserves the CQ WW reconciliation and
+  all earlier BIGFOOT changes on main.
+- The [check workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/39465246487)
+  and both jobs in the
+  [release workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/39465526319)
+  passed. GitHub contains all **22 bundle/checksum assets**. Downloaded assets
+  passed `mise run release:catalog v0.14.0 --dry-run`.
+- The catalog submitted **CQ WW and Zombie only**; nine unchanged extensions
+  were explicitly skipped. Both are approved/current at **0.14.0** on stable
+  and appear exactly once in API-1 and API-7 discovery. Release times are
+  **17:23:35.614 UTC** for CQ WW and **17:23:37.005 UTC** for Zombie.
+- CQ WW's **58,870-byte** catalog bundle is byte-identical to the GitHub
+  asset, SHA-256
+  `c337766fb71b479394a8048a93068dad4d0bc4d4e9db6953648cb5bb0683bf8c`.
+  Zombie's **77,024-byte** bundle likewise matches, SHA-256
+  `de8728531901d2fe59e87069c6214555e2148cb8b01b5ff765b0157a568c9a00`.
+  Catalog metadata hashes/sizes and both scoped note bodies match the archives
+  and authored release sections exactly.
+- `mise run verify-host` accepted all declared hooks across all 11 extensions
+  in the running **Ham2K Mac Logger (Next) 26.9.0 build 181** JavaScript kernel,
+  SHA-256 `f2d0d92c395558e9d98488b8ae1d6dbfccee52bc3a12b58c903c30e98e65f506`.
+  This uses Node VM and simulated timer delivery, separate from native UI.
+
+All nine CQ WW runtime/translation files were checked against the official
+PR #2 source head and match. Zombie presentation and personal release packaging
+do not alter CWT or shared runtime behavior. Native scene scheduling,
+installed-app UI and on-air acceptance remain unverified; the panel's segment
+override limitation and later spot/tuning increment remain documented.
+
 ## Zombie midnight radio club (development) — 2026-10-20
 
 Initially implemented in the separate `zombie-graveyard` Jujutsu workspace,
