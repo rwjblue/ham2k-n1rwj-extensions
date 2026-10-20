@@ -1,5 +1,44 @@
 # Verification and compatibility
 
+## Release 0.13.1 publication — 2026-10-20
+
+Published [v0.13.1](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.13.1)
+from signed main commit `038642cd57b71709c0f9a5c860a2c6483a2b35f9` at
+**15:56:16 UTC** (11:56 US Eastern). GitHub verifies the signature as valid;
+the release tag resolves to the tested commit. The published body exactly
+matches the authored `docs/releases/v0.13.1.md`.
+
+- Local format and release dry-run checks passed **1,708 tests across 122
+  files**, lint, three strict TypeScript projects, all **11 official ES2020
+  builds/packages**, and synchronized versions/checksums. The preparation
+  record below covers **76 native component checks across 25 fixtures** plus
+  the geometry audit and installed JavaScript-kernel verification.
+- The [check workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/39452802210)
+  passed. Both upload and catalog jobs in the
+  [release workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/39452967590)
+  passed. GitHub has all **11 archives and 11 checksum files**; downloaded
+  assets passed `mise run release:catalog v0.13.1 --dry-run`.
+- BIGFOOT alone was submitted and returned **approved** on `stable`.
+  The other ten extensions were skipped under the reviewed notes because
+  their behavior and shared dependencies are unchanged. Their synchronized
+  0.13.1 bundles remain archived on GitHub.
+
+- Public readback confirms BIGFOOT **0.13.1 approved/current** on `stable`,
+  released at **15:57:30.786 UTC**. API-7 discovery lists 0.13.1 and API-1
+  discovery retains 0.12.1. Its **72,630-byte** catalog archive matches the
+  GitHub bytes, sidecar, asset digest, and size; SHA-256
+  `b8a8078ab8decce47fe3efdfad0bccba77ab95639ac5c560814f6fa176e6af17`.
+  All 22 GitHub assets were independently downloaded and checked against
+  digests/sizes and all eleven sidecars. Catalog notes match the authored
+  extraction. The other ten extensions remain approved at **0.13.0**, with
+  unchanged hashes/notes and no 0.13.1 catalog submission.
+
+Only BIGFOOT UI/runtime and personal release packaging change. SDK/tools,
+shared runtime, API level, and radio permission are unchanged, so CWT/CQ WW
+upstream synchronization is exempt. Cached native component and simulated
+radio tests do not establish installed-app or on-air acceptance; no running
+logger, operation log, host dependency, or radio was modified.
+
 ## BIGFOOT CAT availability (v0.13.1 preparation) — 2026-10-20
 
 The existing forest reads the selected CAT radio before offering Tune. A

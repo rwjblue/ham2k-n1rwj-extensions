@@ -8,6 +8,30 @@ each submission before operators can install it from the catalog.
 
 ## Current release status
 
+[v0.13.1](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.13.1)
+was published from signed main commit `038642cd57b71709c0f9a5c860a2c6483a2b35f9`
+on October 20, 2026 at 11:56 US Eastern time (15:56:16 UTC). All **11 bundles
+and 11 checksum files** are available. The
+[check workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/39452802210)
+and both jobs in the
+[release workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/39452967590)
+passed. Downloaded assets passed `mise run release:catalog v0.13.1 --dry-run`,
+and the published body exactly matches `docs/releases/v0.13.1.md`.
+
+BIGFOOT **0.13.1** is **approved** and current on `stable`, released at
+15:57:30.786 UTC. Public bundle bytes and scoped notes match GitHub. API-7
+hosts discover 0.13.1; API-1 hosts retain compatible 0.12.1. The other ten
+extensions remain at 0.13.0 because their behavior and dependencies are
+unchanged. Tune
+now appears only when CAT control is ready; connecting/manual states preserve
+the callsign and frequency with selection-only letter controls. The forest
+refreshes availability every five seconds while a fresh station lead is visible.
+API 7 and radio-write permission requirements are unchanged. See the
+[release notes](releases/v0.13.1.md) and
+[verification record](VERIFICATION.md#release-0131-publication--2026-10-20).
+
+### Previous releases
+
 [v0.13.0](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.13.0)
 was published from signed main commit `a81b0015608811fbae171f0f74dca072b89014b2`
 on October 20, 2026 at 11:17 US Eastern time (15:17:04 UTC). All **11 bundles
@@ -29,8 +53,6 @@ radio-tuning requests and manual callsign entry. It now requires **API 7** and
 The shared SDK behavior is synchronized to the official CWT/CQ WW PR source
 branches. See the [release notes](releases/v0.13.0.md) and
 [verification record](VERIFICATION.md#release-0130-publication--2026-10-20).
-
-### Previous releases
 
 [v0.12.1](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.12.1)
 was published from signed main commit `923c9f71ebe9c4ed69f90b0cfaf789a4ec202600`
