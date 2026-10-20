@@ -40,6 +40,11 @@ test('panel uses operation/log refresh signals without per-keystroke triggers or
   assert.deepEqual(panel.on, ['operation', 'qsoLogged'])
   assert.equal(panel.form?.[0].key, 'focus')
   assert.equal(panel.form?.[0].value, 'CW')
+  const preview = panel.preview
+  assert.ok(preview)
+  assert.ok(preview.startsWith('<svg'))
+  assert.doesNotMatch(preview, /<(?:text|script|image|foreignObject)\b/i)
+  assert.doesNotMatch(preview, /(?:href|src)=["'](?:https?:|data:)/i)
 })
 
 test('default checklist shows CW beside mixed progress and both O contacts as evidence', async () => {

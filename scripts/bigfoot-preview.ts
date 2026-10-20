@@ -2,6 +2,7 @@ import { mkdir, writeFile } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
 import type { PanelContent, PanelEnvironment, PanelRenderArgs } from '@ham2k/extension-sdk'
 import { createBigfootPanel } from '../extensions/activities/n1rwj-bigfoot/src/panel.ts'
+import { huntPanelPreview } from '../extensions/activities/n1rwj-bigfoot/src/panel-preview.ts'
 import type { Qson } from '../extensions/activities/n1rwj-bigfoot/src/rules.ts'
 import { scenePreviewSvg } from './rbn-preview.ts'
 
@@ -142,6 +143,7 @@ export async function previewBigfoot(output: string, fixtureFile?: string) {
   await mkdir(dirname(resolve(output)), { recursive: true })
   await writeFile(output, html)
   await writeFile(`${output.replace(/\.html$/, '')}.json`, JSON.stringify({ fixtures }, null, 2))
+  await writeFile(`${output.replace(/\.html$/, '')}-panel.svg`, huntPanelPreview)
   if (fixtureFile) await writeFile(fixtureFile, JSON.stringify({ fixtures }, null, 2))
   console.log(`BIGFOOT preview: ${resolve(output)} (${fixtures.length} synthetic states)`)
 }

@@ -18,8 +18,8 @@ an updated event profile; they are not inferred from the calendar.
 Check the [organizer's announcement and rules](https://w7dk.org/?view=article&id=319:3rd-annual-national-sasquatch-day-special-event&catid=185)
 for current event details.
 
-1. Download `n1rwj-bigfoot-0.12.0.h2kext` from the
-   [v0.12.0 release](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.12.0).
+1. Download `n1rwj-bigfoot-0.12.1.h2kext` from the
+   [v0.12.1 release](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.12.1).
    Install it using **Settings → Features & Extensions → Install from file**,
    then enable **BIGFOOT Hunt**. Building from source with
    `mise run pack n1rwj-bigfoot` is also supported.
@@ -73,6 +73,11 @@ seven letter tiles, and a separate Skunk Ape card. Add it once with
 Panel → BIGFOOT Hunt**; an existing Hunt panel keeps its saved placement.
 The built-in Info display works independently of this optional panel.
 Leave the scene visible while hunting to see celebrations as contacts count.
+
+**Catalog previews (v0.12.1):** the Extensions listing introduces the animated
+forest and CW/Mixed hunt with friendlier copy; **Add a Panel** shows a static
+forest illustration. Tap its thumbnail to enlarge it. The picker shows fixed
+artwork; your operation's logged progress appears in the added panel.
 
 CW is the default focus, with Mixed progress alongside it. Gold tiles show
 letters earned in the selected mode. A small gold dot marks a letter earned
@@ -174,7 +179,8 @@ mise run check
 ```
 
 `bigfoot:preview` writes a synthetic, interactive state browser to
-`dist/bigfoot-scene-preview.html`, with companion scene JSON. It exercises
+`dist/bigfoot-scene-preview.html`, with companion scene JSON and the static
+picker illustration at `dist/bigfoot-scene-preview-panel.svg`. It exercises
 the actual panel hook with synthetic contacts, including narrow layouts,
 both O rules, completion, greeting, and reduced motion. Its SVG text and
 pose playback approximate the native view; it never accesses your logger

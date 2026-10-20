@@ -130,6 +130,11 @@ it('runs the complete hunt in the bundled sandbox with no network or storage ada
   expect(complete?.o.notices).not.toContain('newMult')
   expect(reads).toBe(0)
   const panel = registered.get('panel')?.hook as PanelHook
+  const [catalogEntry] = await panel.getPanels({}, ctx)
+  expect(catalogEntry.key).toBe('hunt')
+  expect(catalogEntry.preview).toMatch(/^<svg\b/)
+  expect(catalogEntry.description).toContain('🌲🐾')
+  expect(reads).toBe(0)
   const content = await panel.render(
     { panelKey: 'hunt', operation, qsoCount: 8, config: {}, reason: 'operation' },
     ctx,

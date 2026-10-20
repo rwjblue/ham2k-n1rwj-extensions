@@ -1,6 +1,7 @@
 import type { PanelContent, PanelHook, PanelRenderArgs } from '@ham2k/extension-sdk'
 import { bigfootRef, eventFromOperation, FORM_URL, RULES_URL, SPOTS_URL } from './activity.ts'
 import { type CelebrationFrame, createCelebrations } from './celebration.ts'
+import { huntPanelPreview } from './panel-preview.ts'
 import {
   buildProgress,
   type Contact,
@@ -113,7 +114,9 @@ export function createBigfootPanel(): PanelHook {
           key: 'hunt',
           title: 'BIGFOOT Hunt',
           icon: 'paw',
-          description: 'A forest trail with BIGFOOT letters, celebrations and the Skunk Ape bonus.',
+          description:
+            '🌲🐾 Watch Bigfoot celebrate new letters! CW + Mixed progress, both O contacts, and the 🦨 Skunk Ape bonus.',
+          preview: huntPanelPreview,
           on: ['operation', 'qsoLogged'],
           form: [
             {

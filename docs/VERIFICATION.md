@@ -1,5 +1,44 @@
 # Verification and compatibility
 
+## BIGFOOT catalog presentation (v0.12.1 preparation) — 2026-10-20
+
+The extension now advertises the animated forest in the plain-text
+Extensions catalog description with 🌲🐾/🦨 emoji, CW/Mixed letter tracking,
+and search keywords for the event and forest. The name, key, paw icon,
+forest-green accent, and API-1 compatibility remain unchanged. Catalog rows
+render plain text with emoji fallback; they do not support manifest images
+or Markdown descriptions.
+
+The **Add a Panel** descriptor also has a friendly description and a static
+**640×640** SVG illustration: Bigfoot waving in the forest, seven uniform
+letter tiles, the Skunk Ape, sparkles, and footprints. Path-drawn lettering
+works in the host's font-free SVG renderer. The art is decorative and contains
+no logged-progress claims, timers, external images, or network resources.
+The existing `hunt` panel key and live progress behavior are preserved.
+
+- `mise run format` and `mise run check` passed: **1,604 tests across 118
+  files**, strict runtime/test/task typechecks, lint, and all **11 official
+  ES2020 builds and packages**. Descriptor tests cover offline SVG delivery;
+  the bundled sandbox returns the preview without reading the operation log.
+- `mise run verify-host n1rwj-bigfoot` accepted all eight declared hooks in
+  the installed **Ham2K Mac Logger (Next) 26.9.0 build 180** JavaScript kernel.
+- A temporary harness used the actual host `LayoutSheet` and `flutter_svg`
+  renderer. The **40×40** thumbnail opens the **320×320** preview without
+  adding the panel. Native rendering produced no decode errors or Flutter
+  exceptions; gradients, vector letters, and both characters rendered correctly.
+  The bundled emoji font contains 🌲, 🐾, and 🦨. Emoji fallback was checked
+  against host source; Flutter test captures have a documented color-font
+  limitation, so they establish SVG rendering rather than emoji appearance.
+- `mise run bigfoot:preview` also exports the standalone illustration as
+  `dist/bigfoot-scene-preview-panel.svg`. The actual native preview capture is
+  `dist/bigfoot-panel-preview-native.png`; these local evidence files are ignored.
+
+These checks preceded v0.12.1 publication. The approved v0.12.0 bundle
+and catalog notes were not modified. The installed logger, operation log,
+host dependencies, and tracked host source were untouched. Only BIGFOOT
+presentation and preview tooling changed, exempt from CWT/CQ WW upstream
+synchronization; dependencies and shared runtime behavior are unchanged.
+
 ## Release 0.12.0 publication — 2026-10-20
 
 Published [v0.12.0](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.12.0)

@@ -58,8 +58,8 @@ versions; use the latest release linked above when installing.
 
 ### BIGFOOT Hunt
 
-Download and install `n1rwj-bigfoot-0.12.0.h2kext` from the
-[v0.12.0 release](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.12.0).
+Download and install `n1rwj-bigfoot-0.12.1.h2kext` from the
+[v0.12.1 release](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.12.1).
 Create a dedicated operation and add the
 **BIGFOOT Hunt 2026** activity. Its score summary and optional panel track
 **B I G F O O T** plus the separate **W4S** Skunk Ape bonus, with Mixed,
@@ -69,6 +69,8 @@ Version 0.12.0 adds emoji-rich Info details and an optional
 animated forest scene with letter celebrations, a waving Bigfoot, and a
 Skunk Ape bonus card. See the guide's **Forest scene** section for setup
 and previewing.
+Version 0.12.1 adds friendlier catalog copy and an illustrated panel-picker
+preview that you can tap to enlarge.
 
 The supported edition runs **October 13, 2026 at 00:00 UTC through October 21
 at 23:59 UTC**. The two W7O contacts must differ in band, mode, or UTC date.
