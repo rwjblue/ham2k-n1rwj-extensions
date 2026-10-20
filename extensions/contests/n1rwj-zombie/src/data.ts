@@ -24,6 +24,22 @@ interface Storage {
   write(value: JSONValue): Promise<void>
 }
 export const zombieSource = createN1mmSource({ filePrefix: 'ZOMBIE', label: 'Zombie Shuffle' })
+// The unfiltered category's first page contains only recent uploads. A useful
+// annual file can be years old, so ask N1MM to filter before it paginates.
+export const ZOMBIE_DEFAULT_SOURCE = `${DEFAULT_SOURCE}?CMDsearch=ZOMBIE&sort=newest&view=list`
+
+export function zombieSourceUrl(selected: string): string {
+  if (!selected || sourceValidationError(selected)) return ZOMBIE_DEFAULT_SOURCE
+  if (
+    /^https:\/\/n1mm(?:wp)?\.hamdocs\.com\/mmfiles\/categories\/callhistory\/?(?:[?#].*)?$/i.test(
+      selected,
+    )
+  ) {
+    const category = selected.split(/[?#]/)[0]?.replace(/\/?$/, '/')
+    return `${category}?CMDsearch=ZOMBIE&sort=newest&view=list`
+  }
+  return selected
+}
 
 export function checkedZombieSnapshot(raw: unknown): LoadedFile {
   if (
@@ -153,8 +169,7 @@ export function createZombieData(manifest = { key: 'n1rwj-zombie', icon: 'ghost'
     fetchType: 'raw',
     maxAgeInDays: 1,
     async url() {
-      const selected = await savedSource()
-      return sourceValidationError(selected) ? DEFAULT_SOURCE : selected || DEFAULT_SOURCE
+      return zombieSourceUrl(await savedSource())
     },
     async rawToJSONData({ body, url }) {
       try {
@@ -208,11 +223,11 @@ export function createZombieData(manifest = { key: 'n1rwj-zombie', icon: 'ghost'
             key: 'source',
             label: 'N1MM call-history source',
             uppercase: false,
-            value: selected || DEFAULT_SOURCE,
+            value: selected || ZOMBIE_DEFAULT_SOURCE,
           },
           {
             type: 'markdown',
-            text: 'Leave blank to discover the latest available Zombie file, or paste an HTTPS N1MM entry/text URL. Refresh in Data Files after changing it. Files need not be published every year. The last successful download remains available offline. The known 2025 bonus number 3333 is omitted from 2026 suggestions. Files with an unknown event year also omit known bonus values 3333 and 4321; names and SPC remain available. Explicit exchange edits and clearing always win.',
+            text: 'Leave blank to discover the latest available Zombie file, or paste an HTTPS N1MM entry/text URL. Category URLs are filtered to Zombie files and sorted newest first before N1MM paginates them. Refresh in Data Files after changing it. Files need not be published every year. The last successful download remains available offline. The known 2025 bonus number 3333 is omitted from 2026 suggestions. Files with an unknown event year also omit known bonus values 3333 and 4321; names and SPC remain available. Explicit exchange edits and clearing always win.',
           },
         ],
       }

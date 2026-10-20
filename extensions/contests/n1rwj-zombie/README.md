@@ -60,14 +60,21 @@ independent of ordinary callsign-directory first names. Corrections and
 intentional clearing take precedence over suggestions. Use **Wipe** between
 contacts and log one callsign at a time.
 
-The data model supports multiword names. Native keyboard behavior, including
-Space advancing between inline controls, still needs verification in Ham2K.
+The inline controls use **Space** to advance focus. In SPC or Zombie name,
+type **`_` for a space**: `NEW_ZEALAND` becomes `NEW ZEALAND`, and `OLD_NICK`
+becomes `OLD NICK`. Pasting text containing actual spaces also preserves it.
+These two fields reserve underscore as a word separator. The native transform
+order was checked against host source; actual device entry remains acceptance
+work.
 
 ## Call history
 
 Refresh **Zombie Shuffle call history** through Ham2K's data-file settings.
 The default source discovers the latest published Zombie file in the
 [N1MM call-history collection](https://n1mmwp.hamdocs.com/mmfiles/categories/callhistory/).
+A Zombie-specific search keeps older files discoverable when newer contests
+fill the site's first page. Saved category URLs use that same filtered search;
+explicit entry and text URLs are kept as selected.
 A new file is not assumed to appear annually. The last successful download is
 retained for offline use and after a failed replacement. Refreshing data, rather
 than typing a callsign, performs network requests.
@@ -148,7 +155,7 @@ mise run verify-host n1rwj-zombie
 
 Unit, bundle, and installed-kernel verification do not establish native UI or
 on-air acceptance. See the repository's [verification record](../../../docs/VERIFICATION.md)
-for checks actually completed. Native installation, multiword field entry,
+for checks actually completed. Native installation, transformed/pasted multiword entry,
 the two-hour boundary while a spot remains visible, export save/share behavior,
 and on-air use remain acceptance work.
 

@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import manifest from '../manifest.json'
 import { createActivity } from '../src/activity.ts'
+import { createExports } from '../src/exports.ts'
 import { object, type Qson } from '../src/model.ts'
 
 const ctx = { online: false }
@@ -103,6 +104,62 @@ describe('Zombie Shuffle activity', () => {
       their: { exchange: 'TRANSYLVANIA 0007 DEAD MAN FRED' },
     })
     expect(qso.their).toEqual({ call: 'K1ABC', sent: '579', name: 'FRED' })
+  })
+
+  it('provides space-entry transforms that survive save and ADIF while leaving numbers unchanged', async () => {
+    const { activity } = createActivity(manifest)
+    const controls = await activity.loggingControls({ operation, qso: {} }, ctx)
+    const [spc, number, name] = controls
+    if (spc?.input.kind !== 'text' || number?.input.kind !== 'text' || name?.input.kind !== 'text')
+      throw new Error('Expected three text controls')
+    expect([spc.shortLabel, name.shortLabel]).toEqual(['SPC', 'Name'])
+    expect([spc.label, name.label]).toEqual([
+      'State / province / country (_ = space)',
+      'Zombie name (_ = space)',
+    ])
+    for (const control of [spc, name]) {
+      expect(control.input).toMatchObject({
+        transforms: [{ pattern: '_', replacement: ' ', flags: 'g' }],
+      })
+    }
+    expect(number.input.numeric).toBe(true)
+    expect(number.input.transforms).toBeUndefined()
+
+    // Apply the declared native formatter contract: uppercase, then each
+    // regex transform. Both typed underscores and pasted spaces must reach
+    // the saved exchange and ADIF as complete words.
+    const format = (value: string, input: typeof spc.input) => {
+      let result = input.uppercase ? value.toUpperCase() : value
+      for (const transform of input.transforms ?? [])
+        result = result.replace(
+          new RegExp(transform.pattern, transform.flags),
+          transform.replacement,
+        )
+      return result
+    }
+    const { adifFields } = createExports(manifest)
+    for (const [spcText, nameText] of [
+      ['new_zealand', 'old_nick'],
+      ['new zealand', 'old nick'],
+    ]) {
+      const qso: Qson = {
+        their: { call: 'ZL1ABC', sent: '579' },
+        refs: [
+          {
+            type: 'zombie',
+            theirSpc: format(spcText ?? '', spc.input),
+            theirZombieNumber: '002',
+            theirZombieName: format(nameText ?? '', name.input),
+          },
+        ],
+      }
+      const patch = await activity.processQsoBeforeSave({ operation, qso }, ctx)
+      expect(patch?.their).toEqual({ exchange: 'NEW ZEALAND 002 OLD NICK' })
+      expect(await adifFields.fieldsForOneQSO({ operation, qso }, ctx)).toContainEqual({
+        name: 'SRX_STRING',
+        value: 'NEW ZEALAND 002 OLD NICK',
+      })
+    }
   })
 
   it('snapshots the sent bonus exchange without replacing the regular number and retains snapshots on edit', async () => {

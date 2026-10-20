@@ -1,5 +1,78 @@
 # Verification and compatibility
 
+## BIGFOOT and Zombie main integration — 2026-10-19
+
+Integrated BIGFOOT Hunt and Zombie Shuffle with the current main branch,
+preserving RandomGram, Contest Calendar, and the existing extensions. Both new
+extensions now use the synchronized development version 0.10.0.
+
+- `mise run format` and `mise run check` passed: **1,536 tests across 112
+  files**, lint, strict runtime/test/task typechecks, and all **11 ES2020
+  builds and official packages**.
+- `mise run verify-host` activated all declared hooks across all 11 extensions
+  in the running **Ham2K Mac Logger (Next) 26.9.0, build 180** JavaScript kernel,
+  with no compatibility problems. Kernel SHA-256:
+  `21eaa53e90efa10d8599da19b0140d2344211f5bafd6add9f55d04c4a53c507a`.
+
+Installed-kernel verification runs under Node VM; native UI and on-air use
+remain unverified. This integration does not publish a release or catalog
+update. The historical implementation results below describe the earlier
+0.8.1 base; the combined checks above pass on the integrated main branch.
+
+## Zombie Shuffle implementation (unreleased) — 2026-10-19
+
+Added `n1rwj-zombie`, an independent contest extension for the confirmed
+October 30, 2026 event. Native RST fields accompany SPC, a fixed numeric-text
+Zombie number, and a full spooky name. Sent exchanges are captured in
+`our.zombie`, using the supported one-level `our` patch, and remain unchanged
+when setup is edited later. The activity registers under its extension key
+for scoped search; it does not depend on newer host support for ref patches.
+
+The scorer uses two elapsed hours per callsign and actual band, including
+separate 10m/15m duplicate history. Score groups combine 10m/15m, as in both
+official 2026 spreadsheets. Eligible repeat bonus contacts count again, and
+the fixed 666 points begin with the first eligible QSO. These interpretations
+and the absence of a confirmed 2026 submission deadline are documented in the
+[operator guide](../extensions/contests/n1rwj-zombie/README.md).
+
+Initial implementation validation on the 0.8.1 base passed:
+
+- `mise run format` and `mise run check`: **1,313 tests across 101 files**,
+  lint, strict runtime/test/task typechecks, nine ES2020 builds, and official
+  packaging. Zombie contributes **66 tests across eight files**.
+- Deterministic coverage includes the exact two-hour boundary, chronological
+  ordering, held checkpoints, live drafts/spots, edited-contact exclusion,
+  event hours and UTC offsets, activity segments, empty/incomplete logs,
+  sent snapshots, explicit clearing, multiword values, ADIF, and summaries.
+- A live refresh through the shared N1MM downloader and Zombie parser used
+  three HTTP requests and loaded the 1,533-byte `ZOMBIE_004.txt`, file date
+  **2025-10-18**, with **66 calls and zero parser warnings**. Only the four
+  obsolete `3333` suggestions were omitted (AB9CA, N0MII, N2TNN, VE3MGY);
+  WB2JNA's `002` remained intact.
+- Live discovery exposed that N1MM's unfiltered first page omitted the old
+  annual file. The Zombie-only default now searches `ZOMBIE` before pagination,
+  sorted newest first. Saved category URLs receive the same search, while
+  selected entry/text URLs remain unchanged. Regression tests cover this case.
+- `mise run verify-host n1rwj-zombie`: all seven declared hooks activated in
+  the installed **Ham2K Mac Logger (Next) 26.9.0, build 180** kernel, SHA-256
+  `21eaa53e90efa10d8599da19b0140d2344211f5bafd6add9f55d04c4a53c507a`.
+
+Host-source inspection confirms that Space advances native inline fields.
+SPC and Zombie name therefore declare supported `_`-to-space transforms,
+applied after the native Space formatter. Guidance explains typing
+`NEW_ZEALAND` or `OLD_NICK`; pasting ordinary spaces is also supported by
+that formatter. Tests follow the declared transform through save and ADIF.
+This is source/contract verification, not an actual device keyboard test.
+
+Native installation, transformed/pasted input, export save/share behavior,
+spot refresh at the rebirth boundary, and on-air use remain acceptance work.
+The local bundle is in `dist/` and is not published or submitted to the catalog.
+The extension is now aligned with main's development version 0.10.0. No
+dependencies or shared-library ranges changed; the root lockfile only adds
+the new workspace.
+Existing CWT/CQ WW runtime and shared adapters are unchanged, so this extension
+and its documentation are exempt from their upstream synchronization rules.
+
 ## BIGFOOT Hunt implementation (unreleased) — 2026-10-19
 
 Added the standalone `n1rwj-bigfoot` activity with the confirmed 2026 event
@@ -40,10 +113,11 @@ The test, typecheck and packaging tasks were then run independently to
 completion.
 
 This is unit, bundle and installed-kernel verification. Native installation,
-UI layout/save/share behavior and on-air use remain unverified. The extension is now aligned
-with main’s synchronized development version 0.10.0; the local BIGFOOT bundle has not been released
-or submitted to the catalog. This independent activity and its documentation
-are exempt from CWT and CQ WW upstream synchronization.
+UI layout/save/share behavior and on-air use remain unverified. The extension
+is now aligned with main's synchronized development version 0.10.0; the local
+BIGFOOT bundle has not been released or submitted to the catalog. This
+independent activity and its documentation are exempt from CWT and CQ WW
+upstream synchronization.
 
 ## Release 0.10.0 publication — 2026-10-14
 

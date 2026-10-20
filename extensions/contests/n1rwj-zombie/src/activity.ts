@@ -112,7 +112,7 @@ export function createActivity(
         },
         {
           type: 'markdown',
-          text: `CW only, 5 W or less, October 30, 2026. Normally 15:00–midnight at your operating location; HI, AK and DX may use other hours. Set the UTC offset for that date, including daylight saving time.\n\nSend RST, state/province/country, Zombie number and spooky name. RST uses the normal Sent/Rcvd fields. Bonus stations send ${BONUS_NUMBER}; your regular number stays configured above. The same station may be worked on each band again after two elapsed hours.\n\n[Official rules](${RULES_URL})`,
+          text: `CW only, 5 W or less, October 30, 2026. Normally 15:00–midnight at your operating location; HI, AK and DX may use other hours. Set the UTC offset for that date, including daylight saving time.\n\nSend RST, state/province/country, Zombie number and spooky name. RST uses the normal Sent/Rcvd fields. Type _ for a space in the received SPC or Zombie name field: OLD_NICK becomes OLD NICK. Space advances to the next field; pasted spaces are preserved. Bonus stations send ${BONUS_NUMBER}; your regular number stays configured above. The same station may be worked on each band again after two elapsed hours.\n\n[Official rules](${RULES_URL})`,
         },
       ]
       return [
@@ -154,15 +154,17 @@ export function createActivity(
           field,
           uppercase: true,
           // Numeric text is deliberately not a core-allocated serial.
-          ...(numeric ? { numeric: true, pattern: '[0-9]+' } : {}),
+          ...(numeric
+            ? { numeric: true, pattern: '[0-9]+' }
+            : { transforms: [{ pattern: '_', replacement: ' ', flags: 'g' }] }),
           suggestedValue: suggestedValue || ' ',
           placeholder: suggestedValue || undefined,
         },
       })
       return [
-        control('theirSpc', 'State / province / country', 'SPC', 10, hints.spc),
+        control('theirSpc', 'State / province / country (_ = space)', 'SPC', 10, hints.spc),
         control('theirZombieNumber', 'Zombie number', 'Zombie #', 20, hints.zombieNumber, true),
-        control('theirZombieName', 'Zombie name', 'Name', 30, hints.zombieName),
+        control('theirZombieName', 'Zombie name (_ = space)', 'Name', 30, hints.zombieName),
       ]
     },
     async processQsoBeforeSave({ operation, qso }, _ctx) {

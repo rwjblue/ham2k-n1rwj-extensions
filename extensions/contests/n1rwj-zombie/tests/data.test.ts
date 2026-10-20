@@ -5,7 +5,9 @@ import {
   checkedZombieSnapshot,
   createZombieData,
   createZombieFileCache,
+  ZOMBIE_DEFAULT_SOURCE,
   zombieSource,
+  zombieSourceUrl,
 } from '../src/data.ts'
 import { parseZombieHistory } from '../src/history.ts'
 
@@ -169,6 +171,34 @@ describe('Zombie N1MM data', () => {
       ),
     ).toBe('https://n1mmwp.hamdocs.com/mmfiles/zombie_005-txt/')
   })
+  it('filters the default category before pagination can hide the older annual file', async () => {
+    const unrelatedFirstPage =
+      '<html><a href="https://n1mmwp.hamdocs.com/mmfiles/cwops_2026-txt/">CWops October 2026</a><a href="https://n1mmwp.hamdocs.com/mmfiles/k1usnsst_2026-txt/">SST October 2026</a></html>'
+    expect(() => zombieSource.latestEntry(unrelatedFirstPage, DEFAULT_SOURCE)).toThrow(
+      'No Zombie Shuffle entry found',
+    )
+    const data = createZombieData()
+    if (typeof data.dataFile.url !== 'function') throw new Error('Expected configured source')
+    expect(await data.dataFile.url({}, { online: true })).toBe(ZOMBIE_DEFAULT_SOURCE)
+    expect(ZOMBIE_DEFAULT_SOURCE).toBe(`${DEFAULT_SOURCE}?CMDsearch=ZOMBIE&sort=newest&view=list`)
+    const form = await data.settings.getDefinition({ panelKey: 'n1rwj-zombie' }, { online: false })
+    expect(form.elements).toContainEqual(
+      expect.objectContaining({ key: 'source', value: ZOMBIE_DEFAULT_SOURCE }),
+    )
+  })
+  it('filters pasted category URLs while preserving explicit entry and text sources', () => {
+    for (const category of [
+      DEFAULT_SOURCE,
+      'https://n1mmwp.hamdocs.com/mmfiles/categories/callhistory',
+      `${DEFAULT_SOURCE}?sort=titleDesc&view=list`,
+    ]) {
+      expect(zombieSourceUrl(category)).toMatch(
+        /\/categories\/callhistory\/\?CMDsearch=ZOMBIE&sort=newest&view=list$/,
+      )
+    }
+    for (const direct of [snapshot.url, 'https://n1mmwp.hamdocs.com/mmfiles/zombie_004-txt/'])
+      expect(zombieSourceUrl(direct)).toBe(direct)
+  })
   it('downloads through the common nonce adapter and replays the successful snapshot offline', async () => {
     const entryUrl = 'https://n1mmwp.hamdocs.com/mmfiles/zombie_004-txt/'
     const form = `<html><form action="${snapshot.url}"><input name="cmdm_nonce" value="nonce"><input name="id" value="123"><input name="shortcodeId" value="download"></form></html>`
@@ -178,8 +208,8 @@ describe('Zombie N1MM data', () => {
       .mockResolvedValueOnce({ status: 200, body })
     const data = createZombieData()
     const saved = await data.dataFile.rawToJSONData?.({
-      body: `<html><a href="${entryUrl}">Zombie</a></html>`,
-      url: DEFAULT_SOURCE,
+      body: `<html><a href="https://n1mmwp.hamdocs.com/mmfiles/cwops_2026-txt/">CWops October 2026</a><a href="${entryUrl}">Zombie October 2025</a></html>`,
+      url: ZOMBIE_DEFAULT_SOURCE,
       options: {},
     })
     expect(fetch).toHaveBeenNthCalledWith(
@@ -255,7 +285,7 @@ describe('Zombie N1MM data', () => {
       expect.objectContaining({ key: 'n1rwj-zombie', dataFilesSection: true }),
     ])
     if (typeof data.dataFile.url !== 'function') throw new Error('Expected configured source')
-    expect(await data.dataFile.url({}, { online: false })).toBe(DEFAULT_SOURCE)
+    expect(await data.dataFile.url({}, { online: false })).toBe(ZOMBIE_DEFAULT_SOURCE)
     const form = await data.settings.getDefinition({ panelKey: 'n1rwj-zombie' }, { online: false })
     expect(JSON.stringify(form)).toContain('Source event year: 2025')
     expect(JSON.stringify(form)).toContain('Refresh in Data Files')

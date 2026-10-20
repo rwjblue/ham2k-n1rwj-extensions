@@ -8,14 +8,7 @@
   "icon": "ghost",
   "accentColor": "#7B1FA2",
   "api": 1,
-  "keywords": [
-    "contest",
-    "zombie",
-    "shuffle",
-    "cw",
-    "qrp",
-    "call-history"
-  ],
+  "keywords": ["contest", "zombie", "shuffle", "cw", "qrp", "call-history"],
   "hooks": [
     "activity",
     "adifFields",
@@ -25,14 +18,9 @@
     "scoring",
     "settingsPanel"
   ],
-  "domains": [
-    "n1mm.hamdocs.com",
-    "n1mmwp.hamdocs.com"
-  ],
+  "domains": ["n1mm.hamdocs.com", "n1mmwp.hamdocs.com"],
   "relevance": {
-    "interests": [
-      "cw"
-    ]
+    "interests": ["cw"]
   },
   "sharedDependencies": {
     "@ham2k/lib-callsigns": "^1.0.2",
