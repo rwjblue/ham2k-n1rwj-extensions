@@ -5,8 +5,8 @@ rebirth rule, call-history suggestions, score breakdown, ADIF, and a plain-text
 submission summary. This extension is independently installable as
 `n1rwj-zombie`, with activity/reference type `zombie`.
 
-Download `n1rwj-zombie-0.11.0.h2kext` from the
-[v0.11.0 release](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.11.0)
+Download `n1rwj-zombie-0.14.0.h2kext` from the
+[v0.14.0 release](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.14.0)
 and install it through Ham2K's extension settings. Building from source is also
 supported:
 
@@ -17,12 +17,10 @@ mise run pack n1rwj-zombie
 Create a dedicated operation, add **Zombie Shuffle 2026**, and configure your
 sent exchange before logging.
 
-## Midnight radio club (development preview)
+## Midnight radio club
 
-The current development checkout adds an optional **Zombie Shuffle** panel:
+Version 0.14.0 adds an optional **Zombie Shuffle** panel:
 a friendly graveyard, a headphone-wearing Zombie, and a warm radio shack.
-This work is not part of the published releases linked above. Build a local
-bundle with `mise run pack n1rwj-zombie` to try it.
 
 Add **Edit Layout → Add a Panel → Zombie Shuffle** to a dedicated operation.
 The scene shows your configured spooky name and number, qualifying QSO and

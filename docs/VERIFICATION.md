@@ -2,9 +2,9 @@
 
 ## Zombie midnight radio club (development) — 2026-10-20
 
-Implemented in the separate `zombie-graveyard` Jujutsu workspace, based on
-main's synchronized 0.13.1 version. This development work has not been
-published or submitted to the catalog.
+Initially implemented in the separate `zombie-graveyard` Jujutsu workspace,
+based on main's synchronized 0.13.1 version. These development checks preceded
+release preparation and catalog publication.
 
 The optional `graveyard` panel combines original vector artwork, a friendly
 headphone-wearing Zombie, per-band rebirth watch, four score groups, and a

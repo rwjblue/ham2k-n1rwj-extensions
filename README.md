@@ -15,7 +15,7 @@ your signal is heard. Published extensions are available as ready-to-install
 | [K1USN SST](extensions/contests/n1rwj-sst/README.md) (`n1rwj-sst`) | SST sessions, name/location suggestions, scoring, and exports |
 | [Weekly RTTY Test](extensions/contests/n1rwj-wrt/README.md) (`n1rwj-wrt`) | Half-hour RTTY sessions, name/QTH suggestions, callsign multipliers, and exports |
 | [RandomGram](extensions/contests/n1rwj-randomgram/README.md) (`n1rwj-randomgram`) | Supplied TX lists, a large exchange readout, listening-only entries, keyer templates, and received-group submission exports |
-| [Zombie Shuffle](extensions/contests/n1rwj-zombie/README.md) (`n1rwj-zombie`) | 2026 Zombie exchanges, two-hour rebirth checks, call-history suggestions, scoring, and submission summaries |
+| [Zombie Shuffle](extensions/contests/n1rwj-zombie/README.md) (`n1rwj-zombie`) | Friendly graveyard scene, per-band rebirth watch, spooky visitor book, 2026 CW exchanges, scoring, and exports |
 
 The [PSK Reporter extension](extensions/tools/n1rwj-psk-reporter/README.md)
 now builds with live MQTT reception using the published SDK and tools. It shares
@@ -78,6 +78,18 @@ Use another band or date for an all-CW completion. This is a fixed 2026 event
 profile; future annual dates are not inferred. See the
 [BIGFOOT guide](extensions/activities/n1rwj-bigfoot/README.md) for operating
 links, export instructions, certificate requests, and verification limits.
+
+### Zombie Shuffle
+
+Install `n1rwj-zombie-0.14.0.h2kext` from
+[v0.14.0](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.14.0).
+Create a dedicated **Zombie Shuffle 2026** operation and configure your sent
+exchange and event-day UTC offset. Add **Edit Layout → Add a Panel → Zombie
+Shuffle** for the graveyard, rebirth watch and Book of the Undead. Panel settings
+choose the view and motion; native Info also shows the score and identity hints.
+See the [operator guide](extensions/contests/n1rwj-zombie/README.md) for timer
+semantics and the start/break override limitation. Native UI/on-air acceptance
+remains pending.
 
 ### Contest Calendar
 
