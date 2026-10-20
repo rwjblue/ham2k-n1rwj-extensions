@@ -8,6 +8,27 @@ each submission before operators can install it from the catalog.
 
 ## Current release status
 
+[v0.12.0](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.12.0)
+was published from signed main commit `3e63b7205656150161205c65846112b9b92c7aaa`
+on October 20, 2026 at 09:54 US Eastern time (13:54:47 UTC). All 11 bundles,
+11 checksum files, and the native animation demo are available. The
+[check workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/39434301709)
+and both jobs in the
+[release workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/39434533441)
+passed. Downloaded assets passed `mise run release:catalog v0.12.0 --dry-run`,
+and the release body matches `docs/releases/v0.12.0.md` exactly.
+
+BIGFOOT Hunt is **approved** and current at 0.12.0 on `stable`, released at
+13:55:56.702 UTC. It is discoverable on API-1 and API-5 hosts; its catalog
+bundle and notes match the GitHub archive and authored BIGFOOT section.
+The other ten extensions were skipped because their behavior is unchanged.
+This release adds the animated forest panel and emoji-rich Info display.
+Native scene component checks passed; installed-logger UI and on-air
+acceptance remain unverified. See the [release notes](releases/v0.12.0.md)
+and [verification record](VERIFICATION.md#release-0120-publication--2026-10-20).
+
+### Previous releases
+
 [v0.11.1](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.11.1)
 was published from signed main commit `d650e096bf17e7db1b5ab47031de7caae9424f27`
 on October 19, 2026 at 22:04 US Eastern time (October 20 at 02:04:42 UTC).
@@ -28,8 +49,6 @@ including the second W7O, and an optional BIGFOOT-only RBN station filter.
 Native UI and on-air acceptance remain unverified. See the
 [release notes](releases/v0.11.1.md) and
 [verification record](VERIFICATION.md#release-0111-publication--2026-10-19).
-
-### Previous releases
 
 [v0.11.0](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.11.0)
 was published from signed main commit `0ad5eb3f20388db8586c5bb5b8d0470316456dc3`

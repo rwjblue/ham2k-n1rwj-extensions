@@ -1,5 +1,45 @@
 # Verification and compatibility
 
+## Release 0.12.0 publication — 2026-10-20
+
+Published [v0.12.0](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.12.0)
+from signed main commit `3e63b7205656150161205c65846112b9b92c7aaa` at
+13:54:47 UTC (09:54 US Eastern on October 20). GitHub verifies the release
+commit signature; the tag resolves to that tested commit. Its release body
+matches the authored `docs/releases/v0.12.0.md` exactly.
+
+- `mise run format` and `mise run release v0.12.0 --dry-run` passed lint,
+  strict typechecks, **1,604 tests across 118 files**, all **11 official
+  ES2020 builds and packages**, and synchronized versions/checksums.
+  `mise run verify-host n1rwj-bigfoot` accepted all eight declared hooks in
+  the installed build-180 JavaScript kernel. The separate **46 native scene
+  component checks** remain documented below.
+- The [check workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/39434301709)
+  and both jobs in the
+  [release workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/39434533441)
+  passed. GitHub contains **11 bundles, 11 checksums, and the animation demo**.
+  Downloaded assets passed `mise run release:catalog v0.12.0 --dry-run`,
+  which selects BIGFOOT alone and skips the ten unchanged extensions.
+- BIGFOOT is **approved** and current at 0.12.0 on `stable`, with release
+  time **13:55:56.702 UTC**. Public catalog API-1 and API-5 queries both list
+  it. Its **65,103-byte** catalog bundle is byte-identical to the GitHub
+  archive, with SHA-256
+  `196e58a862d02b31cd1f5f5af7f4a23fe21a8edc1887010ede15bea7c7744e9f`
+  matching catalog metadata and the published checksum. Catalog notes exactly
+  match the BIGFOOT-only extraction from the authored release document.
+- The public **560×660** native demo GIF is byte-identical to the verified
+  local capture: **2,638,110 bytes**, SHA-256
+  `711b30e6e29dbc7bec485b60dc0839afdb015caafd69661d2794e036d1cfb3ab`.
+  It loops a synthetic scene-component demonstration; the actual panel
+  celebrates each newly earned credit once.
+
+The release includes the Info display and forest scene without changing
+event rules, exports, dependencies, or shared runtime code. Synchronized
+personal versioning does not require CWT/CQ WW upstream synchronization.
+The new extension was not installed in the running logger during this work;
+native component checks and kernel execution are separate from
+installed-logger UI and on-air acceptance.
+
 ## BIGFOOT forest scene (v0.12.0 preparation) — 2026-10-20
 
 The existing `hunt` panel now returns an original vector forest scene when
