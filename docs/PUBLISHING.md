@@ -8,6 +8,32 @@ each submission before operators can install it from the catalog.
 
 ## Current release status
 
+[v0.12.1](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.12.1)
+was published from signed main commit `923c9f71ebe9c4ed69f90b0cfaf789a4ec202600`
+on October 20, 2026 at 10:13 US Eastern time (14:13:05 UTC). All 11 bundles,
+11 checksum files, and the native panel-picker preview are available. The
+[check workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/39436993370)
+passed. The [release workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/39437234680)
+also passed its checks, but GitHub returned HTTP 404 partway through asset
+upload, so its catalog job was skipped.
+
+Publication was recovered without replacing either complete CI bundle/checksum
+pair. Only the orphaned BIGFOOT checksum was removed; the nine missing pairs
+were uploaded from the tested release checkout. Downloaded assets passed
+`mise run release:catalog v0.12.1 --dry-run`, and the same task without
+`--dry-run` submitted BIGFOOT successfully. The release body matches
+`docs/releases/v0.12.1.md` exactly.
+
+BIGFOOT Hunt is **approved** and current at 0.12.1 on `stable`, released at
+14:17:34.217 UTC. It is discoverable on API-1 and API-5 hosts. Its description,
+keywords, bundle, and scoped notes match the authored sources and GitHub
+archive. The other ten extensions were skipped because their behavior is
+unchanged. This patch adds friendlier catalog discovery and the offline
+panel-picker illustration. See the [release notes](releases/v0.12.1.md) and
+[verification record](VERIFICATION.md#release-0121-publication--2026-10-20).
+
+### Previous releases
+
 [v0.12.0](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.12.0)
 was published from signed main commit `3e63b7205656150161205c65846112b9b92c7aaa`
 on October 20, 2026 at 09:54 US Eastern time (13:54:47 UTC). All 11 bundles,
@@ -26,8 +52,6 @@ This release adds the animated forest panel and emoji-rich Info display.
 Native scene component checks passed; installed-logger UI and on-air
 acceptance remain unverified. See the [release notes](releases/v0.12.0.md)
 and [verification record](VERIFICATION.md#release-0120-publication--2026-10-20).
-
-### Previous releases
 
 [v0.11.1](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.11.1)
 was published from signed main commit `d650e096bf17e7db1b5ab47031de7caae9424f27`

@@ -1,5 +1,47 @@
 # Verification and compatibility
 
+## Release 0.12.1 publication — 2026-10-20
+
+Published [v0.12.1](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.12.1)
+from signed main commit `923c9f71ebe9c4ed69f90b0cfaf789a4ec202600` at
+14:13:05 UTC (10:13 US Eastern on October 20). GitHub verifies its signature;
+the tag resolves to that tested commit. The release body matches the authored
+`docs/releases/v0.12.1.md` exactly.
+
+- Local `mise run format` and `mise run release v0.12.1 --dry-run` passed
+  lint, strict typechecks, **1,604 tests across 118 files**, all **11 official
+  ES2020 builds and packages**, and synchronized versions/checksums.
+  `mise run verify-host n1rwj-bigfoot` accepted all eight declared hooks in
+  the installed build-180 kernel. Native picker component checks are recorded
+  below and remain separate from installed-logger UI and on-air acceptance.
+- The [check workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/39436993370)
+  passed. The [release workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/39437234680)
+  passed all checks, then failed during GitHub asset upload with **HTTP 404**.
+  CQ WW and Calendar bundle/checksum pairs and a BIGFOOT checksum had uploaded;
+  the BIGFOOT archive had not. The dependent catalog job was skipped.
+- Recovery preserved both complete CI pairs byte for byte. The orphaned
+  BIGFOOT checksum was removed, and the nine missing pairs were uploaded from
+  the tested, unchanged release checkout. GitHub now has **11 bundles, 11
+  checksums, and the native preview image**. Downloaded assets passed
+  `mise run release:catalog v0.12.1 --dry-run`; the actual local catalog task
+  then submitted BIGFOOT alone and returned **approved**. No complete
+  published archive or matching checksum was overwritten.
+- Public catalog readback confirms BIGFOOT **0.12.1 approved** on `stable`
+  at **14:17:34.217 UTC**. API-1 and API-5 queries both list it. Description
+  and ordered keywords match the manifest; scoped notes exactly match the
+  BIGFOOT-only extraction. The **66,031-byte** catalog and GitHub archives
+  are identical, with SHA-256
+  `292bc3d537a5337e91634870b1d7e30a03f639b7b021b0f92c8f7fd905da6540`
+  matching catalog metadata and the published checksum.
+- The public native panel-picker PNG matches the local capture:
+  **69,214 bytes**, SHA-256
+  `46d662a5bf582c72002ff0ac8ccd957878a258f9c49c0b338af267cebbccb19d`.
+
+Only BIGFOOT presentation and preview tooling changed. The synchronized
+version bump does not alter shared runtime behavior or dependencies and is
+exempt from CWT/CQ WW upstream synchronization. The installed app, operation
+log, host dependencies, and tracked host source were untouched.
+
 ## BIGFOOT catalog presentation (v0.12.1 preparation) — 2026-10-20
 
 The extension now advertises the animated forest in the plain-text
