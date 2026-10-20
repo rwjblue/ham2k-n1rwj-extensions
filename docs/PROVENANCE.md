@@ -126,6 +126,33 @@ its original MPL-2.0 notices. The shared CWT operation-history adapter is
 consumed unchanged. This work does not affect CWT behavior, and therefore
 requires no update to its temporary upstream PR; CQ WW's PR is also unchanged.
 
+### Zombie Shuffle
+
+`extensions/contests/n1rwj-zombie/` is a separate implementation of the
+[2026 Zombie Shuffle rules](https://www.zianet.com/qrp/ZOMBIE/pg.html).
+The sponsor's [XLS](https://www.zianet.com/qrp/ZOMBIE/summary_sheet_2026.xls)
+and [ODS](https://www.zianet.com/qrp/ZOMBIE/summary_sheet_2026.ods) summary
+sheets agree on four scoring groups (80m, 40m, 20m, combined 10m/15m),
+`(QSOs + bonus contacts) × sum of received numbers` per group, and a fixed
+666-point addition. The implementation counts eligible rebirth bonus contacts
+again and applies the fixed addition only after the first eligible contact;
+these decisions and the source wording's ambiguity are documented in its guide.
+
+The event-specific exchange and history adapters consume the existing generic
+N1MM and contest-history libraries unchanged. The verified
+[ZOMBIE_004.txt](https://n1mmwp.hamdocs.com/mmfiles/zombie_004-txt/), dated
+October 18, 2025, supplies 66 callsign entries. Its four historical `3333`
+bonus values are omitted from 2026 number suggestions while retaining names
+and locations. Historical exchange data remains advisory and does not replace
+operator corrections. No membership roster or annual publication promise is
+implied by that community file.
+
+Zombie Shuffle is independent of the temporary CWT and CQ WW previews and
+does not modify their runtime, translations, shared adapters, or exports.
+It therefore requires no synchronization to either upstream PR. Repository
+MPL-2.0 attribution and the published SDK/build tools' MIT notices accompany
+the new bundle.
+
 ### RBN reception panel
 
 `extensions/tools/n1rwj-rbn/` is an independent panel extension. Reception
