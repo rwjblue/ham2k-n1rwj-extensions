@@ -1,5 +1,55 @@
 # Verification and compatibility
 
+## Release 0.14.1 publication — 2026-10-20
+
+Published [v0.14.1](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.14.1)
+from signed main commit `d30fda660d8aab5293b4a5b120fa9d77db032f2d` at
+**17:53:52 UTC (13:53 US Eastern)**. GitHub verifies the signature, the tag
+resolves to that tested commit, and the published body exactly matches the
+authored `docs/releases/v0.14.1.md`.
+
+- `mise run release v0.14.1 --dry-run` passed lint, strict runtime/test/task
+  typechecks, **1,842 tests across 133 files**, and all **11 official ES2020
+  builds/packages** with synchronized versions and valid checksums.
+- The [check workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/39469911220)
+  and both jobs in the
+  [release workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/39470043824)
+  passed. GitHub contains all **22 bundle/checksum assets**, plus the original
+  PNG illustration. Downloaded assets passed
+  `mise run release:catalog v0.14.1 --dry-run`.
+- The catalog submitted **Zombie only** and skipped ten unchanged extensions.
+  Zombie is approved/current at **0.14.1** on stable, released at
+  **17:55:01.079 UTC**, and appears once in API-1 and API-7 discovery.
+  Its **105,329-byte** catalog bundle matches GitHub exactly, SHA-256
+  `087a241f4445ec656a8f7a41ee48f11359a6386b89a2a7770ae30c8c86b985d0`.
+  Scoped notes match the authored Zombie section exactly.
+- The public catalog page shows the event overview, official homepage and
+  extension repository links, and loads the illustration at **320 × 320**.
+  The **22,059-byte** PNG matches its generated offline module and GitHub,
+  SHA-256 `4ff2447e0ac0831d234fd9f756f3a91f207760172dcf588b1386c0ea87682ab4`.
+- The actual host **FormRenderer** passed a disposable Flutter widget test:
+  its Markdown creates an offline MemoryImage, the native codec decodes the
+  320 × 320 PNG, and the official link row sends the expected URL to the host
+  callback without exceptions. Visual inspection confirmed the corrected
+  colors. Test-font rendering is separate from installed-app acceptance.
+  Chrome for Testing **153.0.8010.12** plus ImageMagick **7.1.2-30** regenerated
+  byte-identical PNG/module output using a fresh temporary profile.
+- `mise run verify-host n1rwj-zombie` accepted all **nine hooks** in the running
+  **Ham2K Mac Logger (Next) 26.9.0 build 181** JavaScript kernel, SHA-256
+  `f2d0d92c395558e9d98488b8ae1d6dbfccee52bc3a12b58c903c30e98e65f506`.
+  This uses Node VM and simulated timer delivery, separate from native UI.
+- The browser scene preview was regenerated and inspected at narrow and minimum
+  sizes. Deterministic tests cover countdown start/end boundaries, offsets and
+  flexible hours, cached ticks, opaque corner coverage, picker artwork,
+  settings routing, late location lookups, portable calls, and history priority.
+  Native suggested-value behavior was checked against host source to preserve
+  edits and clearing; no new network or per-keystroke log reads were introduced.
+
+Zombie-only runtime, artwork and guide changes do not alter CWT, CQ WW or
+shared runtime behavior. Personal synchronized versioning is exempt from
+upstream synchronization. Installed-app layout/entry, native scheduling and
+on-air acceptance remain unverified.
+
 ## Release 0.14.0 publication — 2026-10-20
 
 Published [v0.14.0](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.14.0)

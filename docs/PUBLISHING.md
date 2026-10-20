@@ -8,6 +8,30 @@ each submission before operators can install it from the catalog.
 
 ## Current release status
 
+[v0.14.1](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.14.1)
+was published from signed main commit `d30fda660d8aab5293b4a5b120fa9d77db032f2d`
+on October 20, 2026 at **13:53 US Eastern (17:53:52 UTC)**. All **11 bundles,
+11 checksum files and the original Zombie illustration** are available. The
+[check workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/39469911220)
+and both jobs in the
+[release workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/39470043824)
+passed. Downloaded assets passed `mise run release:catalog v0.14.1 --dry-run`,
+and the published body exactly matches `docs/releases/v0.14.1.md`.
+
+Zombie is **approved** and current at **0.14.1** on `stable`, released at
+**17:55:01.079 UTC**. API-1 and API-7 hosts discover it; its catalog bundle
+and scoped notes match GitHub. The other ten extensions were skipped because
+their behavior and dependencies are unchanged.
+
+This patch fills the panel corners, adds an event countdown and SPC lookup
+defaults, and supplies illustrated panel selection and an offline About guide.
+The public catalog page displays the illustration, event overview and official
+links. Native FormRenderer image/link tests passed; installed-app UI and on-air
+acceptance remain unverified. See the [release notes](releases/v0.14.1.md) and
+[verification record](VERIFICATION.md#release-0141-publication--2026-10-20).
+
+### Previous releases
+
 [v0.14.0](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.14.0)
 was published from signed main commit `4ab275e93e5fd0e8520348595142b77d514b845f`
 on October 20, 2026 at **13:22 US Eastern (17:22:34 UTC)**. All **11 bundles
@@ -29,8 +53,6 @@ book and richer Info. CQ WW includes the already-synchronized upstream entry
 and scoring reconciliation. Native UI and on-air acceptance remain unverified.
 See the [release notes](releases/v0.14.0.md) and
 [verification record](VERIFICATION.md#release-0140-publication--2026-10-20).
-
-### Previous releases
 
 [v0.13.1](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.13.1)
 was published from signed main commit `038642cd57b71709c0f9a5c860a2c6483a2b35f9`
