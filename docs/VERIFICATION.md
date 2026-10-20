@@ -1,5 +1,36 @@
 # Verification and compatibility
 
+## BIGFOOT Info display (unreleased) — 2026-10-20
+
+Enriched the built-in Info pane's two existing views without changing the
+panel layout or extension API. Target notes now include 🌲🐾 event identity,
+🔤 letter or 🦨 bonus details, a calendar row, and separate ⭕/🔁/📻 second-O
+guidance. Compact station markers remain unchanged, and cached lookup notes
+contain no current needed/worked claims or extra log/network reads.
+
+The idle-call Info score summary puts 📻 CW and 🧩 Mixed progress first,
+shows ✅ worked/🔎 needed independently for every letter and both O slots,
+keeps the 🦨 bonus separate, and celebrates each completion only when earned.
+The native numeric tally still counts Mixed letters and labels that scope
+explicitly. Phone/Digital totals and the all-CW second-O rule remain visible.
+
+- `mise run format` and `mise run check` passed: **1,579 tests across 116
+  files**, strict typechecks, lint, and all **11 official ES2020 builds and
+  packages**. Regression cases cover a CW/Mixed split O pair, same-context
+  repeats, Mixed-only completion, CW completion without the bonus, and bonus
+  deletion without false letter or completion credit.
+- `mise run verify-host n1rwj-bigfoot` accepted the eight declared hooks in
+  the installed **Ham2K Mac Logger (Next) 26.9.0, build 180** kernel.
+- Host-source review confirms that operation score details use Markdown with
+  emoji font fallback. Callsign Notes use spaced rows of inline Markdown
+  with emoji fallback. The two views replace each other in Info; an empty
+  operation has no cached score summary until its first contact is scored.
+
+These are source, unit, bundle, and installed-kernel checks; the new development
+bundle was not installed into the running logger and native visual verification
+remains pending. The changes are not in published v0.11.1. Only BIGFOOT display
+code changed, exempt from CWT/CQ WW upstream synchronization.
+
 ## Release 0.11.1 publication — 2026-10-19
 
 Published [v0.11.1](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.11.1)

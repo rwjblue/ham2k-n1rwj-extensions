@@ -90,6 +90,16 @@ The compact marker identifies the station; it does not change to show needed
 status because the native Spots panel caches these markers. Use the highlight
 or BIGFOOT panel for progress.
 
+The current development source also enriches the built-in **Info** pane with
+emoji; these additions are not in the published v0.11.1 downloads. While
+entering an event callsign, its Notes show 🌲🐾 event identity, 🔤 letter or
+🦨 bonus details, and W7O's ⭕/🔁 two-contact rule. With the call field idle,
+the scored hunt summary shows 📻 CW and 🧩 Mixed counts, ✅ worked/🔎 needed
+status for every letter and both O contacts, a separate 🦨 bonus row, and
+🎉 completion banners. CW and Mixed completion remain independent. No extra
+panel is needed. A new empty operation has no scored Info summary until its
+first contact; entering a target still shows its event notes immediately.
+
 Keep the [organizer's spotting page](https://w7dk.org/?view=article&id=309&catid=178)
 and [Reverse Beacon Network](https://www.reversebeacon.net/) available while
 operating. Spots can guide your hunt; confirm the callsign on air before

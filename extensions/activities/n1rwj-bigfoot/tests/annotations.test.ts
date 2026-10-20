@@ -68,6 +68,13 @@ test('annotates exact event targets offline without reading the log or changing 
     assert.equal(result.scope, 'operation')
     assert.equal(result.emoji, '🐾')
     assert.equal(result.note, `🐾 BIGFOOT 2026: ${letter}`)
+    assert.ok(result.notes?.includes('🌲🐾 **BIGFOOT Hunt 2026** 🐾🌲'))
+    assert.ok(
+      result.notes?.some((note) =>
+        note.includes(`**${call === 'W7O' ? 'O + O' : letter} — ${call}**`),
+      ),
+    )
+    assert.ok(result.notes?.every((note) => !/needed|worked|complete/i.test(String(note))))
   }
   const bonus = (await look({}, operation, ctx, 'W4S'))[0] as CallInfoLookup & {
     note?: string
@@ -75,8 +82,9 @@ test('annotates exact event targets offline without reading the log or changing 
   }
   assert.equal(bonus.note, '🦨 BIGFOOT 2026: Skunk Ape bonus')
   assert.equal(bonus.emoji, '🦨')
+  assert.ok(bonus.notes?.some((note) => note.startsWith('🦨 **Skunk Ape — W4S**')))
   assert.match(notes(await look()), /second W7O.*different band, mode, or UTC date/)
-  assert.match(notes(await look()), /On CW, use another band or UTC date/)
+  assert.match(notes(await look()), /All-CW hunt:.*use another band or UTC date/)
   for (const call of ['W3S', 'W7A', 'W7B/P', 'W7OO'])
     assert.deepEqual(await look({}, operation, ctx, call), [])
 })

@@ -1,6 +1,7 @@
 import type { ContestScorer, JSONValue, QsoScoreVerdict, ScoreTally } from '@ham2k/extension-sdk'
 import { contestScorer, tally } from '@ham2k/extension-sdk'
 import { eventFromOperation } from './activity.ts'
+import { progressInfoMarkdown } from './info.ts'
 import type { BigfootEvent, Contact, EventMode } from './rules.ts'
 import { buildProgress, eventForYear, qualifyingContacts } from './rules.ts'
 import { targetStatus } from './targets.ts'
@@ -95,20 +96,12 @@ export const BigfootScorer: ContestScorer<BigfootScoresheet> = {
     if (scope === 'day' || !eventForScoring(operation, ref)) return {}
     const progress = buildProgress(contactsFromScoresheet(scoresheet))
     const mixed = progress.MIXED
-    const checklist = mixed.slots
-      .map((slot, index) => {
-        const name = slot.call === 'W7O' ? `W7O (${index === 4 ? 'first' : 'second'})` : slot.call
-        return `- ${slot.contact ? '✓' : '☐'} **${slot.letter}** — ${name}`
-      })
-      .join('\n')
-    const modes = `CW ${progress.CW.worked}/7 · Phone ${progress.PHONE.worked}/7 · Digital ${progress.DIGITAL.worked}/7`
-    const bonus = `Skunk Ape bonus (W4S): ${mixed.bonus ? 'worked' : 'needed'}`
     return {
       bigfoot: tally('bigfoot', 'operation', mixed.worked, {
         icon: 'paw',
-        label: `BIGFOOT Hunt: ${mixed.worked}/7 letters`,
+        label: 'BIGFOOT Hunt · Mixed letters',
         summary: `${mixed.worked}/7`,
-        longSummary: `${checklist}\n\n${modes}\n\n${bonus}`,
+        longSummary: progressInfoMarkdown(progress),
       }),
     }
   },

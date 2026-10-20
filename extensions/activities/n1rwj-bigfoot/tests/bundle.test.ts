@@ -91,6 +91,9 @@ it('runs the complete hunt in the bundled sandbox with no network or storage ada
   expect(await lookup.lookupCall(args, ctx)).toMatchObject([
     { call: 'W7O', emoji: '🐾', note: '🐾 BIGFOOT 2026: O (two contacts)' },
   ])
+  const notes = (await lookup.lookupCall(args, ctx)).flatMap((result) => result.notes ?? [])
+  expect(notes).toContain('🌲🐾 **BIGFOOT Hunt 2026** 🐾🌲')
+  expect(notes).toContain('⭕ **O + O — W7O** · Two qualifying contacts fill the two O slots.')
   const spots = await scoring.scoreCandidates?.(
     {
       operation,
@@ -111,6 +114,10 @@ it('runs the complete hunt in the bundled sandbox with no network or storage ada
   const result = await scoring.scoreQsos({ operation, qsos, checkpointKey: 'complete' }, ctx)
   expect(result.operationSummary.bigfoot?.total).toBe(7)
   expect(result.operationSummary.bigfoot?.longSummary).toContain('CW 7/7')
+  expect(result.operationSummary.bigfoot?.longSummary).toContain('🎉🐾 **CW BIGFOOT complete!** 🏆')
+  expect(result.operationSummary.bigfoot?.longSummary).toContain(
+    '🦨 **Skunk Ape bonus (W4S)** · CW: ✅ worked · Mixed: ✅ worked',
+  )
   const complete = await scoring.scoreCandidates?.(
     {
       operation,

@@ -42,11 +42,15 @@ test('scores seven letters while keeping the Skunk Ape bonus separate', async ()
   const summary = result.operationSummary.bigfoot
   assert.equal(summary.total, 7)
   assert.equal(summary.summary, '7/7')
-  assert.equal(summary.label, 'BIGFOOT Hunt: 7/7 letters')
+  assert.equal(summary.label, 'BIGFOOT Hunt · Mixed letters')
   assert.ok(summary.longSummary?.includes('CW 7/7'))
   assert.ok(summary.longSummary?.includes('W7O (first)'))
   assert.ok(summary.longSummary?.includes('W7O (second)'))
-  assert.ok(summary.longSummary?.includes('Skunk Ape bonus (W4S): worked'))
+  assert.ok(
+    summary.longSummary?.includes(
+      '🦨 **Skunk Ape bonus (W4S)** · CW: ✅ worked · Mixed: ✅ worked',
+    ),
+  )
   assert.ok(result.daySections.every((day) => Object.keys(day.scores).length === 0))
 })
 

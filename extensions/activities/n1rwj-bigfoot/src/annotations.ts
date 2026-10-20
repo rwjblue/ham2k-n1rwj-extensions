@@ -1,14 +1,12 @@
 import type { CallInfoLookup, LookupHook } from '@ham2k/extension-sdk'
 import { eventFromOperation } from './activity.ts'
+import { targetInfoNotes } from './info.ts'
 import type { Qson } from './rules.ts'
 import { targetForCall } from './targets.ts'
 
 // The host's own call-notes extension uses these extra fields for its compact
 // call-info line and native Spots marker. Detailed notes remain separate.
 type StationAnnotation = CallInfoLookup & { note?: string; emoji?: string }
-
-const SECOND_O_RULE =
-  'The second W7O must use a different band, mode, or UTC date. On CW, use another band or UTC date.'
 
 function text(value: unknown): string {
   return typeof value === 'string' ? value.trim() : ''
@@ -53,7 +51,7 @@ export const BigfootLookup: LookupHook = {
       scope: 'operation',
       note: `${emoji} ${target.label}`,
       emoji,
-      notes: [target.label, ...(target.call === 'W7O' ? [SECOND_O_RULE] : [])],
+      notes: targetInfoNotes(target),
     }
     return [result]
   },
