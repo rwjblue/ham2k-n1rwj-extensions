@@ -15,15 +15,11 @@ commit-message-default: auto
   changes here while the personal extension is in use. MST, SST, general
   monorepo tooling, and personal packaging/identity are exempt; explain the
   exemption when reporting those changes.
-- The personal CQ WW extension (`n1rwj-cqww`) is also temporary. Its RTTY
-  behavior belongs in the official `ham2k-cqww` extension, in
-  [Ham2K/extensions PR #2](https://github.com/ham2k/extensions/pull/2). Its
-  source branch is `codex/cqww-rtty` in `~/src/github/ham2k/extensions`. Verify
-  the branch before edits and synchronize runtime source, translations, tests,
-  and relevant documentation. Preserve the official `cqww` activity/ref type
-  and exchange/export schema so existing operations survive switching back.
-  Keep personal identity/versioning/packaging here. Disable one provider before
-  enabling the other. CQ WW changes do not belong on the CWT PR branch.
+- The temporary CQ WW preview (`n1rwj-cqww`) was removed on October 21,
+  2026 after [Ham2K/extensions PR #2](https://github.com/ham2k/extensions/pull/2)
+  closed without merging. Use the official `ham2k-cqww` extension. Do not
+  restore the preview or synchronize changes to the closed PR. Historical
+  release notes and provenance remain for previously published packages.
 - Each independently installable extension lives in `extensions/<group>/<key>/`
   with its manifest, package, source, and tests. Shared sandbox code lives in
   `packages/<name>/src/`. Keep contest exchange semantics outside the generic

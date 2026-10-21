@@ -35,9 +35,9 @@ The bundles include portions of the published `@ham2k/extension-sdk`;
 CWT also includes prefill improvements backported from Ham2K/extensions
 PR #1. The shared spot-filter contract and its CWT provider are original
 MIT-licensed contributions by Robert Jackson. The SDK and build tools are
-separately licensed under MIT. The temporary CQ WW extension also retains the official extension’s MIT
-license and Sebastian Delmont’s copyright; its complete license is bundled
-as `assets/CQWW-LICENSE.md`. Retained MIT notices follow:
+separately licensed under MIT. Historical releases of the retired CQ WW preview
+retain the official extension’s MIT license and Sebastian Delmont’s copyright
+in their bundled `assets/CQWW-LICENSE.md`. Retained MIT notices follow:
 
 Copyright (c) 2026 Sebastian Delmont <sd@ham2k.com>
 Copyright (c) 2026 Robert Jackson (N1RWJ)

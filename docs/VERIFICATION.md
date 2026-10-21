@@ -1,5 +1,29 @@
 # Verification and compatibility
 
+## CQ WW preview retirement — 2026-10-21
+
+Removed the temporary `n1rwj-cqww` workspace, including its runtime, translations,
+tests, manifest, package, guide, and bundled license, after the user requested
+retirement following [PR #2's closure](https://github.com/ham2k/extensions/pull/2#issuecomment-6318621185).
+Updated the lockfile, repository inventory, agent instructions, publishing guide,
+notices, and provenance. Historical release notes and verification records remain.
+
+- Rebased onto main at `88abf8ee`, preserving the newer Zombie work and
+  0.14.1 release records and versions.
+- `mise run format` passed with no fixes.
+- `mise run check` passed: **1,746 tests across 123 files**, lint, strict
+  typechecks, and ES2020 builds plus official packaging for all ten remaining
+  extensions. Full log: `/tmp/cqww-removal-rebased-check-20261021.log`.
+- `mise run extension:list` reports ten extensions and excludes `n1rwj-cqww`.
+  Build, packaging, and release/catalog selection discover those workspaces;
+  no hard-coded publication list needed changing.
+- The lockfile diff only removes the CQ WW workspace and its npm link.
+  CWT and shared runtime/dependencies are unaffected, so no CWT synchronization
+  is required. This is source/bundle validation, not native UI or on-air testing.
+
+No release, catalog withdrawal/submission, or installed-provider change was
+performed. The closed-PR maintenance automation remains paused.
+
 ## Release 0.14.1 publication — 2026-10-20
 
 Published [v0.14.1](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.14.1)

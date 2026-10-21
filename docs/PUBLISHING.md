@@ -6,6 +6,16 @@ workflow submits changed extensions using the exact same bundles to the
 [Ham2K extension catalog](https://catalog.ham2k.net/docs). The catalog reviews
 each submission before operators can install it from the catalog.
 
+## Retired CQ WW preview
+
+The temporary `n1rwj-cqww` workspace was removed on October 21, 2026 after
+[upstream PR #2 closed without merging](https://github.com/ham2k/extensions/pull/2#issuecomment-6318621185).
+Build, packaging, release notes, and catalog submission tasks discover current
+workspaces, so future releases exclude this extension. Ten extensions remain.
+Repository removal does not withdraw previously published catalog entries or
+GitHub release assets, or change installed providers. The release records below
+remain historical; no new release or catalog submission accompanies removal.
+
 ## Current release status
 
 [v0.14.1](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.14.1)

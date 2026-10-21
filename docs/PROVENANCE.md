@@ -250,19 +250,21 @@ and are exempt from the upstream CWT synchronization requirement.
   introduced by this adaptation must explicitly identify a valid exchange;
   missing membership records do not prove nonmembership.
 
-### Temporary CQ WW preview
+### Retired CQ WW preview
 
-`extensions/contests/n1rwj-cqww/` derives from Sebastian Delmont's official
-MIT-licensed `ham2k-cqww` at upstream main commit
+The former `extensions/contests/n1rwj-cqww/` preview derived from Sebastian
+Delmont's official MIT-licensed `ham2k-cqww` at upstream main commit
 [`2cb349bf`](https://github.com/ham2k/extensions/commit/2cb349bf).
-The RTTY additions are developed on `codex/cqww-rtty` in
-[Ham2K/extensions PR #2](https://github.com/ham2k/extensions/pull/2) for that
-same official extension. Runtime source and translations are identical;
-personal manifest identity and repository versioning differ. The upstream
-copyright and MIT license are retained, including `assets/CQWW-LICENSE.md`.
-The original CQ WW activity/ref type and export identifiers remain unchanged.
+Its RTTY additions were contributed through
+[Ham2K/extensions PR #2](https://github.com/ham2k/extensions/pull/2), which was
+closed without merging on October 21, 2026 after official RTTY support shipped.
+The personal preview was removed from this repository that day. Maintenance
+of that PR is paused; any future contributions should be focused changes
+against the official extension, as requested in the
+[maintainer's closure comment](https://github.com/ham2k/extensions/pull/2#issuecomment-6318621185).
 
-CQ WW does not change the CWT implementation or its shared libraries and is
-exempt from synchronization to the CWT PR. Future CQ WW fixes must instead
-stay synchronized with its own upstream PR until the official release makes
-the temporary personal package unnecessary.
+Historical bundles retain the upstream copyright and MIT license in
+`assets/CQWW-LICENSE.md`. They used the official `cqww` activity/ref type and
+export identifiers. Disable the preview before enabling the official provider.
+Removing this independent preview changes no CWT behavior or shared runtime
+and requires no synchronization to the CWT PR.
