@@ -37,9 +37,11 @@ event-day UTC offset and flexible-hours setting from setup. It refreshes once
 per minute in the scene and detailed watch. The backdrop fills the host's
 square panel surface, and the panel selector has an original illustrated preview.
 
-Open **Settings → Extensions → Zombie Shuffle · About** for an offline event
-overview and illustration, plus links to the official rules, summary sheets
-and this guide.
+Open **Settings → Activities → Zombie Shuffle** for call-history options and
+an offline event overview and illustration, plus links to the official rules,
+summary sheets and this guide. Hosts that predate the Activities settings
+section show Zombie Shuffle as a standalone settings entry instead. The same
+dialog is also available through Data Files.
 
 The **Rebirth watch** shows when previously worked callsigns can count again
 on each actual band. It updates once per minute while visible, with exact
@@ -134,7 +136,7 @@ work.
 
 ## Call history
 
-Refresh **Zombie Shuffle call history** through Ham2K's data-file settings.
+Refresh **Zombie Shuffle N1MM call history** through Ham2K's data-file settings.
 The default source discovers the latest published Zombie file in the
 [N1MM call-history collection](https://n1mmwp.hamdocs.com/mmfiles/categories/callhistory/).
 A Zombie-specific search keeps older files discoverable when newer contests

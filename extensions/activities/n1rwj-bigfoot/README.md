@@ -190,7 +190,7 @@ logging. This extension tracks your contacts, provides those links, and can
 display the logger’s cached reports in the forest and request radio tuning
 when you select a lead. It does not retrieve a live station schedule.
 
-With **N1RWJ RBN** enabled, choose **Settings → RBN → Station filter → BIGFOOT
+With **N1RWJ RBN** enabled, choose **Settings → Spotting → RBN → Station filter → BIGFOOT
 2026** to see only spots for the BIGFOOT 2026 station roster: W7B, W7I, W7G,
 W7F, W7O, W7T, and W4S. **All calls** remains RBN's default. Choose **CW**
 under **Spot mode** for a CW hunt, or keep **All** for RBN's supported modes.

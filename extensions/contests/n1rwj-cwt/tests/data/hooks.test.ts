@@ -35,7 +35,9 @@ it('localizes dataset and freshness labels while retaining personal cache identi
   ]) {
     const context = { ...ctx, locale }
     expect(await DataFile.name({}, context)).toBe(name)
-    expect(await Settings.getPanels?.({}, context)).toMatchObject([{ key: panelKey, title }])
+    expect(await Settings.getPanels?.({}, context)).toEqual([
+      { key: panelKey, title, icon: 'clock-fast', section: 'activities', dataFilesSection: true },
+    ])
     const form = await Settings.getDefinition({ panelKey }, context)
     expect(form.elements[0]).toMatchObject({
       type: 'markdown',

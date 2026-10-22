@@ -43,6 +43,15 @@ function harness(saved: Record<string, JSONValue> = {}) {
   }
 }
 
+it('offers one RBN settings dialog under Spotting without fetching data', async () => {
+  const runtime = harness()
+  expect(await runtime.settings.getPanels?.({}, { online: false })).toEqual([
+    { key: panelKey, title: 'RBN', icon: 'radar', section: 'spotting' },
+  ])
+  expect(runtime.fetch).not.toHaveBeenCalled()
+  expect(runtime.getLocation).not.toHaveBeenCalled()
+})
+
 it('does not block hooks on GPS and persists a local default across restarts', async () => {
   const runtime = harness()
   await runtime.definition()

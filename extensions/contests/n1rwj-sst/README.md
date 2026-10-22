@@ -95,7 +95,10 @@ records load normally. Unsupported values are never converted to `DX`.
 
 Ham2K checks the data when it loads the extension and when it reconnects,
 downloading a missing file or refreshing one older than 24 hours. You can
-also refresh it manually. **SST call history** settings show the file date,
+also refresh it manually. Open **Settings → Activities → SST call history**
+for the call-history options dialog, also available from Data Files. Hosts
+without the Activities settings section show a standalone settings entry.
+The dialog shows the file date,
 download time, record count, warnings, and selected source. Leave the source
 blank for automatic discovery, or choose an HTTPS N1MM file page or direct
 text URL, then refresh. Local file paths are not supported.

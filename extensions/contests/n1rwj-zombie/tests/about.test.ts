@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto'
 import type { FormDefinition, FormLinkElement } from '@ham2k/extension-sdk'
 import { describe, expect, it } from 'vitest'
-import { ZOMBIE_GUIDE_URL, zombieAboutDefinition, zombieAboutPanel } from '../src/about.ts'
+import { ZOMBIE_GUIDE_URL, zombieAboutDefinition } from '../src/about.ts'
 import { zombieAboutArtwork, zombieAboutArtworkSourceHash } from '../src/about-art.ts'
 import { RULES_URL } from '../src/model.ts'
 import { zombiePanelPreview } from '../src/panel-preview.ts'
@@ -32,19 +32,6 @@ describe('Zombie Shuffle about page', () => {
     expect(zombieAboutDefinition().elements[0]).toEqual({
       type: 'markdown',
       text: `![A friendly headphone-wearing Zombie waves beside a moonlit radio shack.](${zombieAboutArtwork}#320x320)`,
-    })
-  })
-
-  it('uses a namespaced native settings descriptor without adding a Data Files row', () => {
-    expect(zombieAboutPanel()).toEqual({
-      key: 'n1rwj-zombie_about',
-      title: 'Zombie Shuffle · About',
-      icon: 'ghost',
-      dataFilesSection: false,
-    })
-    expect(zombieAboutPanel({ key: 'another-zombie', icon: 'pumpkin' })).toMatchObject({
-      key: 'another-zombie_about',
-      icon: 'pumpkin',
     })
   })
 

@@ -77,10 +77,14 @@ not a live membership check or a guarantee of today's exchange.
 
 Ham2K checks the data when it loads the extension and when it reconnects,
 downloading a missing file or refreshing one older than 24 hours. You can
-also refresh it manually. **CWT Prefill** settings show the file's source,
-date, download time, record count, and any warnings. Leave the source blank
+also refresh it manually. **Settings → Activities → CWT Prefill** shows the
+file's source, date, download time, record count, and any warnings. Leave the source blank
 for automatic discovery, or choose an HTTPS N1MM file page or direct text
 URL, then refresh. Local file paths are not supported.
+
+The same dialog is available from the data-files screen. On app versions
+without an Activities settings section, CWT Prefill remains a separate
+settings entry.
 
 N1MM requests allow slower responses within a bounded refresh. Slower or
 failed refreshes retain the last successful file.
@@ -101,7 +105,7 @@ select that filter automatically. To opt in:
 1. Download **CWops CWT call history** under
    **Settings → Accounts, Services & Data Sources** (called **Data Files**
    in earlier app builds).
-2. Open **Settings → RBN → Spots — Who I might hear → Call-history filter**
+2. Open **Settings → Spotting → RBN → Spots — Who I might hear → Call-history filter**
    and select **CWT call-history file**.
 3. Select **All calls** in the same selector to disable call-history filtering.
 

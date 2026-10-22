@@ -1,5 +1,46 @@
 # Verification and compatibility
 
+## Settings placement audit — 2026-10-22
+
+Zombie Shuffle now contributes one **Zombie Shuffle** settings dialog under
+`activities`, combining call-history options and the offline About content.
+The editable panel key, source field, persistent settings group, last-good
+history cache and native data-file identity remain unchanged. The separate
+read-only About descriptor is removed. The same dialog remains reachable
+from Data Files.
+
+Audited all ten installable extensions against the installed SDK settings
+contract and current public host source. CWT, MST and SST now also place their
+single settings entries under `activities`; RBN uses `spotting`. Bigfoot, WRT,
+RandomGram, Contest Calendar and PSK Reporter register no `settingsPanel` hooks.
+Updated active navigation guides and added repository guidance for one grouped
+entry per extension, preserving settings storage and appropriate Data Files
+shortcuts.
+
+The [SDK's section mechanism](https://github.com/ham2k/halo/blob/main/docs/extensions/settings.md)
+opens a panel as a dialog inside a recognized host settings group. The public
+[host registry](https://github.com/ham2k/halo/blob/main/app/lib/services/halo_services.dart)
+has Spotting but does not yet register Activities. `activities` follows
+Sebastián's explicit requested placement; the SDK's standalone navigation
+fallback remains available on hosts without that group. The public docs do
+not yet contain the forthcoming approved-section allowlist.
+
+- `mise run format` and `mise run check` passed: **1,748 tests across 123 files**,
+  lint, strict typechecks, and all **ten official ES2020 builds/packages**.
+  Full check log: `/tmp/ham2k-settings-check-20261022.log`.
+- Regression assertions cover single grouped descriptors in source and bundles,
+  the combined Zombie dialog with existing offline history/source settings,
+  and preserved source validation and clearing.
+- Mirrored the CWT change and guide to the verified source checkout for
+  [PR #1](https://github.com/ham2k/extensions/pull/1), based on
+  `rwjblue/extensions:codex/cwt-call-history` at `e5af61d3`. Upstream CWT passed
+  **134 tests**, typechecking, official build and packaging; `main` was untouched.
+  MST/SST, Zombie and RBN changes affect only their own extensions; repository
+  guidance is general monorepo documentation, exempt from CWT synchronization.
+
+These are local source/bundle checks, not native Ham2K UI acceptance. No push,
+version bump, release or catalog submission was performed.
+
 ## CQ WW preview retirement — 2026-10-21
 
 Removed the temporary `n1rwj-cqww` workspace, including its runtime, translations,

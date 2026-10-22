@@ -3,6 +3,7 @@ import { createContext, runInContext } from 'node:vm'
 import type {
   ActivityHook,
   DataFileDefinition,
+  DynamicSettingsPanel,
   ExtensionDefinition,
   PanelHook,
   RegisterHookParams,
@@ -48,6 +49,16 @@ it('activates its official ES2020 bundle, scores elapsed rebirths and uses cache
   })
   expect([...registered.keys()].sort()).toEqual([...manifest.hooks].sort())
   expect(registered.get('activity')?.key).toBe(manifest.key)
+  const settings = registered.get('settingsPanel')?.hook as DynamicSettingsPanel
+  expect(await settings.getPanels?.({}, { online: false })).toEqual([
+    {
+      key: manifest.key,
+      title: 'Zombie Shuffle',
+      icon: manifest.icon,
+      section: 'activities',
+      dataFilesSection: true,
+    },
+  ])
   const operation: Qson = {
     uuid: 'bundle-operation',
     stationCall: 'N1RWJ',

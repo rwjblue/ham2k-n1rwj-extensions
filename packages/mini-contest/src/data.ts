@@ -86,6 +86,7 @@ export function createHistoryData(config: DownloadedContestConfig, manifest: Con
           key: manifest.key,
           title: `${config.shortName} call history`,
           icon: manifest.icon,
+          section: 'activities',
           dataFilesSection: true,
         },
       ]

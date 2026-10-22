@@ -39,6 +39,13 @@ commit-message-default: auto
 - Preserve explicit operator corrections and clearing. Missing CWops data
   never proves nonmembership; a location guess must never become a member
   number. Do not fetch data or read a full log per keystroke.
+- Group each extension's global settings into one `settingsPanel` entry under
+  a host section: `activities` for contests and `spotting` for RBN. Combine
+  options and About content rather than adding standalone settings categories.
+  Preserve existing settings storage keys and use `dataFilesSection` only for data
+  management. Leave `sidebar` at its default so hosts without the requested
+  section retain navigation access. Check current SDK/host approval guidance
+  before introducing another section.
 - Keep the personal extension key `n1rwj-cwt` distinct from the original.
   Keep CWT reference and exchange/export conventions compatible. Preserve
   Sebastian Delmont's upstream copyright, attribution, and MPL-2.0 license.

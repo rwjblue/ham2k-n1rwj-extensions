@@ -7,7 +7,7 @@ import {
   DEFAULT_SOURCE,
   sourceValidationError,
 } from '../../../../packages/n1mm/src/source.ts'
-import { zombieAboutDefinition, zombieAboutPanel } from './about.ts'
+import { zombieAboutDefinition } from './about.ts'
 import { parseZombieHistory, type ZombieHistoryFile } from './history.ts'
 
 export interface ZombieSnapshot {
@@ -192,22 +192,25 @@ export function createZombieData(manifest = { key: 'n1rwj-zombie', icon: 'ghost'
     kind: 'dynamic',
     async getPanels() {
       return [
-        zombieAboutPanel(manifest),
         {
           key: manifest.key,
-          title: 'Zombie Shuffle call history',
+          title: 'Zombie Shuffle',
           icon: manifest.icon,
+          section: 'activities',
           dataFilesSection: true,
         },
       ]
     },
-    async getDefinition({ panelKey }) {
-      if (panelKey === zombieAboutPanel(manifest).key) return zombieAboutDefinition()
+    async getDefinition() {
       await cache.load()
       const selected = await savedSource()
       const loaded = cache.current()
+      const about = zombieAboutDefinition()
       return {
+        title: about.title,
+        subtitle: about.subtitle,
         elements: [
+          { type: 'divider', title: 'Call history' },
           {
             type: 'markdown',
             text: [
@@ -232,6 +235,8 @@ export function createZombieData(manifest = { key: 'n1rwj-zombie', icon: 'ghost'
             type: 'markdown',
             text: 'Leave blank to discover the latest available Zombie file, or paste an HTTPS N1MM entry/text URL. Category URLs are filtered to Zombie files and sorted newest first before N1MM paginates them. Refresh in Data Files after changing it. Files need not be published every year. The last successful download remains available offline. The known 2025 bonus number 3333 is omitted from 2026 suggestions. Files with an unknown event year also omit known bonus values 3333 and 4321; names and SPC remain available. Explicit exchange edits and clearing always win.',
           },
+          { type: 'divider', title: 'About Zombie Shuffle' },
+          ...about.elements,
         ],
       }
     },

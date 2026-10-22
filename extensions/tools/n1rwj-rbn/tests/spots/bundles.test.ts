@@ -226,6 +226,9 @@ it('bundled RBN recognizes new and already-saved station refs offline without ch
 it('defaults to merging without an activity and toggles cached spots across restarts', async () => {
   const runtime = await harness({}, [])
   const ctx = { online: false }
+  expect(await runtime.settings.getPanels?.({}, ctx)).toEqual([
+    { key: 'n1rwj-rbn', title: 'RBN', icon: 'radar', section: 'spotting' },
+  ])
   const activity = runtime.hook<ActivityHook>('n1rwj-rbn', 'activity')
   expect(await activity.loggingControls?.({ operation: {} }, ctx)).toEqual([])
   const form = await runtime.settings.getDefinition({ panelKey: 'n1rwj-rbn' }, ctx)

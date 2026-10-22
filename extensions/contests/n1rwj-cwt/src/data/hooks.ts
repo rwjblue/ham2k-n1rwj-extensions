@@ -57,6 +57,7 @@ export const Settings: DynamicSettingsPanel = {
         key: manifest.key,
         title: tFor(ctx)('prefillTitle'),
         icon: 'clock-fast',
+        section: 'activities',
         dataFilesSection: true,
       },
     ]

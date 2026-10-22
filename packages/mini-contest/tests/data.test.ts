@@ -43,6 +43,19 @@ describe.each([
       ? { call: 'K1ABC', name: 'BOB' }
       : { call: 'K1ABC', name: 'BOB', location: 'MA' }
 
+  it('keeps call-history options in one Activities dialog and available from Data Files', async () => {
+    const { settings } = createHistoryData(config, manifest)
+    expect(await settings.getPanels?.({}, { online: false })).toEqual([
+      {
+        key: manifest.key,
+        title: `${config.shortName} call history`,
+        icon: manifest.icon,
+        section: 'activities',
+        dataFilesSection: true,
+      },
+    ])
+  })
+
   it('allows a slow discovery and download with a frozen Date.now clock', async () => {
     useHostTimers()
     const fetch = vi

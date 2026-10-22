@@ -103,28 +103,29 @@ afterEach(() => {
 })
 
 describe('Zombie N1MM data', () => {
-  it('opens the read-only About page offline separately from history settings', async () => {
+  it('opens one Activities entry with saved history options and About content offline', async () => {
+    vi.mocked(host.getSettings).mockResolvedValue({
+      extensions: { 'extension_n1rwj-zombie': { source: snapshot.url } },
+    })
+    const fetch = vi.spyOn(host, 'fetch').mockRejectedValue(new Error('Offline'))
     const data = createZombieData()
+    data.dataFile.onLoadRawData?.(snapshot)
     const panels = await data.settings.getPanels?.({}, { online: false })
     expect(panels).toEqual([
       {
-        key: 'n1rwj-zombie_about',
-        title: 'Zombie Shuffle · About',
-        icon: 'ghost',
-        dataFilesSection: false,
-      },
-      {
         key: 'n1rwj-zombie',
-        title: 'Zombie Shuffle call history',
+        title: 'Zombie Shuffle',
         icon: 'ghost',
+        section: 'activities',
         dataFilesSection: true,
       },
     ])
-    const form = await data.settings.getDefinition(
-      { panelKey: 'n1rwj-zombie_about' },
-      { online: false },
-    )
+    const form = await data.settings.getDefinition({ panelKey: 'n1rwj-zombie' }, { online: false })
     expect(form.title).toBe('Zombie Shuffle')
+    expect(form.elements).toContainEqual(
+      expect.objectContaining({ type: 'field', key: 'source', value: snapshot.url }),
+    )
+    expect(JSON.stringify(form)).toContain('Source event year: 2025')
     expect(form.elements).toContainEqual(
       expect.objectContaining({
         type: 'link',
@@ -132,13 +133,13 @@ describe('Zombie N1MM data', () => {
         url: 'https://www.zianet.com/qrp/ZOMBIE/pg.html',
       }),
     )
-    expect(host.getSettings).not.toHaveBeenCalled()
+    expect(fetch).not.toHaveBeenCalled()
   })
-  it('does not accept history-source edits through the read-only About panel', async () => {
+  it('ignores edits for unregistered panel keys', async () => {
     const save = vi.spyOn(host, 'setSettings').mockResolvedValue(undefined)
     const data = createZombieData()
     const args = {
-      panelKey: 'n1rwj-zombie_about',
+      panelKey: 'another-extension',
       fieldKey: 'source',
       value: 'invalid',
       state: {},

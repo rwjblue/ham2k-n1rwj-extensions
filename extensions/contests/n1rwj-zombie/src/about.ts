@@ -1,22 +1,11 @@
 // Copyright (c) 2026 Robert Jackson (N1RWJ)
 // SPDX-License-Identifier: MPL-2.0
-import type { FormDefinition, SettingsPanelDescriptor } from '@ham2k/extension-sdk'
+import type { FormDefinition } from '@ham2k/extension-sdk'
 import { zombieAboutArtwork } from './about-art.ts'
 import { BONUS_NUMBER, EVENT_REF, RULES_URL } from './model.ts'
 
 export const ZOMBIE_GUIDE_URL =
   'https://github.com/rwjblue/ham2k-n1rwj-extensions/tree/main/extensions/contests/n1rwj-zombie#readme'
-
-export function zombieAboutPanel(
-  manifest = { key: 'n1rwj-zombie', icon: 'ghost' },
-): SettingsPanelDescriptor {
-  return {
-    key: `${manifest.key}_about`,
-    title: 'Zombie Shuffle · About',
-    icon: manifest.icon,
-    dataFilesSection: false,
-  }
-}
 
 /** Static, offline event guidance; links open through the host's native rows.
  * The organizer's page is authoritative. It still lists a prior-year

@@ -67,6 +67,16 @@ for (const manifest of [mstManifest, sstManifest]) {
       expect([...registered.keys()].sort()).toEqual([...manifest.hooks].sort())
       expect(registered.get('dataFile')?.key).toBe(`${manifest.key}_history`)
       expect(registered.get('scoring')?.hook).toMatchObject({ scope: { refTypes: [type] } })
+      const settings = required(registered.get('settingsPanel')).hook as DynamicSettingsPanel
+      expect(await settings.getPanels?.({}, { online: false })).toEqual([
+        {
+          key: manifest.key,
+          title: `${type.toUpperCase()} call history`,
+          icon: manifest.icon,
+          section: 'activities',
+          dataFilesSection: true,
+        },
+      ])
     })
     it('replays a last-good offline file and keeps it after a failed refresh', async () => {
       const { registered } = await harness()
