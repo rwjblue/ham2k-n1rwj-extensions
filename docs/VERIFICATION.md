@@ -1,5 +1,28 @@
 # Verification and compatibility
 
+## Release 0.14.2 preparation — 2026-10-22
+
+Prepared synchronized version 0.14.2 and the authored
+`docs/releases/v0.14.2.md` after reviewing all changes since v0.14.1. Catalog
+publication selects CWT, MST, SST, RBN and Zombie Shuffle. The other five
+extensions retain synchronized GitHub archives without catalog resubmission;
+the retired CQ WW preview remains excluded. No dependency versions changed.
+
+- `mise run release:notes v0.14.2` validated all ten sections. An independent
+  review of the catalog selection confirmed exactly the five intended entries.
+- `mise run format` and `mise run release v0.14.2 --dry-run` passed lint,
+  strict typechecks, **1,748 tests across 123 files**, all **ten official ES2020
+  builds/packages**, and all **20 bundle/checksum paths**. Log:
+  `/tmp/ham2k-release-v0.14.2-dry-run-20261022.log`.
+- The matching CWT change is pushed to
+  [PR #1](https://github.com/ham2k/extensions/pull/1); GitHub verifies its signature
+  and the PR head matches the source branch. Upstream CWT's 134 tests,
+  typechecking, build and packaging passed. Its target `main` was untouched.
+
+The Activities host dependency and native UI verification limits remain as
+recorded below. Versioning and release documentation are personal packaging,
+exempt from CWT synchronization.
+
 ## Settings placement audit — 2026-10-22
 
 Zombie Shuffle now contributes one **Zombie Shuffle** settings dialog under
