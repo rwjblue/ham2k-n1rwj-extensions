@@ -4,16 +4,17 @@ The data format follows the [N1MM call-history documentation](https://n1mm.hamdo
 The public [call-history category](https://n1mm.hamdocs.com/mmfiles/categories/callhistory/)
 lists the CWops file. The parser contains no dated filename or network access.
 
-## Selecting a source
+## Automatic source discovery
 
-Leave **CWT Prefill → Source** blank for automatic discovery. An explicit
-source must be an HTTPS category, CWOPS entry, or direct text URL on
-`n1mm.hamdocs.com` or `n1mmwp.hamdocs.com`. Refresh the corresponding native
-Data Files entry after changing the source; the last successful dataset stays
-active until its replacement is downloaded and accepted.
+The extension always discovers the latest CWOPS entry in N1MM's call-history
+category. There is no source URL setting; earlier saved overrides are ignored.
+The source and discovery rules are maintained in extension releases.
 
-Local file paths are unsupported. The native data-file loader uses HTTP, and
-the extension's SDK 0.5.0 interface provides no local file import capability.
+Refresh **CWops CWT call history** under **Settings → Accounts, Services & Data
+Sources** (called **Data Files** in earlier app builds). The last successful
+dataset stays active until its replacement is downloaded and accepted, and
+remains available offline. Lookup notes include file and download dates for
+known exchange suggestions.
 
 ## Observed source
 

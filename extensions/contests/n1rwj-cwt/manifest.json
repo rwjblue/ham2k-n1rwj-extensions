@@ -17,7 +17,6 @@
     "lookup",
     "ref:cwt",
     "scoring",
-    "settingsPanel",
     "spotCallFilter:v1"
   ],
   "domains": ["n1mm.hamdocs.com", "n1mmwp.hamdocs.com"],

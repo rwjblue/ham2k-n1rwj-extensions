@@ -43,17 +43,51 @@ describe.each([
       ? { call: 'K1ABC', name: 'BOB' }
       : { call: 'K1ABC', name: 'BOB', location: 'MA' }
 
-  it('keeps call-history options in one Activities dialog and available from Data Files', async () => {
-    const { settings } = createHistoryData(config, manifest)
-    expect(await settings.getPanels?.({}, { online: false })).toEqual([
-      {
-        key: manifest.key,
-        title: `${config.shortName} call history`,
-        icon: manifest.icon,
-        section: 'activities',
-        dataFilesSection: true,
+  it('always discovers the latest file automatically, ignoring a saved source override', () => {
+    const getSettings = vi.spyOn(host, 'getSettings').mockResolvedValue({
+      extensions: {
+        [`extension_${manifest.key}`]: { source: 'https://n1mm.hamdocs.com/old-history.txt' },
       },
-    ])
+    })
+    const { dataFile } = createHistoryData(config, manifest)
+    expect(dataFile).toMatchObject({
+      key: `${manifest.key}_history`,
+      name: `${config.shortName} N1MM call history`,
+      url: DEFAULT_SOURCE,
+      fetchType: 'raw',
+      maxAgeInDays: 1,
+    })
+    expect(getSettings).not.toHaveBeenCalled()
+  })
+
+  it('retains valid history after invalid or older cached snapshots, and clears it on removal', async () => {
+    const { dataFile, current } = createHistoryData(config, manifest)
+    const saved = {
+      schema: 1,
+      body,
+      url: downloadUrl,
+      fetchedAt: '2026-09-29T12:00:00.000Z',
+    }
+    dataFile.onLoadRawData?.(saved)
+    const previous = current()
+    expect(previous?.records.K1ABC).toEqual(expectedRecord)
+
+    for (const invalid of [
+      null,
+      { ...saved, schema: 2 },
+      { ...saved, body: 42 },
+      { ...saved, url: 42 },
+      { ...saved, fetchedAt: 42 },
+      { ...saved, fetchedAt: 'invalid date' },
+      { ...saved, body: 'not call history' },
+      { ...saved, body: body.replace('BOB', 'OLDER'), fetchedAt: '2026-09-28T12:00:00.000Z' },
+    ]) {
+      expect(() => dataFile.onLoadRawData?.(invalid)).not.toThrow()
+      expect(current()).toBe(previous)
+    }
+
+    await dataFile.onRemoveRawData?.()
+    expect(current()).toBeUndefined()
   })
 
   it('allows a slow discovery and download with a frozen Date.now clock', async () => {
@@ -99,12 +133,11 @@ describe.each([
 
   it('retains the last loaded snapshot and suggestions after a network failure', async () => {
     useHostTimers()
-    vi.spyOn(host, 'getSettings').mockResolvedValue({})
     const fetch = vi
       .spyOn(host, 'fetch')
       .mockResolvedValueOnce({ status: 200, body: entry })
       .mockRejectedValueOnce(new Error('Network request failed'))
-    const { dataFile, settings, current } = createHistoryData(config, manifest)
+    const { dataFile, current } = createHistoryData(config, manifest)
     const saved = {
       schema: 1,
       body,
@@ -122,18 +155,6 @@ describe.each([
     expect(current()).toBe(previous)
     expect(current()?.records.K1ABC).toEqual(expectedRecord)
     expect(vi.getTimerCount()).toBe(0)
-    expect(
-      await settings.getDefinition({ panelKey: manifest.key }, { online: false }),
-    ).toMatchObject({
-      elements: [
-        {
-          type: 'markdown',
-          text: expect.stringContaining(`Downloaded: ${saved.fetchedAt}.`),
-        },
-        {},
-        {},
-      ],
-    })
   })
 
   it('does not start the download POST when a late discovery finishes after the deadline', async () => {
@@ -204,8 +225,7 @@ describe.each([
 
 describe('SST history with unsupported location fields', () => {
   it('refreshes and replays names and valid locations, while keeping the cache after a fatal parse failure', async () => {
-    vi.spyOn(host, 'getSettings').mockResolvedValue({})
-    const { dataFile, settings, current } = createHistoryData(sst, sstManifest)
+    const { dataFile, current } = createHistoryData(sst, sstManifest)
     const url = 'https://n1mm.hamdocs.com/history.txt'
     dataFile.onLoadRawData?.({
       schema: 1,
@@ -226,15 +246,6 @@ describe('SST history with unsupported location fields', () => {
         KE2ET: { call: 'KE2ET', name: 'LARRY' },
         SM4X: { call: 'SM4X', name: 'LARS' },
       },
-    })
-    expect(
-      await settings.getDefinition({ panelKey: sstManifest.key }, { online: false }),
-    ).toMatchObject({
-      elements: [
-        { type: 'markdown', text: expect.stringContaining('Parser warnings: 2.') },
-        {},
-        {},
-      ],
     })
 
     const restarted = createHistoryData(sst, sstManifest)

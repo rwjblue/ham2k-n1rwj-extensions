@@ -36,7 +36,7 @@ function n1mmUrl(value: string, base: string): string {
   const url = value.startsWith('/') ? `${origin}${value}` : value
   if (sourceValidationError(url)) {
     throw new Error(
-      'The N1MM page linked to an unsupported download host. Select an HTTPS call-history entry or text URL on an N1MM host.',
+      'The N1MM page linked to an unsupported download host. Previous data retained; this extension needs a download adapter update.',
     )
   }
   return url
@@ -60,7 +60,7 @@ export function downloadForm(html: string, base: string): { url: string; body: s
     }
   }
   throw new Error(
-    'N1MM download form has changed. Previous data retained; this extension needs a download adapter update or a direct HTTPS text URL on an N1MM host.',
+    'N1MM download form has changed. Previous data retained; this extension needs a download adapter update.',
   )
 }
 
@@ -94,7 +94,7 @@ export function createN1mmSource({ filePrefix, label }: { filePrefix: string; la
       if (href && entryPattern.test(href)) return n1mmUrl(href, base)
     }
     throw new Error(
-      `No ${label} entry found on the N1MM listing. Select its current HTTPS ${label} entry or text URL on an N1MM host.`,
+      `No ${label} entry found on the N1MM listing. Previous data retained; this extension needs a download adapter update.`,
     )
   }
   /** Only invoked by a data-file refresh, never by logging/lookup hooks. */

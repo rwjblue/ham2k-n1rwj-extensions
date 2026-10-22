@@ -2,7 +2,7 @@ import { contestScorer, defineExtension } from '@ham2k/extension-sdk'
 import { callFilterCategory } from '../../../../packages/spot-filters/src/index.ts'
 import manifest from '../manifest.json'
 import { AdifFieldsHook, CWTScorer, ExportHook, RefHandler } from './cwt/index.ts'
-import { DataFile, fileCache, Settings } from './data/hooks.ts'
+import { DataFile, fileCache } from './data/hooks.ts'
 import { callFilter } from './data/spot-filter.ts'
 import { createPrefill } from './integration/prefill.ts'
 
@@ -20,7 +20,6 @@ defineExtension({
     })
     registerHook('lookup', { hook: prefill.lookup })
     registerHook('dataFile', { key: DataFile.key, hook: DataFile })
-    registerHook('settingsPanel', { hook: Settings })
     registerHook(callFilterCategory, { hook: callFilter })
     void fileCache.load()
   },

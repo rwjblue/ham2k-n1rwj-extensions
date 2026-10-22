@@ -3,7 +3,6 @@ import { createContext, runInContext } from 'node:vm'
 import type {
   ActivityHook,
   DataFileDefinition,
-  DynamicSettingsPanel,
   ExtensionDefinition,
   RegisterHookParams,
   ScoringHook,
@@ -11,6 +10,7 @@ import type {
 import { describe, expect, it } from 'vitest'
 import mstManifest from '../../../extensions/contests/n1rwj-mst/manifest.json'
 import sstManifest from '../../../extensions/contests/n1rwj-sst/manifest.json'
+import { DEFAULT_SOURCE } from '../../n1mm/src/source.ts'
 import type { CallFilterHook } from '../../spot-filters/src/index.ts'
 
 function required<T>(value: T | undefined): T {
@@ -24,7 +24,7 @@ for (const manifest of [mstManifest, sstManifest]) {
     type === 'mst'
       ? '# ICWC-MST\n!!Order!!,Call,Name,Misc\nK1ABC,BOB,123\n'
       : '# K1USNSST\n!!Order!!,Call,Name,Exch1\nK1ABC,BOB,MA\n'
-  async function harness(allowSettings = false) {
+  async function harness() {
     const source = await readFile(
       new URL(`../../../extensions/contests/${manifest.key}/build/index.js`, import.meta.url),
       'utf8',
@@ -53,7 +53,6 @@ for (const manifest of [mstManifest, sstManifest]) {
     required(definitions[0]).onActivation({
       registerHook: (category, hook) => registered.set(category, hook),
       hostCall: async (method) => {
-        if (allowSettings && method === 'getSettings') return {}
         throw new Error(`Unexpected host call ${method}`)
       },
     })
@@ -66,17 +65,10 @@ for (const manifest of [mstManifest, sstManifest]) {
       expect(definition.version).toBe(manifest.version)
       expect([...registered.keys()].sort()).toEqual([...manifest.hooks].sort())
       expect(registered.get('dataFile')?.key).toBe(`${manifest.key}_history`)
+      expect(registered.get('dataFile')?.hook).toMatchObject({ url: DEFAULT_SOURCE })
       expect(registered.get('scoring')?.hook).toMatchObject({ scope: { refTypes: [type] } })
-      const settings = required(registered.get('settingsPanel')).hook as DynamicSettingsPanel
-      expect(await settings.getPanels?.({}, { online: false })).toEqual([
-        {
-          key: manifest.key,
-          title: `${type.toUpperCase()} call history`,
-          icon: manifest.icon,
-          section: 'activities',
-          dataFilesSection: true,
-        },
-      ])
+      expect(registered.has('settingsPanel')).toBe(false)
+      expect(manifest.hooks).not.toContain('settingsPanel')
     })
     it('replays a last-good offline file and keeps it after a failed refresh', async () => {
       const { registered } = await harness()
@@ -85,6 +77,7 @@ for (const manifest of [mstManifest, sstManifest]) {
       expect(await filter.describe({}, { online: false })).toMatchObject({
         available: false,
         defaultSelected: false,
+        reason: `Download the ${type.toUpperCase()} call-history file in Accounts, Services & Data Sources / Data Files.`,
       })
       const activity = required(registered.get('activity')).hook as ActivityHook
       const operation = { refs: [{ type }], stationCall: 'N1RWJ' }
@@ -139,7 +132,7 @@ for (const manifest of [mstManifest, sstManifest]) {
     })
     if (type === 'sst')
       it('accepts history with unsupported locations and replays names offline', async () => {
-        const { registered } = await harness(true)
+        const { registered } = await harness()
         const dataFile = required(registered.get('dataFile')).hook as DataFileDefinition
         const body =
           '# K1USNSST\n!!Order!!,Call,Name,Exch1,UserText\nK1ABC,BOB,MA,\nKE2ET,LARRY,CWA,\nSM4X,LARS,SM,\n'
@@ -147,30 +140,14 @@ for (const manifest of [mstManifest, sstManifest]) {
         const snapshot = await required(dataFile.rawToJSONData)({ body, url, options: {} })
         expect(snapshot).toMatchObject({ schema: 1, body, url, fetchedAt: expect.any(String) })
 
-        const replay = await harness(true)
+        const replay = await harness()
         const replayFile = required(replay.registered.get('dataFile')).hook as DataFileDefinition
         required(replayFile.onLoadRawData)(JSON.parse(JSON.stringify(snapshot)))
 
         for (const hooks of [registered, replay.registered]) {
           const activity = required(hooks.get('activity')).hook as ActivityHook
-          const settings = required(hooks.get('settingsPanel')).hook as DynamicSettingsPanel
           const ctx = { online: false }
           const operation = { refs: [{ type }], stationCall: 'N1RWJ' }
-          const definition = await settings.getDefinition({ panelKey: manifest.key }, ctx)
-          expect(definition).toMatchObject({
-            elements: [
-              {
-                type: 'markdown',
-                text: expect.stringContaining('3 calls loaded.'),
-              },
-              {},
-              {},
-            ],
-          })
-          expect(definition.elements[0]).toMatchObject({
-            text: expect.stringContaining('Parser warnings: 2.'),
-          })
-
           // SM4X still receives a valid DX guess from its callsign's country;
           // the unsupported file exchange itself never becomes a suggestion.
           for (const [call, name, qth] of [

@@ -1,5 +1,46 @@
 # Verification and compatibility
 
+## Automatic call-history sources — 2026-10-22
+
+Removed the CWT Prefill, MST call history and SST call history settings panels,
+including their manifest declarations, source fields and settings readers.
+Their native data-file hooks always use N1MM's call-history category and
+discover the latest contest-specific entry. Legacy source overrides are ignored;
+existing data-file identities, manual refresh, offline replay and last-good
+cache retention remain intact. Updated active guides, CWT translations and
+download errors so they no longer direct operators to the removed controls.
+
+The preceding placement change added `section: 'activities'`; it did not
+remove these panels. Verified current public host revision
+[`35dd33ef`](https://github.com/ham2k/halo/tree/35dd33ef5ada5f53d4ef93f0db5e99674cfeb19e)
+against live `origin/main`: the settings registry still has no Activities group.
+Unrecognized sections fall back to a standalone navigation entry and an
+Application Preferences category. Removing the settings hooks removes both
+appearances and their extra Data Files shortcuts. The separate native data-file
+entries remain available under Accounts, Services & Data Sources / Data Files.
+
+- `mise run format` and `mise run check` passed: **1,751 tests across 123 files**,
+  lint, strict typechecks, all **ten official ES2020 builds/packages**. Log:
+  `/tmp/ham2k-remove-history-settings-check-20261022.log`.
+- Deterministic source and bundle regressions cover absent settings hooks,
+  ignored legacy URLs, native cache replay, failed refresh retention and removal.
+- Mirrored CWT behavior, translations, downloader error messages, guide and
+  regression coverage to the verified source checkout for
+  [PR #1](https://github.com/ham2k/extensions/pull/1), based on
+  `rwjblue/extensions:codex/cwt-call-history` at `f07c76fb`; target `main` was
+  untouched. MST/SST-only code and general repository guidance are exempt from
+  CWT synchronization. The shared downloader's error messages affect CWT, MST,
+  SST and Zombie Shuffle; the CWT equivalent is synchronized upstream.
+- Upstream CWT passed **135 tests**, root and workspace typechecking, official
+  build/packaging and the focused build/pack/load harness. The unfiltered
+  upstream bundle harness also passed CWT but failed on seven existing local
+  artifact-only extension directories without manifests. Those unrelated
+  directories were left intact. Focused bundle log:
+  `/tmp/ham2k-cwt-settings-bundle-filtered.log`.
+
+These are local automated checks, not a native Ham2K UI test. No version bump,
+push, release or catalog submission was performed.
+
 ## Release 0.14.2 publication — 2026-10-22
 
 Published [v0.14.2](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.14.2)

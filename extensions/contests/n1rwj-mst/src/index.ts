@@ -15,6 +15,5 @@ defineExtension({
     registerHook('export', { hook: hooks.exports })
     registerHook('scoring', { hook: hooks.scoring })
     registerHook('dataFile', { key: hooks.dataFile.key, hook: hooks.dataFile })
-    registerHook('settingsPanel', { hook: hooks.settings })
   },
 })

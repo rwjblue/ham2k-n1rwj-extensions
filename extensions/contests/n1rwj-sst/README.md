@@ -81,7 +81,7 @@ could otherwise be mistaken for Ontario.
 
 ## Where the call history comes from
 
-The default source is the public
+The source is the public
 [N1MM call-history collection](https://n1mmwp.hamdocs.com/mmfiles/categories/callhistory/).
 The extension discovers the latest listed `K1USNSST-*.txt` file and uses its
 names and locations. See N1MM's
@@ -95,13 +95,9 @@ records load normally. Unsupported values are never converted to `DX`.
 
 Ham2K checks the data when it loads the extension and when it reconnects,
 downloading a missing file or refreshing one older than 24 hours. You can
-also refresh it manually. Open **Settings → Activities → SST call history**
-for the call-history options dialog, also available from Data Files. Hosts
-without the Activities settings section show a standalone settings entry.
-The dialog shows the file date,
-download time, record count, warnings, and selected source. Leave the source
-blank for automatic discovery, or choose an HTTPS N1MM file page or direct
-text URL, then refresh. Local file paths are not supported.
+also refresh **SST N1MM call history** manually under
+**Settings → Accounts, Services & Data Sources** (Data Files on older hosts).
+File discovery is automatic; there is no source URL setting.
 
 N1MM requests allow slower responses within a bounded refresh. Slower or
 failed refreshes retain the last successful file.

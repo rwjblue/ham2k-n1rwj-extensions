@@ -39,6 +39,10 @@ commit-message-default: auto
 - Preserve explicit operator corrections and clearing. Missing CWops data
   never proves nonmembership; a location guess must never become a member
   number. Do not fetch data or read a full log per keystroke.
+- CWT, MST and SST discover their N1MM call-history sources automatically.
+  Keep source URLs and discovery rules in code; do not add settings pages
+  solely for source overrides. Retain native `dataFile` controls for refresh
+  and offline cache management.
 - Group each extension's global settings into one `settingsPanel` entry under
   a host section: `activities` for contests and `spotting` for RBN. Combine
   options and About content rather than adding standalone settings categories.

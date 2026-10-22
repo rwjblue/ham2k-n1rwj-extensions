@@ -37,11 +37,10 @@ export function createMiniContest(config: DownloadedContestConfig, manifest: Con
     callFilter: createHistoryCallFilter({
       label: () => `${config.shortName} call-history file`,
       unavailableReason: () =>
-        `Download the ${config.shortName} call-history file in extension settings.`,
+        `Download the ${config.shortName} call-history file in Accounts, Services & Data Sources / Data Files.`,
       records: async () => data.current()?.records,
       lookupKeys: callLookupKeys,
     }),
     dataFile: data.dataFile,
-    settings: data.settings,
   }
 }

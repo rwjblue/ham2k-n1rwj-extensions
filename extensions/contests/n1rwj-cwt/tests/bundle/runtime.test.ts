@@ -4,7 +4,6 @@ import type {
   ActivityHook,
   AdifFieldsHook,
   DataFileDefinition,
-  DynamicSettingsPanel,
   ExportHook,
   ExtensionDefinition,
   HookContext,
@@ -16,7 +15,7 @@ import type {
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 import type { CallFilterHook } from '../../../../../packages/spot-filters/src/index.ts'
 import manifest from '../../manifest.json'
-import { DEFAULT_SOURCE } from '../../src/data/source'
+import { DEFAULT_SOURCE } from '../../src/data/source.ts'
 
 type Qson = Record<string, JSONValue>
 type HookTypes = {
@@ -24,7 +23,6 @@ type HookTypes = {
   adifFields: AdifFieldsHook
   dataFile: DataFileDefinition
   export: ExportHook
-  settingsPanel: DynamicSettingsPanel
   scoring: ScoringHook & { scope: ScoringScope }
   'spotCallFilter:v1': CallFilterHook
 }
@@ -156,6 +154,7 @@ describe('the installable bundle with a simulated host bridge', () => {
     expect(runtime.definition.key).toBe('n1rwj-cwt')
     expect(runtime.definition.version).toBe(manifest.version)
     expect([...runtime.registered.keys()].sort()).toEqual([...manifest.hooks].sort())
+    expect(runtime.registered.has('settingsPanel')).toBe(false)
     expect(runtime.registered.get('dataFile')?.key).toBe('n1rwj-cwt_history')
     expect(runtime.hook('scoring').scope).toEqual({ refTypes: ['cwt'] })
   })
@@ -229,49 +228,10 @@ describe('the installable bundle with a simulated host bridge', () => {
     expect(restarted.hostCall.mock.calls.every(([method]) => method === 'kvGet')).toBe(true)
   })
 
-  it('persists the selected source in settings and resolves it on the next definition', async () => {
-    const first = harness()
-    const source = 'https://n1mmwp.hamdocs.com/mmfiles/cwops_3992-aaa-txt/'
-    await first
-      .hook('settingsPanel')
-      .onChangeField(
-        { panelKey: manifest.key, fieldKey: 'source', value: source, state: { source } },
-        ctx,
-      )
-    expect(first.settingsGroups[`extension_${manifest.key}`]).toEqual({ source })
-    const currentUrl = first.hook('dataFile').url
-    expect(typeof currentUrl === 'function' ? await currentUrl({}, ctx) : currentUrl).toBe(source)
-    const restarted = harness(first.settingsGroups)
-    const url = restarted.hook('dataFile').url
-    expect(typeof url === 'function' ? await url({}, ctx) : url).toBe(source)
-    const definition = await restarted
-      .hook('settingsPanel')
-      .getDefinition({ panelKey: manifest.key }, ctx)
-    expect(definition.elements).toContainEqual(
-      expect.objectContaining({ key: 'source', value: source }),
-    )
-  })
-
-  it('rejects local source edits without persisting them', async () => {
-    const runtime = harness()
-    const settings = runtime.hook('settingsPanel')
-    const args = {
-      panelKey: manifest.key,
-      fieldKey: 'source',
-      value: '/tmp/cwops.txt',
-      state: { source: '/tmp/cwops.txt' },
-    }
-    expect(await settings.validateField?.(args, ctx)).toContain(
-      'Local file paths are not supported',
-    )
-    await expect(settings.onChangeField(args, ctx)).rejects.toThrow(
-      'Local file paths are not supported',
-    )
-    expect(runtime.settingsGroups).toEqual({})
-  })
-
-  it('keeps a legacy invalid source visible while allowing native cache replay and automatic discovery', async () => {
-    const source = '/tmp/previously-accepted-cwops.txt'
+  it.each([
+    'https://n1mmwp.hamdocs.com/mmfiles/cwops_3992-aaa-txt/',
+    '/tmp/previously-accepted-cwops.txt',
+  ])('ignores legacy source %s while replaying the native offline cache', async (source) => {
     const runtime = harness({ [`extension_${manifest.key}`]: { source } })
     const dataFile = runtime.hook('dataFile')
     const snapshot = {
@@ -284,21 +244,13 @@ describe('the installable bundle with a simulated host bridge', () => {
     expect(typeof dataFile.url === 'function' ? await dataFile.url({}, ctx) : dataFile.url).toBe(
       DEFAULT_SOURCE,
     )
-    const settings = await runtime
-      .hook('settingsPanel')
-      .getDefinition({ panelKey: manifest.key }, ctx)
-    expect(settings.elements).toContainEqual(
-      expect.objectContaining({ key: 'source', value: source }),
-    )
-    expect(settings.elements).toContainEqual(
-      expect.objectContaining({
-        text: expect.stringContaining('The saved source is unsupported.'),
-      }),
-    )
     const controls = await runtime
       .hook('activity')
       .loggingControls?.({ operation, qso: { their: { call: 'K1ABC' } } }, ctx)
     expect(controls?.[1]?.input).toMatchObject({ field: 'number', suggestedValue: '4567' })
     expect(runtime.settingsGroups[`extension_${manifest.key}`]).toEqual({ source })
+    expect(runtime.registered.has('settingsPanel')).toBe(false)
+    expect(runtime.hostCall.mock.calls.some(([method]) => method === 'getSettings')).toBe(false)
+    expect(runtime.hostCall.mock.calls.some(([method]) => method === 'setSettings')).toBe(false)
   })
 })

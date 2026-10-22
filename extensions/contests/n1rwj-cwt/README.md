@@ -77,14 +77,11 @@ not a live membership check or a guarantee of today's exchange.
 
 Ham2K checks the data when it loads the extension and when it reconnects,
 downloading a missing file or refreshing one older than 24 hours. You can
-also refresh it manually. **Settings → Activities → CWT Prefill** shows the
-file's source, date, download time, record count, and any warnings. Leave the source blank
-for automatic discovery, or choose an HTTPS N1MM file page or direct text
-URL, then refresh. Local file paths are not supported.
-
-The same dialog is available from the data-files screen. On app versions
-without an Activities settings section, CWT Prefill remains a separate
-settings entry.
+also refresh it manually under **Settings → Accounts, Services & Data Sources**
+(called **Data Files** in earlier app builds). The extension always discovers
+the latest CWOPS file from N1MM automatically; no source URL configuration is
+needed. Earlier saved source overrides are ignored. Lookup notes show the
+file date and download time alongside known exchange suggestions.
 
 N1MM requests allow slower responses within a bounded refresh. Slower or
 failed refreshes retain the last successful file.
