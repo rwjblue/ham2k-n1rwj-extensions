@@ -1,7 +1,7 @@
 {
   "key": "n1rwj-randomgram",
   "name": "N1RWJ RandomGram",
-  "version": "0.14.2",
+  "version": "0.14.3",
   "shortName": "RG",
   "description": "RandomGram with organizer-issued TX lists, a readable exchange pane, listening-only entries and received-group submission exports.",
   "category": "contest",

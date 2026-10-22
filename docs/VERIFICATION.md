@@ -1,5 +1,30 @@
 # Verification and compatibility
 
+## Release 0.14.3 preparation — 2026-10-22
+
+Prepared synchronized version 0.14.3 and `docs/releases/v0.14.3.md` for automatic
+CWT, MST and SST call-history sources and removal of their source settings.
+Independent release review confirmed catalog publication selects exactly CWT,
+MST, SST and Zombie Shuffle. Zombie consumes the shared downloader's revised
+failure guidance; the other six extensions have no runtime changes. Root
+package/lockfile changes contain only synchronized version fields, with no
+dependency updates.
+
+- `mise run release:notes v0.14.3` validated all ten sections and their scoped
+  previews. The same authored document is the GitHub release body.
+- `mise run format` and `mise run release v0.14.3 --dry-run` passed lint,
+  strict typechecks, **1,751 tests across 123 files**, all **ten official ES2020
+  builds/packages**, and all **20 bundle/checksum paths**. Log:
+  `/tmp/ham2k-release-v0.14.3-dry-run-20261022.log`.
+- Matching CWT behavior, translations, guide and downloader errors are pushed
+  to [PR #1](https://github.com/ham2k/extensions/pull/1) in signed source commit
+  `766f8e88`; GitHub verifies the signature and the PR head matches it.
+  Its 135 CWT tests, root/workspace typechecks, official package and focused
+  bundle harness pass. The unrelated full-harness limitation is recorded below.
+
+Native UI acceptance remains unverified. Personal versioning and release
+documentation are exempt from upstream runtime synchronization.
+
 ## Automatic call-history sources — 2026-10-22
 
 Removed the CWT Prefill, MST call history and SST call history settings panels,
