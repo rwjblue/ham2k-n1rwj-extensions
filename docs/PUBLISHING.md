@@ -18,6 +18,36 @@ remain historical; no new release or catalog submission accompanies removal.
 
 ## Current release status
 
+[v0.14.3](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.14.3)
+was published from signed main commit `97e9baa1bbb416734ddb99c30dcebdaeac959182`
+on October 22, 2026 at **13:44:38 US Eastern (17:44:38 UTC)**. All **ten bundles
+and ten checksum files** are available. The
+[check workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/39825186184)
+and both jobs in the
+[release workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/39825351978)
+passed. Downloaded assets passed `mise run release:catalog v0.14.3 --dry-run`,
+and the published body exactly matches `docs/releases/v0.14.3.md`.
+
+CWT, MST, SST and Zombie Shuffle are **approved** and current at **0.14.3**
+on `stable`, released between **17:45:45.175 and 17:45:50.572 UTC**. Their
+public bundle bytes, sizes, SHA-256 hashes and scoped notes match the GitHub
+archives and authored sections. API-1, API-5, API-7 and API-11 hosts discover
+all four updates. The other six catalog entries were skipped; RBN remains at
+0.14.2 (API-1 hosts retain compatible RBN 0.6.0).
+
+CWT Prefill, MST call history and SST call history source settings pages are
+removed. Those extensions always discover the latest N1MM file automatically,
+ignoring earlier source overrides. Native data-file refresh and offline caches
+remain available. Zombie shares the updated downloader failure guidance.
+The matching CWT change is pushed to
+[upstream PR #1](https://github.com/ham2k/extensions/pull/1) as verified signed
+commit `766f8e88`. Other extension changes and personal release packaging are
+exempt from CWT synchronization. Native UI acceptance remains unverified. See
+the [release notes](releases/v0.14.3.md) and
+[verification record](VERIFICATION.md#release-0143-publication--2026-10-22).
+
+### Previous releases
+
 [v0.14.2](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.14.2)
 was published from signed main commit `eb3c0cc3eb7d0257a91e64fb782c74666e997a79`
 on October 22, 2026 at **09:18:33 US Eastern (13:18:33 UTC)**. All **ten bundles
@@ -44,8 +74,6 @@ changes and personal release packaging are exempt from CWT synchronization.
 Native UI acceptance remains unverified. See the
 [release notes](releases/v0.14.2.md) and
 [verification record](VERIFICATION.md#release-0142-publication--2026-10-22).
-
-### Previous releases
 
 [v0.14.1](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.14.1)
 was published from signed main commit `d30fda660d8aab5293b4a5b120fa9d77db032f2d`

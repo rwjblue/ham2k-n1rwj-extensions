@@ -1,5 +1,41 @@
 # Verification and compatibility
 
+## Release 0.14.3 publication — 2026-10-22
+
+Published [v0.14.3](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.14.3)
+from signed main commit `97e9baa1bbb416734ddb99c30dcebdaeac959182` at
+**17:44:38 UTC (13:44:38 US Eastern)**. GitHub verifies both implementation and
+release preparation signatures; the release tag resolves to that tested commit,
+and its body exactly matches the authored `docs/releases/v0.14.3.md`.
+
+- The [check workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/39825186184)
+  and both jobs in the
+  [release workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/39825351978)
+  passed. GitHub contains all **20 bundle/checksum assets** for ten extensions.
+- Downloaded assets passed `mise run release:catalog v0.14.3 --dry-run`,
+  including synchronized versions and every checksum. The publication plan
+  selected exactly CWT, MST, SST and Zombie Shuffle; the six unchanged entries
+  were skipped. Dry-run log: `/tmp/ham2k-catalog-v0.14.3-dry-run-20261022.log`.
+- The catalog job returned **approved** for all four on `stable`. Public records
+  show **0.14.3** as current, with release times from **17:45:45.175 through
+  17:45:50.572 UTC**. Publish log:
+  `/tmp/ham2k-catalog-v0.14.3-publish-20261022.log`.
+- Independent public verification at **17:46:19 UTC** confirmed identical catalog
+  and GitHub bundle bytes, sizes, SHA-256 hashes, asset digests and authored scoped
+  notes. API-1, API-5, API-7 and API-11 discovery returns each updated contest once
+  at 0.14.3. CWT/MST/SST metadata retains `dataFile` and excludes `settingsPanel`.
+  RBN remains at 0.14.2; API-1 discovery retains compatible RBN 0.6.0. Evidence:
+  `/tmp/ham2k-catalog-v0.14.3-public-verification-20261022.json`.
+- Matching CWT changes and its updated PR description are pushed to
+  [PR #1](https://github.com/ham2k/extensions/pull/1). Its head is signed source
+  commit `766f8e8883206dcb8868ad71e159af91599a7220`, verified by GitHub. The
+  upstream working copy is clean; target `main` remains untouched.
+
+The preparation and source/bundle checks below remain the runtime verification
+scope; publication does not establish native UI acceptance. Publication records
+and synchronized versioning are personal packaging, exempt from upstream CWT
+runtime synchronization.
+
 ## Release 0.14.3 preparation — 2026-10-22
 
 Prepared synchronized version 0.14.3 and `docs/releases/v0.14.3.md` for automatic
