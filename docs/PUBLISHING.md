@@ -18,6 +18,35 @@ remain historical; no new release or catalog submission accompanies removal.
 
 ## Current release status
 
+[v0.14.2](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.14.2)
+was published from signed main commit `eb3c0cc3eb7d0257a91e64fb782c74666e997a79`
+on October 22, 2026 at **09:18:33 US Eastern (13:18:33 UTC)**. All **ten bundles
+and ten checksum files** are available. The
+[check workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/39785519014)
+and both jobs in the
+[release workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/39785690707)
+passed. Downloaded assets passed `mise run release:catalog v0.14.2 --dry-run`,
+and the published body exactly matches `docs/releases/v0.14.2.md`.
+
+CWT, MST, RBN, SST and Zombie Shuffle are **approved** and current at **0.14.2**
+on `stable`, released between **13:19:54.640 and 13:20:02.514 UTC**. The other
+five extensions were skipped because their behavior and dependencies are
+unchanged. Public bundle bytes and scoped notes match the GitHub archives and
+authored sections. API-1 hosts discover the four contests; API-5 and newer
+hosts discover all five. The retired CQ WW preview is excluded.
+
+Zombie combines call-history options and About in one dialog. Contest settings
+target Activities and RBN targets Spotting, preserving saved settings and
+Data Files access. Hosts without Activities retain standalone navigation until
+the host provides that section. The CWT change is pushed to
+[upstream PR #1](https://github.com/ham2k/extensions/pull/1); other extension
+changes and personal release packaging are exempt from CWT synchronization.
+Native UI acceptance remains unverified. See the
+[release notes](releases/v0.14.2.md) and
+[verification record](VERIFICATION.md#release-0142-publication--2026-10-22).
+
+### Previous releases
+
 [v0.14.1](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.14.1)
 was published from signed main commit `d30fda660d8aab5293b4a5b120fa9d77db032f2d`
 on October 20, 2026 at **13:53 US Eastern (17:53:52 UTC)**. All **11 bundles,
@@ -39,8 +68,6 @@ The public catalog page displays the illustration, event overview and official
 links. Native FormRenderer image/link tests passed; installed-app UI and on-air
 acceptance remain unverified. See the [release notes](releases/v0.14.1.md) and
 [verification record](VERIFICATION.md#release-0141-publication--2026-10-20).
-
-### Previous releases
 
 [v0.14.0](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.14.0)
 was published from signed main commit `4ab275e93e5fd0e8520348595142b77d514b845f`

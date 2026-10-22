@@ -1,5 +1,41 @@
 # Verification and compatibility
 
+## Release 0.14.2 publication — 2026-10-22
+
+Published [v0.14.2](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.14.2)
+from signed main commit `eb3c0cc3eb7d0257a91e64fb782c74666e997a79` at
+**13:18:33 UTC (09:18:33 US Eastern)**. GitHub verifies its signature; the
+release tag resolves to that tested commit, and the published body exactly
+matches the authored `docs/releases/v0.14.2.md`.
+
+- The [check workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/39785519014)
+  and both jobs in the
+  [release workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/39785690707)
+  passed. GitHub contains all **20 bundle/checksum assets** for ten extensions.
+- Downloaded assets passed `mise run release:catalog v0.14.2 --dry-run`,
+  including every synchronized version and checksum. The publication plan
+  selected exactly CWT, MST, RBN, SST and Zombie Shuffle; five unchanged
+  extensions were skipped, and the retired CQ WW preview remained excluded.
+  Dry-run log: `/tmp/ham2k-catalog-v0.14.2-dry-run-20261022.log`.
+- The catalog job returned **approved** for all five changed extensions on
+  `stable`. Public catalog records show version **0.14.2** as current, with
+  release times from **13:19:54.640 through 13:20:02.514 UTC**. Publish log:
+  `/tmp/ham2k-catalog-v0.14.2-publish-20261022.log`.
+- Public catalog bundle bytes, sizes and SHA-256 hashes match the GitHub
+  archives for all five entries, and scoped notes exactly match the authored
+  sections. API-1 discovery offers all four contests at 0.14.2 while retaining
+  compatible RBN 0.6.0; API-5, API-7 and API-11 discovery offer all five at
+  0.14.2. Actual installation and native UI were not tested.
+- The matching CWT change is pushed to
+  [PR #1](https://github.com/ham2k/extensions/pull/1). GitHub verifies its
+  signature, and the PR head matches the source branch. No CI checks are
+  registered for that branch; the local 134-test, typecheck, build and package
+  results remain its validation scope.
+
+The Activities host dependency and native UI verification limits remain as
+recorded below. Personal versioning and publication records are exempt from
+CWT synchronization; the extension behavior itself is synchronized upstream.
+
 ## Release 0.14.2 preparation — 2026-10-22
 
 Prepared synchronized version 0.14.2 and the authored
