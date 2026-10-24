@@ -11,12 +11,41 @@ each submission before operators can install it from the catalog.
 The temporary `n1rwj-cqww` workspace was removed on October 21, 2026 after
 [upstream PR #2 closed without merging](https://github.com/ham2k/extensions/pull/2#issuecomment-6318621185).
 Build, packaging, release notes, and catalog submission tasks discover current
-workspaces, so future releases exclude this extension. Ten extensions remain.
+workspaces, so future releases exclude this extension. Ten extensions remained
+after removal.
 Repository removal does not withdraw previously published catalog entries or
 GitHub release assets, or change installed providers. The release records below
 remain historical; no new release or catalog submission accompanies removal.
 
 ## Current release status
+
+[v0.15.0](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.15.0)
+was published from signed main commit `d5493bd32148ea8cb7ed3bcd42b7220050f5e38d`
+on October 24, 2026 at **00:37:41 US Eastern (04:37:41 UTC)**. All **eleven
+bundles and eleven checksum files** are available. The
+[check workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/40063008708)
+and both jobs in the
+[release workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/40063090823)
+passed. Downloaded assets passed `mise run release:catalog v0.15.0 --dry-run`,
+and the published body exactly matches `docs/releases/v0.15.0.md`.
+
+**SKCC Companion 0.15.0 was submitted to `stable` at 04:38:41 UTC and is
+pending catalog review.** Submission success is not public availability: the
+public extension API still returned 404 during verification. The
+[catalog page](https://catalog.ham2k.net/extensions/n1rwj-skcc?channel=stable)
+will become available after approval; the GitHub bundle can be installed now
+on an API-9-capable host. The other ten catalog entries were skipped because
+their behavior and dependencies are unchanged.
+
+SKCC adds offline membership, exchanges and event profiles, member spots,
+award audits, application worksheets and experimental native chasing.
+Its GitHub bundle is **80,561 bytes**, SHA-256
+`babbebe2b8626343f77917841b99f93d79b01479badf5c7d93ef0dd6ffb412ae`.
+Native UI, cross-device rescan and on-air acceptance remain unverified. See
+[release notes](releases/v0.15.0.md) and the
+[verification record](VERIFICATION.md#release-0150-publication--2026-10-24).
+
+### Previous releases
 
 [v0.14.3](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.14.3)
 was published from signed main commit `97e9baa1bbb416734ddb99c30dcebdaeac959182`
@@ -45,8 +74,6 @@ commit `766f8e88`. Other extension changes and personal release packaging are
 exempt from CWT synchronization. Native UI acceptance remains unverified. See
 the [release notes](releases/v0.14.3.md) and
 [verification record](VERIFICATION.md#release-0143-publication--2026-10-22).
-
-### Previous releases
 
 [v0.14.2](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.14.2)
 was published from signed main commit `eb3c0cc3eb7d0257a91e64fb782c74666e997a79`

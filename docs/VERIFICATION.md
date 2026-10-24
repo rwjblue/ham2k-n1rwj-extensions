@@ -1,5 +1,36 @@
 # Verification and compatibility
 
+## Release 0.15.0 publication — 2026-10-24
+
+Published [v0.15.0](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.15.0)
+from signed main commit `d5493bd32148ea8cb7ed3bcd42b7220050f5e38d` at
+**04:37:41 UTC (00:37:41 US Eastern)**. GitHub verifies all six implementation,
+test and release-preparation commit signatures. The release tag resolves to
+the tested commit and the body exactly matches `docs/releases/v0.15.0.md`.
+
+- The [check workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/40063008708)
+  and both jobs in the
+  [release workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/40063090823)
+  passed. GitHub contains all **22 bundle/checksum assets** for eleven extensions.
+- `mise run release:catalog v0.15.0 --dry-run` downloaded and validated every
+  archive/checksum, selected exactly SKCC, and skipped the ten unchanged entries.
+  Log: `/tmp/ham2k-catalog-v0.15.0-dry-run-20261024.log`.
+- The catalog upload returned **pending review** on `stable` at **04:38:41 UTC**.
+  The release-notes request also succeeded. No retry or duplicate submission was
+  made. The public extension endpoint returned 404 during verification, so this
+  record does not claim public catalog availability or approval.
+- Independently downloaded SKCC archive: **80,561 bytes**, SHA-256
+  `babbebe2b8626343f77917841b99f93d79b01479badf5c7d93ef0dd6ffb412ae`.
+  The checksum file and GitHub asset digest match. Evidence:
+  `/tmp/ham2k-skcc-v0.15.0-verification-20261024.json`.
+- Pending catalog review prevents verification of a public catalog bundle and
+  API-9 discovery. Once approved, compare those exact bytes and scoped notes;
+  older hosts should not be offered the API-9 extension.
+
+The preparation and installed-kernel checks below define runtime verification;
+publication does not establish native UI, cross-device or on-air acceptance.
+SKCC and publication records are exempt from CWT upstream synchronization.
+
 ## SKCC Companion and v0.15.0 preparation — 2026-10-24
 
 Prepared API-9 SKCC Companion and synchronized release 0.15.0. The release
