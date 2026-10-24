@@ -183,6 +183,7 @@ describe('SKCC installable ES2020 bundle', () => {
       adifFieldsScope: 'always',
     })
     expect([...runtime.registered.keys()].sort()).toEqual([...manifest.hooks].sort())
+    expect(runtime.registered.get('lookup')?.get(manifest.key)?.priority).toBeLessThan(-1)
     expect(runtime.registered.get('export')?.size).toBe(2)
     expect(runtime.registered.get('chasing')?.size).toBe(11)
     const chasing = runtime.hook('chasing', `${manifest.key}_c`)
@@ -198,14 +199,21 @@ describe('SKCC installable ES2020 bundle', () => {
         .hook('spotCallFilter:v1')
         .matchCalls({ version: 1, calls: ['K2ABC/P', 'K3SK/SK', 'W9UNKNOWN'] }, ctx),
     ).toEqual({ version: 1, available: true, calls: ['K2ABC/P'] })
-    expect(
-      await runtime
-        .hook('lookup')
-        .lookupCall(
-          { operation: {}, qso: { their: { call: 'K2ABC' } }, callInfo: { call: 'K2ABC' } },
-          ctx,
-        ),
-    ).toMatchObject([{ name: 'Alice', note: 'SKCC 2T' }])
+    const lookup = runtime.hook('lookup')
+    const args = { operation: {}, qso: { their: { call: 'K2ABC' } }, callInfo: { call: 'K2ABC' } }
+    const [offlineIdentity] = await lookup.lookupCall(args, ctx)
+    expect(offlineIdentity).toMatchObject({
+      name: 'Alice',
+      notes: expect.arrayContaining(['**SKCC 2T** · Member']),
+    })
+    expect(offlineIdentity).not.toHaveProperty('note')
+    expect(offlineIdentity).not.toHaveProperty('emoji')
+    const [withQrz] = await lookup.lookupCall(
+      { ...args, callInfo: { call: 'K2ABC', name: 'Alice Anderson', grid: 'FN31aa' } },
+      ctx,
+    )
+    expect(withQrz?.notes).toContain('**SKCC 2T** · Member')
+    for (const field of ['name', 'note', 'emoji', 'grid']) expect(withQrz).not.toHaveProperty(field)
     expect(await runtime.hook('settingsPanel').getPanels?.({}, ctx)).toMatchObject([
       { key: manifest.key, section: 'activities', sidebar: false, dataFilesSection: true },
     ])

@@ -1,4 +1,4 @@
-import type { HookContext } from '@ham2k/extension-sdk'
+import type { AnnotatedCallInfo, HookContext } from '@ham2k/extension-sdk'
 import { describe, expect, it, vi } from 'vitest'
 import { createLookup } from '../src/lookup.ts'
 import type { Qson } from '../src/model.ts'
@@ -9,7 +9,7 @@ const roster = parseRoster(
 )
 const lookup = createLookup(() => roster)
 const ctx: HookContext = { online: false, getQsos: vi.fn(), getHistoryForCall: vi.fn() }
-const query = (qso: Qson = {}, callInfo = { call: 'K1ABC' }) =>
+const query = (qso: Qson = {}, callInfo: AnnotatedCallInfo = { call: 'K1ABC' }) =>
   lookup.lookupCall({ qso, operation: {}, callInfo }, ctx)
 
 describe('SKCC global lookup', () => {
@@ -20,8 +20,10 @@ describe('SKCC global lookup', () => {
       source: 'n1rwj-skcc',
       scope: 'general',
       name: 'Alice [a](b)<i>',
-      note: 'SKCC 1C',
+      notes: expect.arrayContaining(['**SKCC 1C** · Member']),
     })
+    expect(result).not.toHaveProperty('note')
+    expect(result).not.toHaveProperty('emoji')
     expect(result).not.toHaveProperty('refs')
     expect(result).not.toHaveProperty('online')
     expect(result).not.toHaveProperty('state')
@@ -34,7 +36,7 @@ describe('SKCC global lookup', () => {
     expect(await query({ their: { call: null } })).toEqual([])
     expect((await query({ their: { call: 'K2ABC' } }))[0]).toMatchObject({
       call: 'K2ABC',
-      note: 'SKCC 2 · Silent key',
+      notes: expect.arrayContaining(['**SKCC 2** · Silent key']),
     })
     for (const name of ['', 'Copied Name', null])
       expect((await query({ their: { name } }))[0]).not.toHaveProperty('name')
@@ -43,9 +45,34 @@ describe('SKCC global lookup', () => {
     expect(JSON.stringify(result.notes)).not.toContain('Alice')
     expect(JSON.stringify(result.notes)).not.toContain('Roster SPC')
     expect(await query({ refs: [{ type: 'skcc', number: '' }] })).toEqual([])
-    expect(
-      (await query({}, { call: 'K1ABC', name: 'Previous source' } as { call: string }))[0],
-    ).not.toHaveProperty('name')
+    expect((await query({}, { call: 'K1ABC', name: 'Previous source' }))[0]).not.toHaveProperty(
+      'name',
+    )
+  })
+  it('augments QRZ and call notes without taking over the compact name line or station details', async () => {
+    const callInfo = {
+      call: 'K1ABC',
+      name: 'Alice “Ali” Anderson',
+      location: 'Austin, TX',
+      city: 'Austin',
+      state: 'TX',
+      grid: 'EM10aa',
+      image: 'https://example.org/qrz-photo.jpg',
+      note: 'A friend from the local club',
+      emoji: '👋',
+    }
+    const original = structuredClone(callInfo)
+    const [result] = await query({}, callInfo)
+    expect(callInfo).toEqual(original)
+    expect(result).toMatchObject({
+      call: 'K1ABC',
+      source: 'n1rwj-skcc',
+      notes: expect.arrayContaining(['**SKCC 1C** · Member']),
+    })
+    // These flat fields enter the host's first-answer-wins merge; `note`
+    // additionally hides the name in the compact logging UI.
+    for (const field of ['name', 'note', 'emoji', 'image', 'location', 'city', 'state', 'grid'])
+      expect(result).not.toHaveProperty(field)
   })
   it('escapes external text in markdown and skips unknown or unavailable members', async () => {
     const notes = (await query())[0].notes?.join('\n')

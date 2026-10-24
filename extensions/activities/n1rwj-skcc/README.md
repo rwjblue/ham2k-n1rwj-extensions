@@ -32,6 +32,15 @@ Neither roster QTH nor today’s membership suffix proves historical eligibility
 
 ## Names and offline data
 
+SKCC membership appears as additional notes in **Info** and in the companion
+panel. It does not replace the compact logging name line or another source's
+call note. Ham2K merges QRZ and other lookup sources normally. SKCC runs after
+callbooks and Call History, offering a name only when those sources and the
+explicit exchange have supplied none.
+Roster SPC stays a labeled hint rather than replacing the station's location.
+The activity's separate exchange fields still suggest the roster name, SPC
+and member number for confirmation on air.
+
 The extension automatically uses the official
 [SKCC skimmer roster](https://www.skccgroup.com/skimmer-data.txt). It contains
 names, member numbers, current and former calls, status, locations and the

@@ -12,7 +12,7 @@ function markdown(value: string): string {
     .replace(/[\\`*_{}[\]()#+.!|~-]/g, '\\$&')
 }
 
-/** Offline global identity hints; no references or participation are invented. */
+/** Additive roster notes and an offline name fallback, never a compact-line override. */
 export function createLookup(getRoster: RosterGetter): LookupHook {
   return {
     async lookupCall({ callInfo, qso }) {
@@ -29,12 +29,12 @@ export function createLookup(getRoster: RosterGetter): LookupHook {
           : member.status === 'IA'
             ? 'Inactive member'
             : 'Member'
-      const annotation: CallInfoLookup & { note: string; emoji: string } = {
+      const annotation: CallInfoLookup = {
         call,
         source: KEY,
         scope: 'general',
-        emoji: '🔑',
-        note: `SKCC ${member.number}${member.suffix}${member.status === 'A' ? '' : ` · ${status}`}`,
+        // The host accumulates notes in Info. Singular `note` replaces its
+        // compact name line, even when QRZ already supplied a name.
         notes: [
           `**SKCC ${member.number}${member.suffix}** · ${status}`,
           [

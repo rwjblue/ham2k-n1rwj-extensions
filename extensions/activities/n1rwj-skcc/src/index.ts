@@ -31,7 +31,9 @@ defineExtension({
       hook: createActivity(data.getRoster, getPreferences),
     })
     registerHook('ref:skcc', { key: manifest.key, hook: SKCCRefHandler })
-    registerHook('lookup', { key: manifest.key, hook: createLookup(data.getRoster) })
+    // Callbooks run first, then native Call History at -1. A club roster
+    // name is the final fallback; membership notes always accumulate.
+    registerHook('lookup', { key: manifest.key, hook: createLookup(data.getRoster), priority: -2 })
     registerHook(callFilterCategory, { key: manifest.key, hook: createSpotFilter(data.getRoster) })
     registerHook('scoring', { key: manifest.key, hook: createScoringHook() })
     registerHook('adifFields', { key: manifest.key, hook: SKCCAdifFields })
