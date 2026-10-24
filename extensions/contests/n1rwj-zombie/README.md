@@ -39,9 +39,10 @@ square panel surface, and the panel selector has an original illustrated preview
 
 Open **Settings → Activities → Zombie Shuffle** for call-history options and
 an offline event overview and illustration, plus links to the official rules,
-summary sheets and this guide. Hosts that predate the Activities settings
-section show Zombie Shuffle as a standalone settings entry instead. The same
-dialog is also available through Data Files.
+summary sheets and this guide. The manifest and panel both place this dialog
+under Activities, with no separate sidebar entry. Hosts that predate the
+Activities section can still show a standalone preferences category; update
+Ham2K for grouped placement. The dialog is also available through Data Files.
 
 The **Rebirth watch** shows when previously worked callsigns can count again
 on each actual band. It updates once per minute while visible, with exact

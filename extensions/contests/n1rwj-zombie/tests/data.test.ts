@@ -117,6 +117,7 @@ describe('Zombie N1MM data', () => {
         title: 'Zombie Shuffle',
         icon: 'ghost',
         section: 'activities',
+        sidebar: false,
         dataFilesSection: true,
       },
     ])

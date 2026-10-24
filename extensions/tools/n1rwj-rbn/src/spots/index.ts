@@ -277,7 +277,9 @@ export function createRbnSpots(options: Options) {
     ...actions,
     kind: 'dynamic',
     async getPanels() {
-      return [{ key: manifest.key, title: 'RBN', icon: 'radar', section: 'spotting' }]
+      return [
+        { key: manifest.key, title: 'RBN', icon: 'radar', section: 'spotting', sidebar: false },
+      ]
     },
     async getDefinition(_args, ctx) {
       const [selected, health] = await Promise.all([

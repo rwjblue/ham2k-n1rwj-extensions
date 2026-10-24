@@ -197,6 +197,7 @@ export function createZombieData(manifest = { key: 'n1rwj-zombie', icon: 'ghost'
           title: 'Zombie Shuffle',
           icon: manifest.icon,
           section: 'activities',
+          sidebar: false,
           dataFilesSection: true,
         },
       ]

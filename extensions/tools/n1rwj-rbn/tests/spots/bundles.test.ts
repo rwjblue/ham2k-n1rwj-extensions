@@ -227,8 +227,16 @@ it('defaults to merging without an activity and toggles cached spots across rest
   const runtime = await harness({}, [])
   const ctx = { online: false }
   expect(await runtime.settings.getPanels?.({}, ctx)).toEqual([
-    { key: 'n1rwj-rbn', title: 'RBN', icon: 'radar', section: 'spotting' },
+    { key: 'n1rwj-rbn', title: 'RBN', icon: 'radar', section: 'spotting', sidebar: false },
   ])
+  expect(manifest.settings).toEqual({ section: 'spotting' })
+  expect(runtime.definitions.find((definition) => definition.key === manifest.key)).toMatchObject({
+    settings: manifest.settings,
+  })
+  const builtManifest = JSON.parse(
+    await readFile(new URL('../../build/manifest.json', import.meta.url), 'utf8'),
+  )
+  expect(builtManifest.settings).toEqual(manifest.settings)
   const activity = runtime.hook<ActivityHook>('n1rwj-rbn', 'activity')
   expect(await activity.loggingControls?.({ operation: {} }, ctx)).toEqual([])
   const form = await runtime.settings.getDefinition({ panelKey: 'n1rwj-rbn' }, ctx)

@@ -47,9 +47,12 @@ commit-message-default: auto
   a host section: `activities` for contests and `spotting` for RBN. Combine
   options and About content rather than adding standalone settings categories.
   Preserve existing settings storage keys and use `dataFilesSection` only for data
-  management. Leave `sidebar` at its default so hosts without the requested
-  section retain navigation access. Check current SDK/host approval guidance
-  before introducing another section.
+  management. Declare the matching `settings.section` in the manifest as well
+  as `section` on the panel, and explicitly set the panel's `sidebar: false`.
+  Do not request a new category, sidebar entry, or Common Preferences fields.
+  Older hosts without the requested section can still render a standalone
+  preferences category. Check current SDK/host/catalog approval guidance
+  before changing placement; panel code alone is not a catalog declaration.
 - Keep the personal extension key `n1rwj-cwt` distinct from the original.
   Keep CWT reference and exchange/export conventions compatible. Preserve
   Sebastian Delmont's upstream copyright, attribution, and MPL-2.0 license.

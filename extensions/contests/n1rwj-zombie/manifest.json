@@ -21,6 +21,7 @@
     "settingsPanel"
   ],
   "domains": ["n1mm.hamdocs.com", "n1mmwp.hamdocs.com"],
+  "settings": { "section": "activities" },
   "relevance": {
     "interests": ["cw"]
   },

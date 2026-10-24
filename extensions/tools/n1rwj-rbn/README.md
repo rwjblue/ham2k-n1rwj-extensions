@@ -28,6 +28,11 @@ See [collection behavior, limits, and generated examples](../../../docs/RBN-EXPO
 
 ## Find stations in Spots
 
+Global settings live in one dialog under **Settings → Spotting → RBN**.
+The manifest and panel both declare that placement, with no separate sidebar
+entry or Common Preferences fields. Older hosts without Spotting can still
+show a standalone preferences category; update Ham2K for grouped placement.
+
 Opening **Settings → Spotting → RBN** checks the
 [Vail ReRBN health endpoint](https://vailrerbn.com/docs/endpoints#health).
 A warning at the top explains a failed check, service or database problem,
