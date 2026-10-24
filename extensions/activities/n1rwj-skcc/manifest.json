@@ -1,7 +1,7 @@
 {
   "key": "n1rwj-skcc",
   "name": "SKCC Companion",
-  "version": "0.14.3",
+  "version": "0.15.0",
   "description": "SKCC member names, manual-key exchanges, events, member spots and award progress with auditable application worksheets.",
   "category": "activity",
   "api": 9,
@@ -33,7 +33,9 @@
   ],
   "adifFieldsScope": "always",
   "domains": ["skccgroup.com", "www.skccgroup.com"],
-  "relevance": { "interests": ["cw"] },
+  "relevance": {
+    "interests": ["cw"]
+  },
   "sharedDependencies": {
     "@ham2k/lib-callsigns": "^1.0.2",
     "@ham2k/lib-country-files": "^1.0.202605301",

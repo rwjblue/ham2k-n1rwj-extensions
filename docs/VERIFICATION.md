@@ -1,5 +1,49 @@
 # Verification and compatibility
 
+## SKCC Companion and v0.15.0 preparation — 2026-10-24
+
+Prepared API-9 SKCC Companion and synchronized release 0.15.0. The release
+notes select only SKCC for catalog submission; the existing ten extensions
+have no runtime changes. Lockfile changes add the workspace and synchronized
+versions without updating dependencies.
+
+- `mise run release:notes v0.15.0`, `mise run format`, and
+  `mise run release v0.15.0 --dry-run` passed: **1,897 tests across 140 files**,
+  strict source/test/task typechecks, lint, eleven official ES2020 builds and
+  packages, and all 22 bundle/checksum paths.
+- The original five-second limit timed out in existing RBN, PSK Reporter and
+  reception-layout tests; RBN reproduced with a single worker. Capping workers
+  at four and allowing fifteen seconds passed every unchanged assertion.
+- Both live official roster layouts parsed **31,513** records. The downloaded
+  skimmer source supplies explicit active/inactive/silent-key status. Historical
+  `/EX` and `/SK` suffixes override inconsistent active flags for spot filtering.
+  Official event, roster and download links were checked; a dead awards-index
+  link was replaced with verified individual award-rule pages.
+- New tests cover delayed native roster replay, failed-refresh preservation,
+  aliases, operator corrections/clearing, event windows and segmented scoring,
+  ADIF evidence round trips, historical eligibility, specialty award selection,
+  import ownership/persistence, scoped exports, SKS assistance suppression and
+  operation-cache reuse during callsign typing.
+- `mise run verify-host n1rwj-skcc` passed against running **26.9.0 build 183**,
+  kernel SHA-256 `4308fbcd588f2d5b7e4a23eb01b9d2979a2409cfe294e89bfe150808940dd2c3`.
+  All 23 SKCC hooks register, including eleven native chasing programs; shared
+  library versions satisfy the manifest. This evaluates the installed kernel
+  under Node VM and does not install or manipulate native app data.
+- An additional installed-kernel check used its actual `core/adif` exporter:
+  delayed roster replay, settings writes, saved exchanges, Centurion claims,
+  panel rendering and ADIF delegation passed. Dedicated and whole-log exports
+  preserved SKCC number, own name, qualification and Morse-key evidence, even
+  when saved snapshots had no activity refs. The durable bundle harness labels
+  its ADIF delegate stub separately from this actual-serializer verification.
+
+Native UI, real cross-device chasing rebuilds and on-air acceptance remain
+unverified. Native claims freeze an available roster and require explicit
+reload plus whole-log EXP CHASE rebuild after roster changes. Imported
+complete-history summaries are dated snapshots rather than live claim ledgers.
+Theme review, award approval and sponsor submission remain operator actions.
+SKCC, test-runner configuration and personal packaging are exempt from the
+CWT upstream synchronization requirement; CWT behavior is unchanged.
+
 ## Release 0.14.3 publication — 2026-10-22
 
 Published [v0.14.3](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.14.3)

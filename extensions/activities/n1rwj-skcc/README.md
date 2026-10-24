@@ -142,7 +142,9 @@ roster independently.
 
 ## Sources and verification
 
-Official rules: [awards](https://www.skccgroup.com/awards/),
+Official rules: [Centurion](https://www.skccgroup.com/operating_awards/centurion/),
+[Tribune](https://www.skccgroup.com/operating_awards/tribune/),
+[Senator](https://www.skccgroup.com/operating_awards/senator/),
 [key policy](https://www.skccgroup.com/keypolicy.php),
 [Monthly Brag](https://www.skccgroup.com/operating_activities/monthly_brag/),
 [WES](https://www.skccgroup.com/operating_activities/weekend_sprintathon/),
