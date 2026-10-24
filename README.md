@@ -6,6 +6,7 @@ your signal is heard. Published extensions are available as ready-to-install
 
 | Extension | What it adds |
 | --- | --- |
+| [SKCC Companion](extensions/activities/n1rwj-skcc/README.md) (`n1rwj-skcc`) | Offline member names, manual-key exchanges, SKCC events, member spots, award audits and application worksheets |
 | [BIGFOOT Hunt](extensions/activities/n1rwj-bigfoot/README.md) (`n1rwj-bigfoot`) | 2026 BIGFOOT letter and Skunk Ape bonus tracking, same-mode progress, and event worksheets |
 | [Contest Calendar](extensions/tools/n1rwj-contest-calendar/README.md) (`n1rwj-contest-calendar`) | Optional Home panel with upcoming contests, UTC/local times, and sponsor rules from ContestClock |
 | [RBN](extensions/tools/n1rwj-rbn/README.md) (`n1rwj-rbn`) | Reception map and sortable CW, RTTY, FT8, and FT4 reports from the Reverse Beacon Network via Vail ReRBN, using your operation's callsign and location |
@@ -54,6 +55,16 @@ see the installed extensions and their enable switches. See the
 versions; use the latest release linked above when installing.
 
 ![Installed N1RWJ contest extensions and RBN panel in Ham2K](docs/images/extensions-installed.jpg)
+
+### SKCC Companion
+
+Install `n1rwj-skcc` on an API-9-capable host, download its member roster,
+then configure your exchange under **Activities → SKCC Companion**. Add an
+SKCC activity to an operation and the companion panel to its layout. RBN
+can filter to SKCC members; experimental native Chasing and complete-history
+ADIF audits support longer-term goals. Follow the
+[operator guide](extensions/activities/n1rwj-skcc/README.md) for evidence,
+scoring reviews, imports and native rescan instructions.
 
 ### BIGFOOT Hunt
 

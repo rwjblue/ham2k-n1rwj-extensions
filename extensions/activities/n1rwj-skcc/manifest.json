@@ -1,0 +1,47 @@
+{
+  "key": "n1rwj-skcc",
+  "name": "SKCC Companion",
+  "version": "0.14.3",
+  "description": "SKCC member names, manual-key exchanges, events, member spots and award progress with auditable application worksheets.",
+  "category": "activity",
+  "api": 9,
+  "icon": "key",
+  "keywords": [
+    "skcc",
+    "straight key",
+    "cw",
+    "centurion",
+    "tribune",
+    "senator",
+    "wes",
+    "sks",
+    "k3y"
+  ],
+  "hooks": [
+    "activity",
+    "ref:skcc",
+    "lookup",
+    "spotCallFilter:v1",
+    "scoring",
+    "adifFields",
+    "adifImport",
+    "export",
+    "panel",
+    "settingsPanel",
+    "dataFile",
+    "chasing"
+  ],
+  "adifFieldsScope": "always",
+  "domains": ["skccgroup.com", "www.skccgroup.com"],
+  "relevance": { "interests": ["cw"] },
+  "sharedDependencies": {
+    "@ham2k/lib-callsigns": "^1.0.2",
+    "@ham2k/lib-country-files": "^1.0.202605301",
+    "@ham2k/lib-dxcc-data": "^1.0.1",
+    "@ham2k/lib-format-tools": "^1.2.0",
+    "@ham2k/lib-geo-tools": "^1.1.1",
+    "@ham2k/lib-operation-data": "^1.1.3",
+    "i18next": "^23.16.8",
+    "liquidjs": "^10.28.0"
+  }
+}
