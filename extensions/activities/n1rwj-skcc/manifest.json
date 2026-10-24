@@ -1,7 +1,7 @@
 {
   "key": "n1rwj-skcc",
   "name": "SKCC Companion",
-  "version": "0.15.0",
+  "version": "0.15.1",
   "description": "SKCC member names, manual-key exchanges, events, member spots and award progress with auditable application worksheets.",
   "category": "activity",
   "api": 9,
@@ -32,7 +32,9 @@
     "chasing"
   ],
   "adifFieldsScope": "always",
-  "settings": { "section": "activities" },
+  "settings": {
+    "section": "activities"
+  },
   "domains": ["skccgroup.com", "www.skccgroup.com"],
   "relevance": {
     "interests": ["cw"]
