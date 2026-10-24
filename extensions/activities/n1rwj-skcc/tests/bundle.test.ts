@@ -207,8 +207,14 @@ describe('SKCC installable ES2020 bundle', () => {
         ),
     ).toMatchObject([{ name: 'Alice', note: 'SKCC 2T' }])
     expect(await runtime.hook('settingsPanel').getPanels?.({}, ctx)).toMatchObject([
-      { key: manifest.key, section: 'activities', dataFilesSection: true },
+      { key: manifest.key, section: 'activities', sidebar: false, dataFilesSection: true },
     ])
+    expect(manifest.settings).toEqual({ section: 'activities' })
+    expect(runtime.definition).toMatchObject({ settings: manifest.settings })
+    const packedManifest = JSON.parse(
+      await readFile(new URL('../build/manifest.json', import.meta.url), 'utf8'),
+    )
+    expect(packedManifest.settings).toEqual(manifest.settings)
     expect(runtime.hostCall.mock.calls.every(([method]) => method === 'kvGet')).toBe(true)
   })
 

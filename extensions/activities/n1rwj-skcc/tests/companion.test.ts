@@ -151,6 +151,7 @@ describe('SKCC settings and history actions', () => {
         title: 'SKCC Companion',
         icon: 'key',
         section: 'activities',
+        sidebar: false,
         dataFilesSection: true,
       },
     ])
