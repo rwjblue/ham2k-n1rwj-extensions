@@ -19,6 +19,33 @@ remain historical; no new release or catalog submission accompanies removal.
 
 ## Current release status
 
+[v0.15.1](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.15.1)
+was published from signed main commit `5c4dec996ef7fc57ddac73b34ac0795e40bb4879`
+on October 24, 2026 at **07:54:19 US Eastern (11:54:19 UTC)**. All **eleven
+bundles and eleven checksum files** are available. The
+[check workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/40091702568)
+and both jobs in the
+[release workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/40091757087)
+passed. Downloaded assets passed `mise run release:catalog v0.15.1 --dry-run`,
+and the published body exactly matches `docs/releases/v0.15.1.md`.
+
+**RBN, SKCC Companion and Zombie Shuffle are approved and current at 0.15.1
+on `stable`**, released between **11:55:25.798 and 11:55:30.025 UTC**. Their
+public bundle bytes, sizes, SHA-256 hashes and scoped notes match GitHub.
+The other eight catalog entries were skipped because their behavior and
+dependencies are unchanged.
+
+All three settings panels now declare their existing host section in the
+manifest as well as panel code, with the separate sidebar entry disabled.
+RBN uses Spotting; SKCC and Zombie use Activities. Older hosts without the
+requested section can still render a standalone preferences category.
+API-1 hosts discover Zombie, API-5 hosts also discover RBN, and API-9 hosts
+discover all three. SKCC is absent from API-8 and older catalog responses.
+See [release notes](releases/v0.15.1.md) and the
+[verification record](VERIFICATION.md#release-0151-publication--2026-10-24).
+
+### Previous releases
+
 [v0.15.0](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.15.0)
 was published from signed main commit `d5493bd32148ea8cb7ed3bcd42b7220050f5e38d`
 on October 24, 2026 at **00:37:41 US Eastern (04:37:41 UTC)**. All **eleven
@@ -29,11 +56,11 @@ and both jobs in the
 passed. Downloaded assets passed `mise run release:catalog v0.15.0 --dry-run`,
 and the published body exactly matches `docs/releases/v0.15.0.md`.
 
-**SKCC Companion 0.15.0 was submitted to `stable` at 04:38:41 UTC and is
-pending catalog review.** Submission success is not public availability: the
+**SKCC Companion 0.15.0 was submitted to `stable` at 04:38:41 UTC and was
+pending catalog review during verification.** Submission success is not public availability: the
 public extension API still returned 404 during verification. The
 [catalog page](https://catalog.ham2k.net/extensions/n1rwj-skcc?channel=stable)
-will become available after approval; the GitHub bundle can be installed now
+was not yet public at that point; the GitHub bundle could be installed
 on an API-9-capable host. The other ten catalog entries were skipped because
 their behavior and dependencies are unchanged.
 
@@ -44,8 +71,6 @@ Its GitHub bundle is **80,561 bytes**, SHA-256
 Native UI, cross-device rescan and on-air acceptance remain unverified. See
 [release notes](releases/v0.15.0.md) and the
 [verification record](VERIFICATION.md#release-0150-publication--2026-10-24).
-
-### Previous releases
 
 [v0.14.3](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.14.3)
 was published from signed main commit `97e9baa1bbb416734ddb99c30dcebdaeac959182`

@@ -1,5 +1,47 @@
 # Verification and compatibility
 
+## Release 0.15.1 publication — 2026-10-24
+
+Published [v0.15.1](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.15.1)
+from signed main commit `5c4dec996ef7fc57ddac73b34ac0795e40bb4879` at
+**11:54:19 UTC (07:54:19 US Eastern)**. GitHub verifies all three settings and
+release-preparation commit signatures. The tag resolves to that tested commit,
+and the release body exactly matches `docs/releases/v0.15.1.md`.
+
+- Local `mise run release v0.15.1 --dry-run` passed **1,897 tests across 140
+  files**, lint, source/test/task typechecks, eleven official builds and
+  packaging. Bundle checks cover manifest placement and disabled sidebar entries.
+- The [check workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/40091702568)
+  and both jobs in the
+  [release workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/40091757087)
+  passed. All **22 bundle/checksum assets** are available.
+- `mise run release:catalog v0.15.1 --dry-run` downloaded and validated every
+  archive/checksum, selected RBN, SKCC and Zombie, and skipped the other eight.
+  Log: `/tmp/ham2k-catalog-v0.15.1-dry-run-20261024.log`.
+- All three catalog submissions returned **approved** on `stable`. Public
+  extension endpoints confirm 0.15.1 is current, with release times below.
+  Their downloaded bytes match GitHub exactly, their SHA-256 hashes match the
+  catalog and GitHub asset digests, and their scoped notes match the authored
+  release sections. Evidence: `/tmp/ham2k-v0.15.1-public-verification.json`.
+
+| Extension | Released at (UTC) | Bytes | SHA-256 |
+| --- | --- | ---: | --- |
+| RBN | 11:55:25.798 | 320,747 | `c6ff7a873ccd62ce6b5db2b2f9ed97ee6b89794ed40a652fd55fc7b78896c61b` |
+| SKCC | 11:55:27.838 | 80,594 | `92da028df94c25f54a401877d22500048639fa4e498590dd5e3151110a4fc997` |
+| Zombie | 11:55:30.025 | 105,408 | `d7d902187fe4fa124c857f6b50e1cce2100417f7bb6e37119f15d48552a84fea` |
+
+API-1 catalog discovery offers Zombie 0.15.1 and the older compatible RBN
+0.6.0. API-5 and API-8 offer RBN and Zombie 0.15.1; API-9 also offers SKCC
+0.15.1. SKCC is absent from the API-1, API-5 and API-8 responses.
+
+Only SKCC, RBN and Zombie register global settings panels. They now declare
+the matching manifest section and disable separate sidebar entries; repository
+guidance captures the same rule. Current host source supports their sections,
+but older hosts without those sections can still render standalone preferences
+categories. This verifies source, bundles and distribution, not native UI or
+on-air behavior. No shared dependency or CWT behavior changed; these settings
+and publication updates are exempt from CWT upstream synchronization.
+
 ## Release 0.15.0 publication — 2026-10-24
 
 Published [v0.15.0](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.15.0)
