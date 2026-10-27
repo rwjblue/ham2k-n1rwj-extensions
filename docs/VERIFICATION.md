@@ -1,5 +1,39 @@
 # Verification and compatibility
 
+## SKCC additive lookup and v0.15.2 preparation — 2026-10-26
+
+The host's compact logging UI deliberately shows a lookup's singular `note`
+instead of `name`. SKCC supplied that field for membership, which hid a QRZ
+name even though the name remained in the merged station data. The host's
+[UI regression test](https://github.com/ham2k/halo/blob/main/packages/halo_widgets/test/logging_controls_lookup_test.dart)
+explicitly covers this behavior. CWT uses the additive `notes` list; Call Notes
+uses singular `note` intentionally for its compact replacement text.
+
+SKCC now contributes membership through `notes` only, and stops emitting a
+compact `note` or `emoji`. Its roster-name fallback runs at priority -2, after
+callbooks and native Call History (-1), so a previous full name wins offline.
+The host handles merging; SKCC does not fetch or copy QRZ data. Roster SPC
+remains a labeled hint, and the separate SKCC exchange controls still suggest
+name, SPC and member number for confirmation on air.
+
+- `mise run release v0.15.2 --dry-run` passed **1,898 tests across 140 files**,
+  lint, source/test/task typechecks, eleven official ES2020 builds/packages and
+  all 22 bundle/checksum paths. Unit and bundle regressions cover the absence
+  of compact overrides alongside richer QRZ identity and existing call notes.
+- The running **26.9.0 build 184** kernel and its actual core lookup
+  orchestrator passed five scenarios with synthetic source replies: QRZ
+  identity/location/photo preserved; membership notes accumulated; Call History
+  name before roster fallback; offline roster name fallback; and existing call
+  note/emoji preserved. Kernel SHA-256:
+  `7cdaf082cae88298ae61786d01f4d3ee7ab33a10890c9c6cebd8016e3f83e3cf`.
+  Evidence: `/tmp/ham2k-skcc-additive-installed-check.json`.
+- This evaluates installed JavaScript under Node VM with fixture callbook and
+  history replies. It does not exercise the native UI, contact QRZ, or modify
+  installed app data. Existing native UI and on-air verification limits remain.
+- Release notes select only SKCC for catalog submission. Synchronized versions
+  do not update dependencies. SKCC and personal packaging are exempt from CWT
+  upstream synchronization; no CWT or shared runtime behavior changed.
+
 ## Release 0.15.1 publication — 2026-10-24
 
 Published [v0.15.1](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.15.1)
