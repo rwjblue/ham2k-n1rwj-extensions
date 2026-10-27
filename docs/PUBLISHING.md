@@ -19,6 +19,32 @@ remain historical; no new release or catalog submission accompanies removal.
 
 ## Current release status
 
+[v0.15.2](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.15.2)
+was published from signed main commit `e45bdecc817892a894cbd7ebfce8d3e029f1fb02`
+on **October 26, 2026 at 22:03:46 US Eastern (October 27 at 02:03:46 UTC)**.
+All **eleven bundles and eleven checksum files** are available. The
+[check workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/40436116226)
+and both jobs in the
+[release workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/40436228850)
+passed. Downloaded assets passed `mise run release:catalog v0.15.2 --dry-run`,
+and the published body exactly matches `docs/releases/v0.15.2.md`.
+
+**SKCC Companion is approved and current at 0.15.2 on `stable`**, released
+on **October 26 at 22:04:47.308 US Eastern (October 27 at 02:04:47.308 UTC)**.
+Its public bundle bytes, size, SHA-256 and scoped notes match GitHub. API-9
+catalog discovery offers this version; API-8 does not offer SKCC. The other
+ten catalog entries were skipped because their behavior and dependencies
+are unchanged.
+
+SKCC membership now appears in additive Info notes instead of replacing the
+compact logging name line. Callbooks and Call History take precedence over
+the offline roster-name fallback. Source, bundle and installed-kernel lookup
+checks passed; native UI acceptance remains separate. See
+[release notes](releases/v0.15.2.md) and the
+[verification record](VERIFICATION.md#release-0152-publication--2026-10-26).
+
+### Previous releases
+
 [v0.15.1](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.15.1)
 was published from signed main commit `5c4dec996ef7fc57ddac73b34ac0795e40bb4879`
 on October 24, 2026 at **07:54:19 US Eastern (11:54:19 UTC)**. All **eleven
@@ -43,8 +69,6 @@ API-1 hosts discover Zombie, API-5 hosts also discover RBN, and API-9 hosts
 discover all three. SKCC is absent from API-8 and older catalog responses.
 See [release notes](releases/v0.15.1.md) and the
 [verification record](VERIFICATION.md#release-0151-publication--2026-10-24).
-
-### Previous releases
 
 [v0.15.0](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.15.0)
 was published from signed main commit `d5493bd32148ea8cb7ed3bcd42b7220050f5e38d`

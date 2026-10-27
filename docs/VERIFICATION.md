@@ -1,5 +1,34 @@
 # Verification and compatibility
 
+## Release 0.15.2 publication — 2026-10-26
+
+Published [v0.15.2](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.15.2)
+from signed main commit `e45bdecc817892a894cbd7ebfce8d3e029f1fb02` on
+**October 26 at 22:03:46 US Eastern (October 27 at 02:03:46 UTC)**. GitHub
+verifies both implementation and release-preparation signatures. The tag
+resolves to the tested commit and the body exactly matches the authored notes.
+
+- The [check workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/40436116226)
+  and both jobs in the
+  [release workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/40436228850)
+  passed. GitHub contains all **22 bundle/checksum assets**.
+- `mise run release:catalog v0.15.2 --dry-run` downloaded and validated every
+  archive/checksum, selected only SKCC and skipped the ten unchanged entries.
+  Log: `/tmp/ham2k-catalog-v0.15.2-dry-run-20261026.log`.
+- The catalog returned **approved** on `stable`. Its public endpoint confirms
+  SKCC 0.15.2 is current, released at **October 26, 22:04:47.308 US Eastern
+  (October 27, 02:04:47.308 UTC)**. Scoped catalog notes match the authored
+  release section. No retry or duplicate submission was made.
+- The downloaded public catalog bundle matches GitHub exactly: **80,630 bytes**,
+  SHA-256 `0fc55486630a0d3832b01fce25c60dfb3eaa2cb8e1ea886ea63a5bb6779315b4`.
+  Catalog metadata and the GitHub asset digest agree. API-9 discovery offers
+  0.15.2, while API-8 omits SKCC. Evidence:
+  `/tmp/ham2k-skcc-v0.15.2-public-verification.json`.
+
+The preparation record below defines lookup runtime coverage and its native
+UI boundary. Only SKCC behavior changed; publication and personal packaging
+are exempt from CWT upstream synchronization.
+
 ## SKCC additive lookup and v0.15.2 preparation — 2026-10-26
 
 The host's compact logging UI deliberately shows a lookup's singular `note`
