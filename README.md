@@ -6,6 +6,7 @@ your signal is heard. Published extensions are available as ready-to-install
 
 | Extension | What it adds |
 | --- | --- |
+| [BKG Companion](extensions/activities/n1rwj-bkg/README.md) (`n1rwj-bkg`, unreleased) | Daily offline Brass Knuckle Gang roster, member highlights, a Home/operation panel and native Worked the Gang chasing for everyone |
 | [SKCC Companion](extensions/activities/n1rwj-skcc/README.md) (`n1rwj-skcc`) | Offline member names, manual-key exchanges, SKCC events, member spots, award audits and application worksheets |
 | [BIGFOOT Hunt](extensions/activities/n1rwj-bigfoot/README.md) (`n1rwj-bigfoot`) | 2026 BIGFOOT letter and Skunk Ape bonus tracking, same-mode progress, and event worksheets |
 | [Contest Calendar](extensions/tools/n1rwj-contest-calendar/README.md) (`n1rwj-contest-calendar`) | Optional Home panel with upcoming contests, UTC/local times, and sponsor rules from ContestClock |

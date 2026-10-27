@@ -1,0 +1,23 @@
+{
+  "key": "n1rwj-bkg",
+  "name": "BKG Companion",
+  "version": "0.15.2",
+  "description": "Find Brass Knuckle Gang members, work the whole gang, and discover 2m CW joining opportunities. Daily offline roster, member cards and native chasing for everyone.",
+  "category": "activity",
+  "api": 9,
+  "icon": "hand-fist",
+  "accentColor": "#D4AF37",
+  "keywords": ["bkg", "brass knuckle gang", "2m", "cw", "members", "chasing"],
+  "hooks": ["dataFile", "lookup", "panel", "chasing"],
+  "domains": ["www.bkg.club"],
+  "sharedDependencies": {
+    "@ham2k/lib-callsigns": "^1.0.2",
+    "@ham2k/lib-country-files": "^1.0.202605301",
+    "@ham2k/lib-dxcc-data": "^1.0.1",
+    "@ham2k/lib-format-tools": "^1.2.0",
+    "@ham2k/lib-geo-tools": "^1.1.1",
+    "@ham2k/lib-operation-data": "^1.1.3",
+    "i18next": "^23.16.8",
+    "liquidjs": "^10.28.0"
+  }
+}

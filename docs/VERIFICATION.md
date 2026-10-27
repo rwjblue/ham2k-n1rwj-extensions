@@ -1,5 +1,50 @@
 # Verification and compatibility
 
+## BKG Companion first cut — 2026-10-29
+
+Implemented `n1rwj-bkg` at the current synchronized development version,
+0.15.2. It has four hooks: daily native Data File, additive membership lookup,
+contextual panel, and one API-9 Worked the Gang program. There are no settings,
+identity controls, accounts, recruit submissions or OG hunt programs. Native
+chasing supports nonmember hunters and counts only 2m CW; the panel calls out
+recent 2m CW member spots as joining opportunities.
+
+- `mise run format` and `mise run check` passed: **1,946 tests in 143 files**,
+  strict runtime/test/task types, lint, all ES2020 bundles and official packages.
+  BKG contributes **48 tests**, including raw-cache cold replay, refresh failure,
+  source typo handling, portable identity, call clearing, callsign rename/reuse,
+  nonmember claims, 2m CW eligibility, operation corrections and scene bounds/accessibility fallback.
+- A read-only request to the live website v2 JSON successfully parsed and indexed
+  **1,016 members**; source generation was `2026-10-29T14:29:04.041Z`.
+  No administrator API, production mutation or private member data was used.
+- `mise run verify-host n1rwj-bkg` passed against the installed Ham2K Mac Logger
+  Next 26.9.0 build **184** JavaScript kernel, registering all four hooks with
+  no compatibility problems. The new manifest uses the established LiquidJS
+  `^10.28.0` host floor; no existing manifest compatibility range changed.
+- `mise tasks validate` passed for all 41 tasks; the preview task's help and
+  normal invocation were checked. `mise run bkg:preview` generates six synthetic
+  Home/operation/nonmember/narrow/compact/unavailable states. Browser screenshots
+  were visually reviewed after fixing preview-only cross-document SVG clipping.
+
+The API-9 host has no reference-data invalidation hook for cached chase
+candidates/lifetime claims. The roster, lookup, panel and uncached evaluations
+refresh immediately; rebuilding existing chase results requires reloading the
+extension and toggling EXP CHASE off/on on a complete-log device. This is
+documented in the operator guide. No native UI, on-air or actual app chase-ranking
+acceptance is claimed. The kernel check runs under Node VM.
+
+The user's subsequent band/mode clarification restricts chase claims and panel
+operation totals to 2m CW while preserving all-band/mode membership labels.
+Chase schema version 2 invalidates the earlier any-band/mode bookkeeping so the
+host can rebuild it on a complete-log device after extension reload. Regression
+cases reject HF CW and 2m SSB, FM and FT8, including for spot-candidate evaluation.
+
+Installable bundle: `dist/n1rwj-bkg-0.15.2.h2kext` and matching SHA-256 file.
+This is a local, unreleased first cut; no tag, GitHub release or catalog
+submission was created. Existing `docs/ZOMBIE-VIDEO-BRIEF.md` was left untouched.
+Only BKG implementation, development tooling and personal provenance changed;
+no CWT runtime/shared behavior requires upstream synchronization.
+
 ## Release 0.15.2 publication — 2026-10-26
 
 Published [v0.15.2](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.15.2)

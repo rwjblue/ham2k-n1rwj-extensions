@@ -1,5 +1,22 @@
 # Extension provenance and attribution
 
+## BKG Companion
+
+`extensions/activities/n1rwj-bkg/` is an original MPL-2.0 implementation using
+the published Ham2K SDK. Membership data comes from the Brass Knuckle Gang's
+[public v2 roster](https://www.bkg.club/data/v2/roster.json). Its number,
+callsign, name, QTH and sponsor fields are used as published; legacy spelling
+errors are not silently corrected. Photos and map locations are not consumed.
+
+The scene follows [BKG.club](https://www.bkg.club/)'s published brass/black/lime
+theme tokens and member-card vocabulary, with original vector artwork and
+native text. No website scripts, fonts, photos or host internals are bundled.
+Synthetic previews/tests do not redistribute the live member roster.
+
+This independent extension, its preview task and its personal packaging change
+no CWT behavior or shared runtime source, so upstream CWT synchronization is
+not applicable.
+
 ## RandomGram
 
 `extensions/contests/n1rwj-randomgram/` is an independent MPL-2.0 implementation

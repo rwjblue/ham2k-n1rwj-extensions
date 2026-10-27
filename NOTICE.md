@@ -31,6 +31,11 @@ International. Its bundle carries `assets/CONTEST_CALENDAR_ATTRIBUTION.md` with
 source and license links. Calendar data is normalized and filtered; sponsor
 rules remain theirs and are linked rather than copied.
 
+The independent BKG Companion reads the Brass Knuckle Gang's public roster
+from https://www.bkg.club/data/v2/roster.json. Its original scene follows the
+club website's brass/black/lime theme and member-card vocabulary. Website
+scripts, fonts, photos and map data are not bundled.
+
 The bundles include portions of the published `@ham2k/extension-sdk`;
 CWT also includes prefill improvements backported from Ham2K/extensions
 PR #1. The shared spot-filter contract and its CWT provider are original
