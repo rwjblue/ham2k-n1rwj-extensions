@@ -1,6 +1,5 @@
 import type { HookContext } from '@ham2k/extension-sdk'
 import { describe, expect, it, vi } from 'vitest'
-import { checkedZombieSnapshot } from '../src/data.ts'
 import { createZombieHistory } from '../src/history.ts'
 import { createZombieLookup } from '../src/lookup.ts'
 import type { Qson } from '../src/model.ts'
@@ -11,21 +10,28 @@ const operation: Qson = {
   stationCall: 'N1RWJ',
   refs: [{ type: 'zombie', ref: '2026' }],
 }
-const file = checkedZombieSnapshot({
-  schema: 1,
-  body: '# ZOMBIE\n# LastEdit,2025-10-18\n!!Order!!,Call,Name,Exch1,MISC\nK1ABC,OLD NICK,0007,MA\nK2ABC,DEAD FRED,3333,CT',
-  url: 'https://n1mmwp.hamdocs.com/zombie.txt',
-  fetchedAt: '2026-10-20T12:00:00Z',
-})
-
 function setup() {
   const history = createZombieHistory()
   history.update({ operation, qsos: [] })
-  const lookup = createZombieLookup(history, () => file)
+  const lookup = createZombieLookup(history)
   const ctx: HookContext = {
     online: false,
     getQsos: vi.fn(async () => []),
-    getHistoryForCall: vi.fn(async () => []),
+    getHistoryForCall: vi.fn(async (call: string) => [
+      {
+        uuid: `prior-${call}`,
+        their: { call },
+        refs: [
+          {
+            type: 'zombie',
+            ref: '2025',
+            theirZombieName: call === 'K1ABC' ? 'OLD NICK' : call === 'K2ABC' ? 'DEAD FRED' : '',
+            theirZombieNumber: call === 'K1ABC' ? '0007' : call === 'K2ABC' ? '3333' : '',
+            theirSpc: call === 'K1ABC' ? 'MA' : call === 'K2ABC' ? 'CT' : '',
+          },
+        ],
+      },
+    ]),
   }
   const query = (qso: Qson = { their: { call: 'K1ABC' } }, op: Qson = operation) =>
     lookup.lookupCall(

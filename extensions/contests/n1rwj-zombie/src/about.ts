@@ -39,7 +39,7 @@ export function zombieAboutDefinition(): FormDefinition {
       { type: 'divider', title: 'At the logging table' },
       {
         type: 'markdown',
-        text: 'Add Zombie Shuffle 2026 to an operation and configure your number, spooky name, location and **UTC offset on the event date**, including daylight saving time. Enable flexible hours if operating from HI, AK or DX.\n\nThe graveyard keeps your visitors, score groups and rebirth watch together. Native Info shows scoring details and identity hints. Optional call history works offline after download; it suggests exchanges, and does not confirm who is on the air. Copy and confirm the exchange you hear.',
+        text: 'Add Zombie Shuffle 2026 to an operation and configure your number, spooky name, location and **UTC offset on the event date**, including daylight saving time. Enable flexible hours if operating from HI, AK or DX.\n\nThe graveyard keeps your visitors, score groups and rebirth watch together. Native Info shows scoring details and identity hints from your logged Zombie contacts. Contact history suggests exchanges and does not confirm who is on the air. Copy and confirm the exchange you hear.',
       },
       {
         type: 'link',
@@ -47,7 +47,7 @@ export function zombieAboutDefinition(): FormDefinition {
         label: 'Extension operator guide',
         url: ZOMBIE_GUIDE_URL,
         icon: 'book-open-page-variant-outline',
-        description: 'Setup, call history, scoring, exports and graveyard display guidance.',
+        description: 'Setup, contact history, scoring, exports and graveyard display guidance.',
       },
       { type: 'divider', title: 'After the Shuffle' },
       {

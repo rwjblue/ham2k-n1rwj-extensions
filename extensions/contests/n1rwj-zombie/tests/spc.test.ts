@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import manifest from '../manifest.json'
 import { createActivity } from '../src/activity.ts'
-import { checkedZombieSnapshot } from '../src/data.ts'
 import { object, type Qson } from '../src/model.ts'
 import { zombieSpcSuggestion } from '../src/spc.ts'
 
@@ -131,14 +130,19 @@ describe('Zombie native SPC prefill', () => {
   })
 
   it('keeps a copied Zombie history location ahead of general lookup data', async () => {
-    const file = checkedZombieSnapshot({
-      schema: 1,
-      body: '# ZOMBIE\n# LastEdit,2025-10-18\n!!Order!!,Call,Name,Exch1,MISC\nK1ABC,IGOR,002,CT',
-      url: 'https://n1mmwp.hamdocs.com/zombie.txt',
-      fetchedAt: '2026-10-20T12:00:00Z',
+    const { activity, history } = createActivity(manifest)
+    history.update({
+      operation,
+      qsos: [
+        {
+          uuid: 'copied-zombie',
+          their: { call: 'K1ABC' },
+          refs: [
+            { type: 'zombie', theirSpc: 'CT', theirZombieNumber: '002', theirZombieName: 'IGOR' },
+          ],
+        },
+      ],
     })
-    const { activity, history } = createActivity(manifest, () => file)
-    history.update({ operation, qsos: [] })
     const controls = await activity.loggingControls(
       {
         operation,

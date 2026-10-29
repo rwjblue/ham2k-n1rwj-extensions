@@ -201,14 +201,15 @@ sheets agree on four scoring groups (80m, 40m, 20m, combined 10m/15m),
 again and applies the fixed addition only after the first eligible contact;
 these decisions and the source wording's ambiguity are documented in its guide.
 
-The event-specific exchange and history adapters consume the existing generic
-N1MM and contest-history libraries unchanged. The verified
+The event-specific exchange adapters use the shared callsign and contest-history
+libraries. Earlier releases downloaded
 [ZOMBIE_004.txt](https://n1mmwp.hamdocs.com/mmfiles/zombie_004-txt/), dated
-October 18, 2025, supplies 66 callsign entries. Its four historical `3333`
-bonus values are omitted from 2026 number suggestions while retaining names
-and locations. Historical exchange data remains advisory and does not replace
-operator corrections. No membership roster or annual publication promise is
-implied by that community file.
+October 18, 2025, with 66 entries. That page now returns 404 and N1MM's
+call-history search has no Zombie result. Version 0.15.3 removes the downloader,
+file parser, snapshot cache and source setting; the old file is not bundled or
+used as a fallback. Suggestions now come only from logged Zombie contacts.
+Historical bonus filtering, operator corrections and explicit clearing remain
+in place. No membership roster or annual publication promise is implied.
 
 Zombie Shuffle is independent of the temporary CWT and CQ WW previews and
 does not modify their runtime, translations, shared adapters, or exports.

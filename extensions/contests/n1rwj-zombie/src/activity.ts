@@ -6,7 +6,6 @@ import type {
   LoggingControlDescriptor,
   RefHandlerHook,
 } from '@ham2k/extension-sdk'
-import type { LoadedFile } from './data.ts'
 import { effectiveSent, exchangeText, received } from './exchange.ts'
 import { createZombieHistory } from './history.ts'
 import {
@@ -24,10 +23,7 @@ import { zombieSpcSuggestion } from './spc.ts'
 
 type Manifest = { key: string; icon: string; accentColor: string }
 
-export function createActivity(
-  manifest: Manifest,
-  file: () => LoadedFile | undefined = () => undefined,
-) {
+export function createActivity(manifest: Manifest) {
   const history = createZombieHistory()
   const activity = {
     async suggest({ searchTerm, scoped }, _ctx) {
@@ -134,7 +130,7 @@ export function createActivity(
     },
     async loggingControls({ operation, qso }, ctx) {
       if (!refOf(operation)) return []
-      const hints = await history.suggestions(operation, qso ?? {}, ctx, file())
+      const hints = await history.suggestions(operation, qso ?? {}, ctx)
       const spc = hints.spc || zombieSpcSuggestion(object(qso?.their))
       const control = (
         field: string,

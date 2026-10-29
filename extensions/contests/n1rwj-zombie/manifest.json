@@ -12,7 +12,6 @@
   "hooks": [
     "activity",
     "adifFields",
-    "dataFile",
     "export",
     "lookup",
     "panel",
@@ -20,7 +19,6 @@
     "scoring",
     "settingsPanel"
   ],
-  "domains": ["n1mm.hamdocs.com", "n1mmwp.hamdocs.com"],
   "settings": {
     "section": "activities"
   },

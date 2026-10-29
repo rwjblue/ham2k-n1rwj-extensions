@@ -92,12 +92,14 @@ links, export instructions, certificate requests, and verification limits.
 
 ### Zombie Shuffle
 
-Install `n1rwj-zombie-0.14.1.h2kext` from
-[v0.14.1](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.14.1).
+Install `n1rwj-zombie-0.15.3.h2kext` from
+[v0.15.3](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.15.3).
 Create a dedicated **Zombie Shuffle 2026** operation and configure your sent
 exchange and event-day UTC offset. Add **Edit Layout → Add a Panel → Zombie
 Shuffle** for the graveyard, rebirth watch and Book of the Undead. Panel settings
 choose the view and motion; native Info also shows the score and identity hints.
+Zombie no longer downloads N1MM call history; exchange hints come from your
+logged Zombie contacts.
 See the [operator guide](extensions/contests/n1rwj-zombie/README.md) for timer
 semantics and the start/break override limitation. Native UI/on-air acceptance
 remains pending.

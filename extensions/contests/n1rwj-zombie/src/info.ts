@@ -33,7 +33,7 @@ export interface ZombieCandidateInfoInput {
   rebirth?: Pick<ZombieRebirth, 'status' | 'nextAt' | 'remainingMillis'>
 }
 
-/** Names and downloaded history are data, including Markdown/HTML-looking text. */
+/** Names and contact history are data, including Markdown/HTML-looking text. */
 function plain(value: string): string {
   return [...value]
     .map((character) =>

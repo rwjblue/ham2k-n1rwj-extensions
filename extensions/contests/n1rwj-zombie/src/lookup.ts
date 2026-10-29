@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MPL-2.0
 import type { CallInfoLookup, LookupHook } from '@ham2k/extension-sdk'
 import { isCallsign, normalizeCall } from '../../../../packages/n1mm/src/callsign.ts'
-import type { LoadedFile } from './data.ts'
 import { received } from './exchange.ts'
 import type { createZombieHistory, ZombieSuggestions } from './history.ts'
 import { zombieIdentityNotes } from './info.ts'
@@ -11,10 +10,7 @@ import { EVENT_REF, type Exchange, object, refOf, text } from './model.ts'
 type ZombieAnnotation = CallInfoLookup & { note?: string; emoji?: string }
 
 /** Static, scoped identity notes. No cached readiness, roster claim or network access. */
-export function createZombieLookup(
-  history: ReturnType<typeof createZombieHistory>,
-  file: () => LoadedFile | undefined = () => undefined,
-): LookupHook {
+export function createZombieLookup(history: ReturnType<typeof createZombieHistory>): LookupHook {
   return {
     async lookupCall({ callInfo, operation, qso }, ctx) {
       if (text(refOf(operation)?.ref) !== EVENT_REF) return []
@@ -29,7 +25,6 @@ export function createZombieLookup(
           operation,
           { ...qso, their: { ...their, call } },
           ctx,
-          file(),
         )
       } catch {
         // Optional history must not hide the operator's own current exchange.

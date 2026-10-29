@@ -1,6 +1,5 @@
 import type { JSONValue } from '@ham2k/extension-sdk'
 import { describe, expect, it, vi } from 'vitest'
-import { checkedZombieSnapshot } from '../src/data.ts'
 import { createZombieHistory, historicalNumber, zombieHistoryContact } from '../src/history.ts'
 
 type Qson = Record<string, JSONValue>
@@ -32,13 +31,6 @@ const contact = (
     },
   ],
 })
-const file = checkedZombieSnapshot({
-  schema: 1,
-  body: '# ZOMBIE\n# LastEdit,2025-10-18\n!!Order!!,Call,Name,Exch1,MISC\nK1ABC,FILE,002,MA',
-  url: 'https://n1mmwp.hamdocs.com/zombie.txt',
-  fetchedAt: '2026-10-19T12:00:00Z',
-})
-
 describe('Zombie exchange history', () => {
   it.each([
     ['3333', 2025, 2026, ''],
@@ -80,7 +72,7 @@ describe('Zombie exchange history', () => {
     }
     expect(zombieHistoryContact(captured)?.eventYear).toBe(2025)
   })
-  it('uses current-operation corrections then same-event copied fields then downloaded fields then older history', async () => {
+  it('uses current-operation corrections then same-event copied fields then older Zombie history', async () => {
     const history = createZombieHistory()
     const current = contact('current', 'CURRENT', '', '', 2026, 3)
     const sameYear = contact('same-year', 'SAME YEAR', '4321', '', 2026, 2)
@@ -94,10 +86,10 @@ describe('Zombie exchange history', () => {
       getQsos,
       getHistoryForCall: vi.fn(async () => [old, sameYear, current]),
     }
-    expect(await history.suggestions(operation, qso, ctx, file)).toEqual({
+    expect(await history.suggestions(operation, qso, ctx)).toEqual({
       zombieName: 'CURRENT',
       zombieNumber: '4321',
-      spc: 'MA',
+      spc: 'CT',
     })
     expect(getQsos).not.toHaveBeenCalled()
     expect(ctx.getHistoryForCall).toHaveBeenCalledWith('K1ABC', { refType: 'zombie' })
@@ -106,7 +98,7 @@ describe('Zombie exchange history', () => {
     const history = createZombieHistory()
     const copied = contact('current', 'IGOR', '3333', 'CT')
     history.update({ operation, qsos: [copied] })
-    expect(await history.suggestions(operation, qso, { online: false }, file)).toEqual({
+    expect(await history.suggestions(operation, qso, { online: false })).toEqual({
       zombieName: 'IGOR',
       zombieNumber: '3333',
       spc: 'CT',
@@ -126,10 +118,10 @@ describe('Zombie exchange history', () => {
   })
   it('does not use another band-independent identity as a portable SPC', async () => {
     const history = createZombieHistory()
-    history.update({ operation, qsos: [] })
+    history.update({ operation, qsos: [contact('known', 'IGOR', '002', 'MA')] })
     expect(
-      await history.suggestions(operation, { their: { call: 'K1ABC/P' } }, { online: false }, file),
-    ).toEqual({ zombieName: 'FILE', zombieNumber: '002' })
+      await history.suggestions(operation, { their: { call: 'K1ABC/P' } }, { online: false }),
+    ).toEqual({ zombieName: 'IGOR', zombieNumber: '002' })
   })
   it('uses the latest contact within each source and excludes the edited QSO', async () => {
     const history = createZombieHistory()
@@ -151,7 +143,7 @@ describe('Zombie exchange history', () => {
     const getQsos = vi.fn(async () => [current])
     const ctx = { online: false, getQsos, getHistoryForCall: async () => [current] }
     for (let i = 0; i < 3; i++)
-      expect(await history.suggestions(operation, qso, ctx, file)).toEqual({
+      expect(await history.suggestions(operation, qso, ctx)).toEqual({
         zombieName: 'CORRECTED',
         zombieNumber: '002',
         spc: 'VT',
@@ -159,36 +151,30 @@ describe('Zombie exchange history', () => {
     expect(getQsos).toHaveBeenCalledTimes(1)
     const offline = createZombieHistory()
     expect(
-      await offline.suggestions(
-        operation,
-        qso,
-        {
-          online: false,
-          getHistoryForCall: async () => {
-            throw new Error('Unavailable')
-          },
+      await offline.suggestions(operation, qso, {
+        online: false,
+        getHistoryForCall: async () => {
+          throw new Error('Unavailable')
         },
-        file,
-      ),
-    ).toEqual({ zombieName: 'FILE', zombieNumber: '002', spc: 'MA' })
+      }),
+    ).toEqual({})
   })
   it('does not reclassify a deleted current-operation contact as older history', async () => {
     const history = createZombieHistory()
     history.update({ operation, qsos: [contact('gone', 'DELETED', '1', 'CT')] })
     const getQsos = vi.fn(async () => [])
     expect(
-      await history.suggestions(
-        operation,
-        qso,
-        { online: false, getQsos, getHistoryForCall: async () => [] },
-        file,
-      ),
-    ).toEqual({ zombieName: 'FILE', zombieNumber: '002', spc: 'MA' })
+      await history.suggestions(operation, qso, {
+        online: false,
+        getQsos,
+        getHistoryForCall: async () => [],
+      }),
+    ).toEqual({})
     expect(getQsos).toHaveBeenCalledTimes(1)
   })
   it('returns no suggestions outside the activity or without a callsign', async () => {
     const history = createZombieHistory()
-    expect(await history.suggestions({}, qso, { online: false }, file)).toEqual({})
-    expect(await history.suggestions(operation, {}, { online: false }, file)).toEqual({})
+    expect(await history.suggestions({}, qso, { online: false })).toEqual({})
+    expect(await history.suggestions(operation, {}, { online: false })).toEqual({})
   })
 })

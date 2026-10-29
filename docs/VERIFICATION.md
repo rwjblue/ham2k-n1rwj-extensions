@@ -1,5 +1,33 @@
 # Verification and compatibility
 
+## Zombie call-history removal — 2026-10-29
+
+The public N1MM Zombie file page returns 404 and the filtered call-history
+listing has no Zombie result. Remove the registered data file, downloader,
+parser, snapshot cache, source setting and N1MM network grants. The Activities
+dialog retains its offline event guide. Old downloaded snapshots and source
+settings are ignored; no replacement roster is bundled.
+
+- `mise run format` and `mise run check` pass: **1,884 tests across 140 files**,
+  lint, strict runtime/test/task typechecks, eleven ES2020 builds and official
+  packaging.
+- The bundle regression rejects every activation host call, asserts that no
+  `dataFile` hook or network grant exists, and exercises logged-contact hints
+  while leaving unknown Zombie names and numbers unsuggested.
+- Contact-history tests retain current-operation/same-event/older-event
+  precedence, stale bonus filtering, leading zeros, portable identity matching,
+  explicit corrections and clearing, and bounded log access. The read-only
+  settings test verifies that old source values never trigger reads or writes.
+- `mise run verify-host n1rwj-zombie` passes against the installed
+  **Ham2K Mac Logger (Next) 26.9.0, build 184** kernel, SHA-256
+  `7cdaf082cae88298ae61786d01f4d3ee7ab33a10890c9c6cebd8016e3f83e3cf`.
+  It activates all eight remaining hooks, with no data-file hook.
+
+Installed-kernel verification runs under Node VM; native UI, device upgrade
+and on-air acceptance remain separate. Shared runtime modules and CWT behavior
+are unchanged, so this Zombie-only removal is exempt from upstream CWT
+synchronization.
+
 ## BKG Companion first cut — 2026-10-29
 
 Implemented `n1rwj-bkg` at the current synchronized development version,

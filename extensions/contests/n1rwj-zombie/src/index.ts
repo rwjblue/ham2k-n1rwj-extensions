@@ -3,16 +3,15 @@
 import { defineExtension } from '@ham2k/extension-sdk'
 import manifest from '../manifest.json'
 import { createActivity } from './activity.ts'
-import { createZombieData } from './data.ts'
 import { createExports } from './exports.ts'
 import { createZombieLookup } from './lookup.ts'
 import { TYPE } from './model.ts'
 import { createZombiePanel } from './panel.ts'
 import { createScoringHook } from './scorer.ts'
+import { createZombieSettings } from './settings.ts'
 
 export function createZombieHooks() {
-  const data = createZombieData()
-  const { activity, refHandler, history } = createActivity(manifest, data.cache.current)
+  const { activity, refHandler, history } = createActivity(manifest)
   const base = createScoringHook()
   const scoring = {
     ...base,
@@ -26,10 +25,9 @@ export function createZombieHooks() {
     refHandler,
     scoring,
     panel: createZombiePanel(),
-    lookup: createZombieLookup(history, data.cache.current),
+    lookup: createZombieLookup(history),
     ...createExports(manifest),
-    dataFile: data.dataFile,
-    settings: data.settings,
+    settings: createZombieSettings(manifest),
   }
 }
 
@@ -44,7 +42,6 @@ defineExtension({
     registerHook('lookup', { key: manifest.key, hook: hooks.lookup })
     registerHook('adifFields', { key: manifest.key, hook: hooks.adifFields })
     registerHook('export', { key: manifest.key, hook: hooks.exports })
-    registerHook('dataFile', { key: hooks.dataFile.key, hook: hooks.dataFile })
     registerHook('settingsPanel', { key: manifest.key, hook: hooks.settings })
   },
 })
