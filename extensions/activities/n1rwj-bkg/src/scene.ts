@@ -21,12 +21,9 @@ export const fistArtwork = svg(
   '<g fill="#D4AF37" stroke="#0B0906" stroke-width="4" stroke-linejoin="round"><path d="M24 84V60L14 49q-7-10 3-14l15 9V24q0-13 11-11 7 1 7 11V13q0-12 11-9 6 1 6 10v9q0-13 11-10 7 2 7 12v12q0-11 10-8 6 2 5 12l-3 26-17 17z"/><path d="M32 44l17 12m1-32v22m17-23v23m18-9v14M41 67h36" fill="none"/></g>',
 )
 
-export function bkgScene(view: PanelView, environment: PanelEnvironment, spacing = 1): PanelScene {
+export function bkgScene(view: PanelView, environment: PanelEnvironment): PanelScene {
   const width = Math.max(160, environment.width),
-    height = Math.max(
-      environment.height,
-      505 + view.spots.length * 48 * spacing + (view.current ? 72 : 0),
-    )
+    height = Math.max(environment.height, 505 + view.spots.length * 48 + (view.current ? 72 : 0))
   const layers: PanelSceneLayer[] = []
   const p = Math.min(20, width * 0.045),
     left = Math.max(p, (width - 620) / 2),
@@ -195,7 +192,7 @@ export function bkgScene(view: PanelView, environment: PanelEnvironment, spacing
         700,
       )
       label(`spot-${index}-detail`, row.detail, left, y + 21, cw, 10, MUTED)
-      y += 48 * spacing
+      y += 48
     }
   box('footer', left, footerY, cw, footerHeight, RULE, '#211007')
   label('hunt-label', 'HUNT THE WHOLE GANG', left + 10, footerY + 6, cw - 20, 11, GOLD, 800)
@@ -288,22 +285,7 @@ export function bkgScene(view: PanelView, environment: PanelEnvironment, spacing
     height: height + 44,
     scroll: { axis: 'y', value: 'scrollY' },
     radio: {},
-    values: { scrollY: 0, spotCount: view.spots.length, joiningBand: view.radioReady ? 1 : 0 },
+    values: { scrollY: 0, joiningBand: view.radioReady ? 1 : 0 },
     layers,
-    controls: [
-      {
-        id: 'spot-spacing',
-        kind: 'zoom',
-        label: 'Pinch or drag the right edge to change spot spacing',
-        event: 'spot-spacing',
-        x: width - 16,
-        y: 44,
-        width: 16,
-        height,
-        min: 0.8 / spacing,
-        max: 2 / spacing,
-        when: { value: 'spotCount', min: 1 },
-      },
-    ],
   }
 }

@@ -1,8 +1,9 @@
 import { host } from '@ham2k/extension-sdk'
 import { afterEach, expect, it, vi } from 'vitest'
 import { bkgEnvironment, bkgPreviewFixtures } from '../../../../scripts/bkg-preview.ts'
+import * as model from '../src/model.ts'
 import { createPanel } from '../src/panel.ts'
-import { args, roster, spot } from './fixtures.ts'
+import { args, qso, roster } from './fixtures.ts'
 
 afterEach(() => vi.restoreAllMocks())
 
@@ -82,44 +83,59 @@ it('refreshes 2m CW guidance on radio events without rereading the log while typ
   }
   const read = vi.spyOn(host, 'readRadio').mockResolvedValue(radio)
   const getQsos = vi.fn(async () => [])
-  const panel = createPanel(roster, undefined, async () => 'N0AAA')
+  const getRoster = vi.fn(roster)
+  const worked = vi.spyOn(model, 'workedMembers')
+  const panel = createPanel(getRoster, undefined, async () => 'N0AAA')
   const renderArgs = args({ environment: bkgEnvironment(380, 300), instanceId: 'one' })
   expect((await panel.getPanels({}, { online: false }))[0]?.on).toContain('radio')
   const first = await panel.render(renderArgs, { online: false, getQsos })
   if (first.kind !== 'scene') throw new Error('Expected scene')
   expect(first.scene.values.joiningBand).toBe(1)
   await panel.render({ ...renderArgs, reason: 'qso' }, { online: false, getQsos })
-  expect(read).toHaveBeenCalledTimes(1)
+  expect(read).toHaveBeenCalledTimes(2)
   expect(getQsos).toHaveBeenCalledTimes(1)
   read.mockResolvedValue({ ...radio, frequencyHz: 14_050_000 })
   const next = await panel.render({ ...renderArgs, reason: 'radio' }, { online: false, getQsos })
   if (next.kind !== 'scene') throw new Error('Expected scene')
   expect(next.scene.values.joiningBand).toBe(0)
   expect(getQsos).toHaveBeenCalledTimes(1)
+  for (const reason of ['visible', 'coalesced']) {
+    read.mockResolvedValue(radio)
+    const resumed = await panel.render({ ...renderArgs, reason }, { online: false, getQsos })
+    if (resumed.kind !== 'scene') throw new Error('Expected scene')
+    expect(resumed.scene.values.joiningBand).toBe(1)
+    read.mockResolvedValue({ ...radio, status: 'disconnected' })
+    const disconnected = await panel.render({ ...renderArgs, reason }, { online: false, getQsos })
+    if (disconnected.kind !== 'scene') throw new Error('Expected scene')
+    expect(disconnected.scene.values.joiningBand).toBe(0)
+  }
+  expect(getQsos).toHaveBeenCalledTimes(1)
+  expect(worked).toHaveBeenCalledTimes(1)
+  getRoster.mockReturnValue({ ...roster(), revision: 'new-roster' })
+  await panel.render({ ...renderArgs, reason: 'radio' }, { online: false, getQsos })
+  expect(worked).toHaveBeenCalledTimes(2)
+  expect(getQsos).toHaveBeenCalledTimes(1)
 })
 
-it('commits bounded spot spacing per placement and ignores invalid control events', async () => {
+it('invalidates derived progress after an overlapping radio render during a log refresh', async () => {
+  let finish!: (qsos: ReturnType<typeof qso>[]) => void
+  const getQsos = vi.fn(async () => [] as ReturnType<typeof qso>[])
   const panel = createPanel(roster, undefined, async () => 'N0AAA')
-  const renderArgs = args({ environment: bkgEnvironment(380, 300), instanceId: 'one' })
-  const ctx = { online: false, getSpots: async () => [spot('N0AAA'), spot('N0BBB')] }
-  const before = await panel.render(renderArgs, ctx)
-  if (before.kind !== 'scene' || !panel.onEvent) throw new Error('Expected interactive scene')
-  const event = {
-    controlId: 'spot-spacing',
-    action: 'spot-spacing',
-    phase: 'commit' as const,
-    sequence: 1,
-    value: 2,
-  }
-  await panel.onEvent({ ...renderArgs, event }, ctx)
-  const after = await panel.render({ ...renderArgs, reason: 'event' }, ctx)
-  if (after.kind !== 'scene') throw new Error('Expected scene')
-  expect(after.scene.height).toBeGreaterThan(before.scene.height)
-  for (const value of [NaN, -1, 0])
-    await panel.onEvent({ ...renderArgs, event: { ...event, value } }, ctx)
-  const retained = await panel.render({ ...renderArgs, reason: 'event' }, ctx)
-  expect(retained).toEqual(after)
-  const other = await panel.render({ ...renderArgs, instanceId: 'two', reason: 'event' }, ctx)
-  if (other.kind !== 'scene') throw new Error('Expected scene')
-  expect(other.scene.height).toBe(before.scene.height)
+  const ctx = { online: false, getQsos }
+  await panel.render(args(), ctx)
+  getQsos.mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        finish = resolve
+      }),
+  )
+  const refresh = panel.render(args({ qsoCount: 1, reason: 'qsoLogged' }), ctx)
+  await panel.render(args({ qsoCount: 1, reason: 'radio' }), ctx)
+  finish([qso()])
+  const fresh = await refresh
+  if (fresh.kind !== 'markdown') throw new Error('Expected Markdown')
+  expect(fresh.content).toContain('1 distinct BKG members')
+  const next = await panel.render(args({ qsoCount: 1, reason: 'qso' }), ctx)
+  expect(next).toEqual(fresh)
+  expect(getQsos).toHaveBeenCalledTimes(2)
 })

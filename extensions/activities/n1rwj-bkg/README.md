@@ -100,9 +100,8 @@ acceptance is claimed.
 ## Native panel controls
 
 Ham2K extension API 13 is required. The BKG card scrolls vertically in short
-panes; pinch or drag the right edge to adjust spot-list spacing. Font sizes
-remain unchanged, and high-contrast or enlarged-text layouts retain native
-Markdown. Spacing is temporary and independent for each panel placement.
+panes. Font sizes remain unchanged, and high-contrast or enlarged-text layouts
+retain native Markdown.
 
 The extension requests read-only radio access. A fixed strip follows the
 logging radio’s frequency, mode and connection through native scene bindings;

@@ -95,7 +95,13 @@ export function panelMarkdown(view: PanelView): string {
     .filter(Boolean)
     .join('\n\n')
 }
-type LogSnapshot = { generation: number; qsos?: Qson[]; count: number }
+type LogSnapshot = {
+  generation: number
+  qsos?: Qson[]
+  count: number
+  worked?: Set<number>
+  rosterRevision?: string
+}
 type SpotSnapshot = { spots: BoardSpot[]; at: number; failed: boolean }
 
 /** Home/Logs omit operation at runtime. Never read a log while typing. */
@@ -106,9 +112,7 @@ export function createPanel(
 ): PanelHook {
   const snapshots = new Map<string, LogSnapshot>()
   const boards = new Map<string, SpotSnapshot>()
-  const spacing = new Map<string, number>()
-  let radioReady = false,
-    radioRead = false
+  let radioReady = false
   let profile = '',
     profileAt = -Infinity
   return {
@@ -140,7 +144,7 @@ export function createPanel(
       const operationId = text(operation.uuid)
       let worked: Set<number> | undefined
       if (operationId && ctx.getQsos) {
-        const state = snapshots.get(operationId) ?? { generation: 0, count: -1 }
+        const state: LogSnapshot = snapshots.get(operationId) ?? { generation: 0, count: -1 }
         snapshots.delete(operationId)
         snapshots.set(operationId, state)
         while (snapshots.size > 8) {
@@ -155,18 +159,30 @@ export function createPanel(
           (args.reason === 'tick' && !state.qsos)
         ) {
           const generation = ++state.generation
+          state.worked = undefined
+          state.rosterRevision = undefined
           state.count = args.qsoCount
           try {
             const qsos = await ctx.getQsos(operationId)
             if (generation !== state.generation) return { kind: 'markdown', content: '' }
             state.qsos = qsos ?? undefined
+            state.worked = undefined
+            state.rosterRevision = undefined
             state.count = args.qsoCount
           } catch {
             if (generation !== state.generation) return { kind: 'markdown', content: '' }
             state.qsos = undefined
+            state.worked = undefined
+            state.rosterRevision = undefined
           }
         }
-        if (state.qsos && roster) worked = workedMembers(state.qsos, roster)
+        if (state.qsos && roster) {
+          if (!state.worked || state.rosterRevision !== roster.revision) {
+            state.worked = workedMembers(state.qsos, roster)
+            state.rosterRevision = roster.revision
+          }
+          worked = state.worked
+        }
       }
       let spots: BoardSpot[] = []
       let spotsStatus = ctx.getSpots
@@ -263,48 +279,32 @@ export function createPanel(
           environment.width < 240 ||
           environment.height < 270)
       if (environment?.version === 1 && !accessibleText) {
-        if (!radioRead || args.reason === 'radio' || args.reason === 'operation') {
-          radioRead = true
-          try {
-            const radio = await host.readRadio()
-            radioReady = Boolean(
-              radio &&
-                radio.status === 'connected' &&
-                !radio.stale &&
-                radio.frequencyHz !== null &&
-                radio.frequencyHz >= 144_000_000 &&
-                radio.frequencyHz < 148_000_000 &&
-                ['CW', 'CW-R', 'CWR'].includes(radio.mode ?? ''),
-            )
-          } catch {
-            radioReady = false
-          }
+        // Hidden and coalesced radio triggers arrive with a different reason.
+        // Read the current local state on every scene render; never poll.
+        try {
+          const radio = await host.readRadio()
+          radioReady = Boolean(
+            radio &&
+              radio.status === 'connected' &&
+              !radio.stale &&
+              radio.frequencyHz !== null &&
+              radio.frequencyHz >= 144_000_000 &&
+              radio.frequencyHz < 148_000_000 &&
+              ['CW', 'CW-R', 'CWR'].includes(radio.mode ?? ''),
+          )
+        } catch {
+          radioReady = false
         }
+
         view.radioReady = radioReady
       }
       return environment?.version === 1 && !accessibleText
         ? {
             kind: 'scene',
-            scene: bkgScene(view, environment, spacing.get(args.instanceId ?? 'default') ?? 1),
+            scene: bkgScene(view, environment),
             title,
           }
         : { kind: 'markdown', content: panelMarkdown(view), title }
-    },
-    async onEvent(args) {
-      const event = args.event
-      if (
-        event.controlId === 'spot-spacing' &&
-        event.action === 'spot-spacing' &&
-        event.phase === 'commit' &&
-        typeof event.value === 'number' &&
-        event.value > 0 &&
-        Number.isFinite(event.value)
-      ) {
-        const key = args.instanceId ?? 'default'
-        spacing.set(key, Math.min(2, Math.max(0.8, (spacing.get(key) ?? 1) * event.value)))
-        if (spacing.size > 16) spacing.delete(spacing.keys().next().value ?? '')
-      }
-      return { values: {} }
     },
   }
 }
