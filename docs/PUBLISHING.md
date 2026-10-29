@@ -19,6 +19,39 @@ remain historical; no new release or catalog submission accompanies removal.
 
 ## Current release status
 
+[v0.17.0](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.17.0)
+was published from signed main commit `ad433250bb949e6a2b1053f2fef74079f1a26078`
+on **October 29, 2026 at 19:15:39 US Eastern (23:15:39 UTC)**. All
+**twelve bundles and twelve checksum files** are available. The
+[check workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/40971780574)
+and both jobs of the
+[release workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/40971902010)
+passed. Downloaded assets passed `mise run release:catalog v0.17.0 --dry-run`,
+and the release body exactly matches `docs/releases/v0.17.0.md`.
+
+**All twelve extensions are approved and current at 0.17.0 on `stable`**,
+released between **23:16:44.648 and 23:16:59.175 UTC**. Their public bundle
+bytes, sizes, SHA-256 hashes and scoped notes match GitHub. The shared SDK/tools
+and patched build dependencies select every extension for this publication.
+
+CWT/MST/SST adopt native N1MM downloads at API 11; CWT and SKCC use native
+Data Files persistence without oversized KV copies. SKCC/RBN use folded
+settings at API 12. BKG uses native scrolling and read-only live radio context
+at API 13. BKG/SKCC progress also recovers hidden and merged host events.
+Discovery and updates were verified across API 1, 5, 9, 10, 11, 12 and 13,
+including compatible older-version fallbacks.
+
+All checks passed: **1,880 tests in 142 files**, strict types, lint, twelve
+builds and official packages. Both independent audits are complete; no required
+API upgrades remain. Native zoom was withheld because its whole-scene behavior
+breaks card geometry. Installed-kernel VM and static previews are recorded
+separately from native device/on-air acceptance. CWT changes are synchronized
+to [upstream PR #1](https://github.com/ham2k/extensions/pull/1); other extensions
+and personal packaging are exempt. See the [release notes](releases/v0.17.0.md)
+and [verification record](VERIFICATION.md#release-0170-publication--2026-10-29).
+
+### Previous releases
+
 [v0.16.0](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.16.0)
 was published from signed main commit `3bac28646dbef95d5e079a1be5f8109a6f996927`
 on **October 29, 2026 at 18:32:31 US Eastern (22:32:31 UTC)**. All
@@ -46,8 +79,6 @@ acceptance remain separate. See the [release notes](releases/v0.16.0.md) and
 [verification record](VERIFICATION.md#release-0160-publication--2026-10-29).
 These BKG, Zombie-only and personal packaging changes are exempt from CWT
 upstream synchronization. The broader host API migration is separate.
-
-### Previous releases
 
 [v0.15.2](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.15.2)
 was published from signed main commit `e45bdecc817892a894cbd7ebfce8d3e029f1fb02`

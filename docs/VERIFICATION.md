@@ -1,5 +1,59 @@
 # Verification and compatibility
 
+## Release 0.17.0 publication — 2026-10-29
+
+Published [v0.17.0](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.17.0)
+from signed main commit `ad433250bb949e6a2b1053f2fef74079f1a26078` at
+**19:15:39 US Eastern (23:15:39 UTC)**. GitHub verifies all eight implementation,
+release preparation and review-correction commits. The tag resolves to the
+exact tested commit and the release body matches the authored notes.
+
+- The [check workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/40971780574)
+  and both jobs of the
+  [release workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/40971902010)
+  passed. All **twelve bundles and twelve checksum files** are archived.
+- Every extension is **approved** and current at **0.17.0** on `stable`, released
+  between **23:16:44.648 and 23:16:59.175 UTC**. Public bundle bytes, SHA-256,
+  sizes and scoped notes match the GitHub archives and authored sections.
+- `mise run release:catalog v0.17.0 --dry-run` downloaded and validated all
+  archives/checksums and selected all twelve extensions because shared SDK,
+  tools and build dependencies changed. Log:
+  `/tmp/ham2k-catalog-v0.17.0-dry-run.log`.
+- Public discovery and update offers were checked at API **1, 5, 9, 10, 11,
+  12 and 13**. New compatible offers numbered **2, 5, 6, 6, 9, 11 and 12**,
+  respectively. CWT/MST/SST require API 11; SKCC/RBN require API 12; BKG
+  requires API 13 and declares read-only radio access. Older hosts retain
+  compatible prior catalog versions. Update tests used approved installed
+  versions compatible with each simulated host, rather than unpublished
+  synchronized archive versions. Evidence:
+  `/tmp/ham2k-v0.17.0-public-verification.json`.
+- Final checks passed **1,880 tests in 142 files**, strict typechecking, lint,
+  twelve ES2020 builds and official packages. The dependency audit reports no
+  vulnerabilities for the released repository dependency tree. Logs:
+  `/tmp/ham2k-v0.17.0-visibility-check.log` and
+  `/tmp/ham2k-v0.17.0-release-workflow.log`.
+- Installed Next build 184 JavaScript-kernel verification passes under Node VM
+  for all twelve bundles; this tests registration, libraries and simulated
+  timer delivery. It does **not** establish native API 13 support in build 184.
+  Native device UI, scrolling gestures, upgrades and on-air acceptance remain
+  separate. Synthetic BKG previews were inspected; native zoom was removed
+  after review found that whole-scene zoom breaks the card geometry.
+
+Independent fresh-context release-readiness and API-opportunity audits found
+and verified fixes for hidden/coalesced radio state, overlapping derived-cache
+refreshes, and same-count log edits. BKG and SKCC now refresh immediately on
+reveal and explicit log changes; a one-minute real-clock cache lifetime recovers
+event reasons overwritten by the host without per-keystroke log reads. No
+required API migrations remain. Supported scene aliases and potential BIGFOOT
+workflow changes remain optional future work.
+
+CWT behavior, tests and documentation are synchronized to the source branch of
+[Ham2K/extensions PR #1](https://github.com/ham2k/extensions/pull/1), with signed
+commit `7320f5119b3591b7c7b7393c923210a15eafb043`. A clean dependency install,
+**96 CWT tests**, focused strict typecheck and official build/pack passed there;
+the PR description reflects API 11 and SDK/tools 1.13.0. Other extensions and
+personal release tooling/packaging are exempt from CWT synchronization.
+
 ## Release 0.16.0 publication — 2026-10-29
 
 Published [v0.16.0](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.16.0)
