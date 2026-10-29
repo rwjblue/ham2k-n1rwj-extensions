@@ -20,7 +20,7 @@ function required<T>(value: T | undefined): T {
 }
 
 it('registers and loads the weekly receiver data file in the packaged sandbox', async () => {
-  expect(manifest.api).toBe(5)
+  expect(manifest.api).toBe(12)
   const source = await readFile(new URL('../build/index.js', import.meta.url), 'utf8')
   const sharedModules = Object.fromEntries(
     await Promise.all(

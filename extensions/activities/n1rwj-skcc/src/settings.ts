@@ -35,7 +35,7 @@ export function createSettings(
           type: 'markdown',
           text: 'Recognize members, log the exchange, find friendly CW contacts and follow your SKCC goals. Suggestions remain editable. Only recorded exchanges and approved keying qualify for award reports.',
         },
-        { type: 'header', title: 'Your usual exchange' },
+        { type: 'header', style: 'section', key: 'skcc-exchange', title: 'Your usual exchange' },
         {
           type: 'field',
           fieldType: 'text',
@@ -69,7 +69,7 @@ export function createSettings(
           value: p.myKey,
           options: KEY_OPTIONS,
         },
-        { type: 'header', title: 'Companion panel' },
+        { type: 'header', style: 'section', key: 'skcc-companion', title: 'Companion panel' },
         {
           type: 'field',
           fieldType: 'number',
@@ -109,7 +109,13 @@ export function createSettings(
           description:
             'Verify the number on the official Monthly Brag page. Adding a bonus pins an automatic month to the current UTC month. Changing months clears the bonus.',
         },
-        { type: 'header', title: 'History and award applications' },
+        {
+          type: 'header',
+          style: 'section',
+          key: 'skcc-history',
+          title: 'History and award applications',
+          collapsed: true,
+        },
         {
           type: 'action',
           key: 'analyze',
@@ -127,14 +133,26 @@ export function createSettings(
           type: 'markdown',
           text: 'The panel distinguishes this operation from a dated imported-history snapshot. Importing here analyzes a copy; it does not insert contacts into the logger. Use the SKCC audit and application exports while this analysis is loaded. Native Chasing checklists use Ham2K’s own log.',
         },
-        { type: 'header', title: 'Offline membership data' },
+        {
+          type: 'header',
+          style: 'section',
+          key: 'skcc-offline',
+          title: 'Offline membership data',
+          collapsed: true,
+        },
         {
           type: 'markdown',
           text: roster
             ? `${roster.members.length.toLocaleString()} roster entries. Last downloaded ${new Date(roster.downloadedAt).toISOString()}. Refresh or remove **SKCC member roster** in the host’s Data Files controls.`
             : 'Download **SKCC member roster** in the host’s Data Files controls. Names, member lookup and award evaluation then work offline.',
         },
-        { type: 'header', title: 'Experimental native chasing' },
+        {
+          type: 'header',
+          style: 'section',
+          key: 'skcc-chasing',
+          title: 'Experimental native chasing',
+          collapsed: true,
+        },
         {
           type: 'markdown',
           text: 'Native award checklists require a host with EXP CHASE enabled. After refreshing the membership roster, reload the extension below, then turn EXP CHASE off and back on on a device holding the complete log. That asks the host to recalculate historical eligibility. A reload alone does not rebuild an unchanged program version. The companion reports always use the currently loaded roster.',
@@ -147,7 +165,13 @@ export function createSettings(
           value: p.rebuildChecklists,
           restartOnChange: true,
         },
-        { type: 'header', title: 'About SKCC Companion' },
+        {
+          type: 'header',
+          style: 'section',
+          key: 'skcc-about',
+          title: 'About SKCC Companion',
+          collapsed: true,
+        },
         {
           type: 'markdown',
           text: 'Personal N1RWJ extension, not an official SKCC product. SKCCLogger and SKCC Skimmer remain useful companions. Award thresholds mean ready for review, not sponsor approval. SKS is unassisted: close native spots, chasing, RBN and sked assistance when operating it.',
@@ -161,6 +185,7 @@ export function createSettings(
         { type: 'link', label: 'SKCC Sked Page', url: 'https://sked.skccgroup.com/' },
         { type: 'link', label: 'Manual-key policy', url: `${HOME}keypolicy.php` },
       ]
+      fields.push({ type: 'sectionEnd' })
       return { title: 'SKCC Companion', elements: fields }
     },
     async validateField({ fieldKey, value }) {

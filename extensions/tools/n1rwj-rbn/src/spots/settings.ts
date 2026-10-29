@@ -46,6 +46,8 @@ export function settingsDefinition(
       {
         type: 'header',
         style: 'section',
+        key: 'rbn-my-signal',
+        collapsed: true,
         title: 'My Signal — Who hears me',
       },
       {
@@ -55,6 +57,8 @@ export function settingsDefinition(
       {
         type: 'header',
         style: 'section',
+        key: 'rbn-exports',
+        collapsed: true,
         title: 'Exports',
       },
       {
@@ -71,6 +75,7 @@ export function settingsDefinition(
       {
         type: 'header',
         style: 'section',
+        key: 'rbn-spots',
         title: 'Spots — Who I might hear',
       },
       reset('resetAllSpotSettings', 'Reset all spot settings'),
@@ -107,7 +112,7 @@ export function settingsDefinition(
         options: spotModes.map((value) => ({ label: value === 'all' ? 'All' : value, value })),
       },
       reset('resetSpotMode', 'Reset mode — All'),
-      { type: 'header', title: 'CW speed range' },
+      { type: 'header', style: 'section', key: 'rbn-speed', title: 'CW speed range' },
       {
         type: 'markdown',
         text: 'Default: no speed limit. Leave either end blank for an open-ended range. Limits include the entered speeds and apply only to CW, including in All mode. CW reports without a known positive speed are excluded while a limit is set.',
@@ -129,7 +134,7 @@ export function settingsDefinition(
         value: selected.raw.spotMaxWpm ?? '',
       },
       reset('resetSpotSpeed', 'Reset CW speed range — No limits'),
-      { type: 'header', title: 'Receivers' },
+      { type: 'header', style: 'section', key: 'rbn-receivers', title: 'Receivers' },
       {
         type: 'markdown',
         text: 'Nearby receivers can help you find stations to try; reception at your station is not guaranteed. Every enabled receiver filter must match.',
@@ -175,7 +180,7 @@ export function settingsDefinition(
       },
       reset('resetSpotContinents', `Reset continents — ${continentLabel}`),
       reset('clearSpotContinents', 'Clear continent filter — All continents'),
-      { type: 'header', title: 'Receiver distance' },
+      { type: 'header', style: 'section', key: 'rbn-distance', title: 'Receiver distance' },
       {
         type: 'field',
         fieldType: 'text',
@@ -200,6 +205,7 @@ export function settingsDefinition(
         type: 'markdown',
         text: 'Distance is approximate, measured between grid centers. Refresh the RBN receiver directory in Data Files to load continents and updated grids. Bare receiver IDs use directory metadata only when their nodes agree. Conflicting node grids are excluded from grid-region and distance filters. Receivers with no known continent are excluded when continents are selected; receivers with no known grid are excluded when a grid region or distance limit is set.',
       },
+      { type: 'sectionEnd' },
       {
         type: 'markdown',
         text:

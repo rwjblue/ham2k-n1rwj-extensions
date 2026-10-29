@@ -4,7 +4,7 @@
   "version": "0.16.0",
   "description": "SKCC member names, manual-key exchanges, events, member spots and award progress with auditable application worksheets.",
   "category": "activity",
-  "api": 9,
+  "api": 12,
   "icon": "key",
   "keywords": [
     "skcc",
