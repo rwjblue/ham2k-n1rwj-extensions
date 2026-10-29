@@ -7,8 +7,9 @@ settings, account, identity picker, or operation activity is required.
 
 ## Install and use
 
-1. Install the locally built `dist/n1rwj-bkg-<version>.h2kext` on a host supporting
-   extension API 9. This extension is not yet published in a GitHub release.
+1. Install `n1rwj-bkg-0.16.0.h2kext` from the
+   [v0.16.0 release](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.16.0)
+   on a host supporting extension API 9.
 2. Ham2K downloads **BKG member roster** through its native Data Files manager.
    It becomes eligible for refresh after one day; native synchronization decides
    when to fetch. Manual refresh and offline cache removal remain in Data Files.

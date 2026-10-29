@@ -6,7 +6,7 @@ your signal is heard. Published extensions are available as ready-to-install
 
 | Extension | What it adds |
 | --- | --- |
-| [BKG Companion](extensions/activities/n1rwj-bkg/README.md) (`n1rwj-bkg`, unreleased) | Daily offline Brass Knuckle Gang roster, member highlights, a Home/operation panel and native Worked the Gang chasing for everyone |
+| [BKG Companion](extensions/activities/n1rwj-bkg/README.md) (`n1rwj-bkg`) | Daily offline Brass Knuckle Gang roster, member highlights, a Home/operation panel and native Worked the Gang chasing for everyone |
 | [SKCC Companion](extensions/activities/n1rwj-skcc/README.md) (`n1rwj-skcc`) | Offline member names, manual-key exchanges, SKCC events, member spots, award audits and application worksheets |
 | [BIGFOOT Hunt](extensions/activities/n1rwj-bigfoot/README.md) (`n1rwj-bigfoot`) | 2026 BIGFOOT letter and Skunk Ape bonus tracking, same-mode progress, and event worksheets |
 | [Contest Calendar](extensions/tools/n1rwj-contest-calendar/README.md) (`n1rwj-contest-calendar`) | Optional Home panel with upcoming contests, UTC/local times, and sponsor rules from ContestClock |
@@ -92,8 +92,8 @@ links, export instructions, certificate requests, and verification limits.
 
 ### Zombie Shuffle
 
-Install `n1rwj-zombie-0.15.3.h2kext` from
-[v0.15.3](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.15.3).
+Install `n1rwj-zombie-0.16.0.h2kext` from
+[v0.16.0](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.16.0).
 Create a dedicated **Zombie Shuffle 2026** operation and configure your sent
 exchange and event-day UTC offset. Add **Edit Layout → Add a Panel → Zombie
 Shuffle** for the graveyard, rebirth watch and Book of the Undead. Panel settings

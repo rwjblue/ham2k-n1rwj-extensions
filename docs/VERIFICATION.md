@@ -1,5 +1,26 @@
 # Verification and compatibility
 
+## Release 0.16.0 preparation — 2026-10-29
+
+Prepared the Zombie removal on top of the signed BKG implementation on main,
+`790e73b83d83dfa097018bfaad92cf9dd05dc6e3`. All twelve extension archives and
+shared workspaces use 0.16.0. The authored release notes select only BKG and
+Zombie for catalog submission; the other ten sections explicitly declare no
+extension-specific changes. Root dependencies and shared runtime code are
+unchanged.
+
+`mise run release:notes v0.16.0` validates the complete document and extracted
+catalog notes. `mise run release v0.16.0 --dry-run` passes **1,932 tests in
+143 files**, lint, strict runtime/test/task types, twelve ES2020 builds,
+official packaging, synchronized versions and all 24 bundle/checksum assets.
+Log: `/tmp/ham2k-release-v0.16.0-check.log`.
+
+The Zombie installed-kernel check below and the BKG implementation check use
+Next build 184. They are JavaScript contract checks, not native device upgrade,
+UI or on-air acceptance. This release contains BKG, Zombie-only behavior and
+personal packaging changes, exempt from CWT upstream synchronization. The
+broader host API migration is deferred to separate changes.
+
 ## Zombie call-history removal — 2026-10-29
 
 The public N1MM Zombie file page returns 404 and the filtered call-history

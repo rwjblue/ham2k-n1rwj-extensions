@@ -205,7 +205,7 @@ The event-specific exchange adapters use the shared callsign and contest-history
 libraries. Earlier releases downloaded
 [ZOMBIE_004.txt](https://n1mmwp.hamdocs.com/mmfiles/zombie_004-txt/), dated
 October 18, 2025, with 66 entries. That page now returns 404 and N1MM's
-call-history search has no Zombie result. Version 0.15.3 removes the downloader,
+call-history search has no Zombie result. Version 0.16.0 removes the downloader,
 file parser, snapshot cache and source setting; the old file is not bundled or
 used as a fallback. Suggestions now come only from logged Zombie contacts.
 Historical bonus filtering, operator corrections and explicit clearing remain

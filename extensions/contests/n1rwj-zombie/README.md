@@ -7,8 +7,8 @@ rebirth rule, previous-contact suggestions, score breakdown, ADIF, and a plain-t
 submission summary. This extension is independently installable as
 `n1rwj-zombie`, with activity/reference type `zombie`.
 
-Download `n1rwj-zombie-0.15.3.h2kext` from the
-[v0.15.3 release](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.15.3)
+Download `n1rwj-zombie-0.16.0.h2kext` from the
+[v0.16.0 release](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.16.0)
 and install it through Ham2K's extension settings. Building from source is also
 supported:
 
@@ -147,7 +147,7 @@ suggest names and locations while an obsolete bonus number is omitted. Unknown
 event years are handled conservatively for known bonus values. Saved exchanges,
 explicit corrections and deliberate clearing retain their existing behavior.
 
-Version 0.15.3 removes downloadable N1MM Zombie call history because the source
+Version 0.16.0 removes downloadable N1MM Zombie call history because the source
 file is no longer available. There is no Zombie Data Files entry or source URL
 setting, and previously downloaded snapshots are no longer used. Copy a new
 station's Zombie number and spooky name on the air; ordinary directory names
