@@ -104,6 +104,7 @@ interface OperationCache {
   qsos?: Qson[]
   report?: AwardReport
   generation: number
+  readAt: number
 }
 export function createPanel(
   getRoster: RosterGetter,
@@ -126,7 +127,8 @@ export function createPanel(
       await Promise.all([preferences.load(), audit.load()])
       const p = preferences.get(),
         roster = getRoster(),
-        now = args.clock?.nowMillis ?? Date.now()
+        now = args.clock?.nowMillis ?? Date.now(),
+        realNow = args.clock?.realNowMillis ?? Date.now()
       const month = p.month || new Date(now).toISOString().slice(0, 7)
       const event = eventOn(args.operation),
         operationId = text(args.operation.uuid)
@@ -149,7 +151,7 @@ export function createPanel(
         month,
         p.bragBonusNumber,
       ])
-      const state = cache.get(operationId) ?? { key: '', generation: 0 }
+      const state = cache.get(operationId) ?? { key: '', generation: 0, readAt: -Infinity }
       cache.set(operationId, state)
       const oldest = cache.keys().next().value
       if (cache.size > 4 && oldest !== undefined) cache.delete(oldest)
@@ -158,9 +160,16 @@ export function createPanel(
       if (
         operationId &&
         ctx.getQsos &&
-        (state.key !== key || args.reason === 'operation' || args.reason === 'qsoLogged')
+        (state.key !== key ||
+          args.reason === 'operation' ||
+          ['qsoLogged', 'visible'].includes(args.reason) ||
+          realNow < state.readAt ||
+          realNow - state.readAt >= 60_000)
       ) {
+        // Hidden/merged host events can lose the saved-contact reason.
+        // Revalidate at most once a minute during ordinary typing updates.
         const generation = ++state.generation
+        state.readAt = realNow
         state.key = key
         state.qsos = undefined
         state.report = undefined

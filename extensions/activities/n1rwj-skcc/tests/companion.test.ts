@@ -87,6 +87,62 @@ describe('SKCC companion panel', () => {
     await panel.render({ ...args, reason: 'qsoLogged' }, ctx)
     expect(ctx.getQsos).toHaveBeenCalledTimes(2)
   })
+  it('refreshes same-count corrections after hidden and coalesced events', async () => {
+    const { prefs, audit } = stores()
+    const panel = createPanel(() => roster, prefs, audit)
+    const contact = {
+      uuid: 'contact',
+      startAtMillis: now,
+      band: '40m',
+      mode: 'CW',
+      their: { call: 'K2ABC' },
+      our: {
+        call: 'N1ME',
+        skcc: { number: '1', name: 'Me', spc: 'MA', key: 'SK', qualified: true, keyDeclared: true },
+      },
+      refs: [
+        {
+          type: 'skcc',
+          ref: '2',
+          number: '2T',
+          name: 'Alice',
+          spc: 'NY',
+          qualified: true,
+          event: 'general',
+        },
+      ],
+    }
+    const getQsos = vi.fn(async () => [contact])
+    const ctx = { online: false, getQsos }
+    const renderArgs = { ...args, qsoCount: 1 }
+    expect(await panel.render(renderArgs, ctx)).toMatchObject({
+      content: expect.stringContaining('1 distinct qualifying members'),
+    })
+    getQsos.mockResolvedValue([{ ...contact, mode: 'SSB' }])
+    expect(await panel.render({ ...renderArgs, reason: 'visible' }, ctx)).toMatchObject({
+      content: expect.stringContaining('0 distinct qualifying members'),
+    })
+    getQsos.mockResolvedValue([contact])
+    await panel.render({ ...renderArgs, reason: 'coalesced' }, ctx)
+    expect(getQsos).toHaveBeenCalledTimes(2)
+    expect(
+      await panel.render(
+        {
+          ...renderArgs,
+          reason: 'coalesced',
+          clock: { nowMillis: now, realNowMillis: now + 60_000 },
+        },
+        ctx,
+      ),
+    ).toMatchObject({
+      content: expect.stringContaining('1 distinct qualifying members'),
+    })
+    await panel.render(
+      { ...renderArgs, reason: 'qso', clock: { nowMillis: now, realNowMillis: now + 60_001 } },
+      ctx,
+    )
+    expect(getQsos).toHaveBeenCalledTimes(3)
+  })
   it('suppresses live assistance in SKS without claiming to disable other sources', async () => {
     const { prefs, audit } = stores(),
       panel = createPanel(() => roster, prefs, audit)

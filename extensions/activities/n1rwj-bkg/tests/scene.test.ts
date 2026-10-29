@@ -109,12 +109,12 @@ it('refreshes 2m CW guidance on radio events without rereading the log while typ
     if (disconnected.kind !== 'scene') throw new Error('Expected scene')
     expect(disconnected.scene.values.joiningBand).toBe(0)
   }
-  expect(getQsos).toHaveBeenCalledTimes(1)
-  expect(worked).toHaveBeenCalledTimes(1)
+  expect(getQsos).toHaveBeenCalledTimes(3)
+  expect(worked).toHaveBeenCalledTimes(3)
   getRoster.mockReturnValue({ ...roster(), revision: 'new-roster' })
   await panel.render({ ...renderArgs, reason: 'radio' }, { online: false, getQsos })
-  expect(worked).toHaveBeenCalledTimes(2)
-  expect(getQsos).toHaveBeenCalledTimes(1)
+  expect(worked).toHaveBeenCalledTimes(4)
+  expect(getQsos).toHaveBeenCalledTimes(3)
 })
 
 it('invalidates derived progress after an overlapping radio render during a log refresh', async () => {
@@ -138,4 +138,59 @@ it('invalidates derived progress after an overlapping radio render during a log 
   const next = await panel.render(args({ qsoCount: 1, reason: 'qso' }), ctx)
   expect(next).toEqual(fresh)
   expect(getQsos).toHaveBeenCalledTimes(2)
+})
+
+it('refreshes same-count contact corrections after hidden and combined host events', async () => {
+  const getQsos = vi.fn(async () => [qso()])
+  const panel = createPanel(roster, undefined, async () => 'N0AAA')
+  const ctx = { online: false, getQsos }
+  const renderArgs = args({ qsoCount: 1 })
+  expect(await panel.render(renderArgs, ctx)).toMatchObject({
+    content: expect.stringContaining('1 distinct BKG members'),
+  })
+  getQsos.mockResolvedValue([{ ...qso(), mode: 'SSB' }])
+  expect(await panel.render({ ...renderArgs, reason: 'visible' }, ctx)).toMatchObject({
+    content: expect.stringContaining('0 distinct BKG members'),
+  })
+  getQsos.mockResolvedValue([qso()])
+  await panel.render({ ...renderArgs, reason: 'coalesced' }, ctx)
+  expect(getQsos).toHaveBeenCalledTimes(2)
+  expect(
+    await panel.render(
+      {
+        ...renderArgs,
+        reason: 'coalesced',
+        clock: {
+          nowMillis: renderArgs.clock?.nowMillis ?? 0,
+          realNowMillis: (renderArgs.clock?.realNowMillis ?? 0) + 60_000,
+        },
+      },
+      ctx,
+    ),
+  ).toMatchObject({
+    content: expect.stringContaining('1 distinct BKG members'),
+  })
+  await panel.render(
+    {
+      ...renderArgs,
+      reason: 'qso',
+      clock: {
+        nowMillis: renderArgs.clock?.nowMillis ?? 0,
+        realNowMillis: (renderArgs.clock?.realNowMillis ?? 0) + 60_001,
+      },
+    },
+    ctx,
+  )
+  await panel.render(
+    {
+      ...renderArgs,
+      reason: 'radio',
+      clock: {
+        nowMillis: renderArgs.clock?.nowMillis ?? 0,
+        realNowMillis: (renderArgs.clock?.realNowMillis ?? 0) + 60_002,
+      },
+    },
+    ctx,
+  )
+  expect(getQsos).toHaveBeenCalledTimes(3)
 })

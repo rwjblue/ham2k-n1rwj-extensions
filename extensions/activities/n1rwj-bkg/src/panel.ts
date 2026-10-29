@@ -99,6 +99,7 @@ type LogSnapshot = {
   generation: number
   qsos?: Qson[]
   count: number
+  readAt: number
   worked?: Set<number>
   rosterRevision?: string
 }
@@ -144,7 +145,11 @@ export function createPanel(
       const operationId = text(operation.uuid)
       let worked: Set<number> | undefined
       if (operationId && ctx.getQsos) {
-        const state: LogSnapshot = snapshots.get(operationId) ?? { generation: 0, count: -1 }
+        const state: LogSnapshot = snapshots.get(operationId) ?? {
+          generation: 0,
+          count: -1,
+          readAt: -Infinity,
+        }
         snapshots.delete(operationId)
         snapshots.set(operationId, state)
         while (snapshots.size > 8) {
@@ -155,10 +160,15 @@ export function createPanel(
           state.count < 0 ||
           state.count !== args.qsoCount ||
           args.reason === 'operation' ||
-          args.reason === 'qsoLogged' ||
+          ['qsoLogged', 'visible'].includes(args.reason) ||
+          now < state.readAt ||
+          now - state.readAt >= 60_000 ||
           (args.reason === 'tick' && !state.qsos)
         ) {
+          // The host can replace a saved-contact reason with typing/radio.
+          // Recover within a minute without fetching a log per keystroke.
           const generation = ++state.generation
+          state.readAt = now
           state.worked = undefined
           state.rosterRevision = undefined
           state.count = args.qsoCount
