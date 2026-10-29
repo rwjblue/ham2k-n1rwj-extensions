@@ -1,5 +1,39 @@
 # Verification and compatibility
 
+## Release 0.16.0 publication — 2026-10-29
+
+Published [v0.16.0](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.16.0)
+from signed main commit `3bac28646dbef95d5e079a1be5f8109a6f996927` at
+**18:32:31 US Eastern (22:32:31 UTC)**. GitHub verifies both the Zombie
+implementation and release-preparation commit signatures. The tag resolves
+to the tested commit and the body exactly matches the authored release notes.
+
+- The [check workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/40966433977)
+  and both jobs in the
+  [release workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/40966649612)
+  passed. GitHub contains all **24 bundle/checksum assets**.
+- `mise run release:catalog v0.16.0 --dry-run` downloaded and validated every
+  archive and checksum, selecting only BKG and Zombie and skipping the ten
+  unchanged entries. Log: `/tmp/ham2k-catalog-v0.16.0-dry-run.log`.
+- The catalog reports **approved** on `stable` for BKG and Zombie, released
+  at **22:33:30.084 and 22:33:31.742 UTC**, respectively. Both are current at
+  0.16.0. Scoped notes match the authored per-extension extraction exactly.
+- Downloaded public catalog bundles match their GitHub assets byte for byte,
+  including the GitHub-reported digest and size:
+  - BKG: **33,261 bytes**, SHA-256
+    `e10db2101364cb2322820aabff0c30833c10dda48a11074ff51e729d0a394aef`.
+  - Zombie: **98,773 bytes**, SHA-256
+    `9db7990b15e454c9cb1cf7f22dd3f58ba73dacfe7fc5880d6bb7e06272377d2f`.
+- API-1, API-9 and API-13 public discovery offers Zombie 0.16.0. API-9 and
+  API-13 also offer BKG 0.16.0; API-1 omits BKG. A read-only request to the
+  app's update-check endpoint with an installed Zombie 0.15.1 and API 1
+  offers 0.16.0. Zombie's approved manifest has eight hooks and no data file.
+  Evidence: `/tmp/ham2k-v0.16.0-public-verification.json`.
+
+The preparation record below defines automated coverage and native acceptance
+limits. BKG, Zombie-only changes and personal publishing are exempt from CWT
+upstream synchronization. No broader host API migration is included.
+
 ## Release 0.16.0 preparation — 2026-10-29
 
 Prepared the Zombie removal on top of the signed BKG implementation on main,

@@ -19,6 +19,36 @@ remain historical; no new release or catalog submission accompanies removal.
 
 ## Current release status
 
+[v0.16.0](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.16.0)
+was published from signed main commit `3bac28646dbef95d5e079a1be5f8109a6f996927`
+on **October 29, 2026 at 18:32:31 US Eastern (22:32:31 UTC)**. All
+**twelve bundles and twelve checksum files** are available. The
+[check workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/40966433977)
+and both jobs in the
+[release workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/40966649612)
+passed. Downloaded assets passed `mise run release:catalog v0.16.0 --dry-run`,
+and the release body exactly matches `docs/releases/v0.16.0.md`.
+
+**BKG Companion and Zombie Shuffle are approved and current at 0.16.0 on
+`stable`**, released at **22:33:30.084 and 22:33:31.742 UTC**, respectively.
+Their public bundle bytes, sizes, SHA-256 hashes and scoped notes match GitHub.
+The other ten catalog entries were skipped. API-1 discovery and the update
+endpoint offer Zombie 0.16.0 to existing 0.15.1 installations. API-9 and API-13
+discovery also offer BKG; API-1 does not offer BKG.
+
+Zombie no longer registers downloadable call history or its source setting.
+It retains logged-contact hints and the offline event guide. BKG adds its
+daily offline roster, member panel and native Worked the Gang chasing for
+2m CW contacts. All release checks passed: **1,932 tests in 143 files**,
+strict types, lint, twelve official bundles and packages. Installed-kernel
+verification uses Next build 184; native UI, device upgrades and on-air
+acceptance remain separate. See the [release notes](releases/v0.16.0.md) and
+[verification record](VERIFICATION.md#release-0160-publication--2026-10-29).
+These BKG, Zombie-only and personal packaging changes are exempt from CWT
+upstream synchronization. The broader host API migration is separate.
+
+### Previous releases
+
 [v0.15.2](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.15.2)
 was published from signed main commit `e45bdecc817892a894cbd7ebfce8d3e029f1fb02`
 on **October 26, 2026 at 22:03:46 US Eastern (October 27 at 02:03:46 UTC)**.
@@ -42,8 +72,6 @@ the offline roster-name fallback. Source, bundle and installed-kernel lookup
 checks passed; native UI acceptance remains separate. See
 [release notes](releases/v0.15.2.md) and the
 [verification record](VERIFICATION.md#release-0152-publication--2026-10-26).
-
-### Previous releases
 
 [v0.15.1](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.15.1)
 was published from signed main commit `5c4dec996ef7fc57ddac73b34ac0795e40bb4879`
