@@ -22,7 +22,7 @@ export const config: DownloadedContestConfig = {
     { day: 1, hour: 0 },
     { day: 5, hour: 20 },
   ],
-  historyPrefix: 'k1usnsst-',
+  historyStem: 'K1USNSST',
   historyAliases: ['K1USNSST', 'K1USN-SST', 'SST'],
   exchange: 'name-location',
   setupLocationSuggestions,

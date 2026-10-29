@@ -1,13 +1,2 @@
-import { createN1mmSource } from '../../../../../packages/n1mm/src/source.ts'
-
-export type { Fetcher } from '../../../../../packages/n1mm/src/source.ts'
-export {
-  DEFAULT_SOURCE,
-  downloadForm,
-  sourceValidationError,
-} from '../../../../../packages/n1mm/src/source.ts'
-
-export const { latestEntry, sourceText } = createN1mmSource({
-  filePrefix: 'cwops_',
-  label: 'CWOPS',
-})
+/** API 11 delegates discovery, download and freshness checks to the host. */
+export const DEFAULT_SOURCE = 'n1mm-history:CWOPS'

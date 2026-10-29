@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 import { parseN1mm } from '../src/parse.ts'
-import { createN1mmSource, DEFAULT_SOURCE } from '../src/source.ts'
 
 describe('shared N1MM documents', () => {
   it.each([
@@ -34,18 +33,5 @@ describe('shared N1MM documents', () => {
     expect(parsed.usable).toBe(false)
     expect(parsed.rows[0]?.fields.exch1).toBeUndefined()
     expect(parsed.rows[0]?.fields.misc).toBe('123')
-  })
-})
-
-describe('contest-specific N1MM discovery', () => {
-  const listing =
-    '<html><a href="/mmfiles/icwc-mst-075-txt/">MST</a><a href="/mmfiles/k1usnsst-060-txt-2/">SST</a><a href="/mmfiles/cwops_123-txt-2/">CWT</a></html>'
-  it.each([
-    ['icwc-mst-', '/mmfiles/icwc-mst-075-txt/'],
-    ['k1usnsst-', '/mmfiles/k1usnsst-060-txt-2/'],
-    ['cwops_', '/mmfiles/cwops_123-txt-2/'],
-  ])('selects only %s including repeated-upload slugs', (filePrefix, expected) => {
-    const source = createN1mmSource({ filePrefix, label: filePrefix })
-    expect(source.latestEntry(listing, DEFAULT_SOURCE)).toBe(`https://n1mm.hamdocs.com${expected}`)
   })
 })

@@ -13,7 +13,6 @@ export const callFilter = createHistoryCallFilter({
   label: (ctx) => tFor(ctx)('spotsFilterLabel'),
   unavailableReason: (ctx) => tFor(ctx)('historyEmpty'),
   async records() {
-    await fileCache.load()
     return fileCache.current()?.parsed.records
   },
   lookupKeys: callLookupKeys,

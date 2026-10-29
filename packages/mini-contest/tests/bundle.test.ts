@@ -10,7 +10,6 @@ import type {
 import { describe, expect, it } from 'vitest'
 import mstManifest from '../../../extensions/contests/n1rwj-mst/manifest.json'
 import sstManifest from '../../../extensions/contests/n1rwj-sst/manifest.json'
-import { DEFAULT_SOURCE } from '../../n1mm/src/source.ts'
 import type { CallFilterHook } from '../../spot-filters/src/index.ts'
 
 function required<T>(value: T | undefined): T {
@@ -65,7 +64,9 @@ for (const manifest of [mstManifest, sstManifest]) {
       expect(definition.version).toBe(manifest.version)
       expect([...registered.keys()].sort()).toEqual([...manifest.hooks].sort())
       expect(registered.get('dataFile')?.key).toBe(`${manifest.key}_history`)
-      expect(registered.get('dataFile')?.hook).toMatchObject({ url: DEFAULT_SOURCE })
+      expect(registered.get('dataFile')?.hook).toMatchObject({
+        url: `n1mm-history:${type === 'mst' ? 'ICWC-MST' : 'K1USNSST'}`,
+      })
       expect(registered.get('scoring')?.hook).toMatchObject({ scope: { refTypes: [type] } })
       expect(registered.has('settingsPanel')).toBe(false)
       expect(manifest.hooks).not.toContain('settingsPanel')

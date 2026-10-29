@@ -1,4 +1,3 @@
-import type { JSONValue } from '@ham2k/extension-sdk'
 import { parseCallHistory } from '../history/index.ts'
 import type { ParsedCallHistory } from '../history/types.ts'
 
@@ -12,11 +11,6 @@ export interface LoadedFile {
   snapshot: Snapshot
   parsed: ParsedCallHistory
 }
-export interface Storage {
-  read(): Promise<unknown>
-  write(value: JSONValue): Promise<void>
-}
-
 export function checkedSnapshot(value: unknown): LoadedFile {
   if (
     !value ||
@@ -61,85 +55,38 @@ export function checkedSnapshot(value: unknown): LoadedFile {
   }
 }
 
-/** Last-good runtime state. Production storage is volatile host KV; Ham2K's
- * dataFile manager persists successful snapshots and replays them at startup. */
-export function createFileCache(storage: Storage) {
+/** Native Data Files own durable storage and replay validated snapshots at startup.
+ * Keep only the parsed index in memory; host KV is limited to small records. */
+export function createFileCache() {
   let current: LoadedFile | undefined
   let error: string | undefined
-  let generation = 0
-  let ready: Promise<void> | undefined
-  let mutations: Promise<void> = Promise.resolve()
-
-  // Apply writes in invocation order. A failed operation still rejects its
-  // caller, while the recovered tail allows the next queued change to run.
-  function mutate<T>(operation: () => Promise<T>): Promise<T> {
-    const result = mutations.then(operation)
-    mutations = result.then(
-      () => undefined,
-      () => undefined,
-    )
-    return result
+  function install(next: LoadedFile): Snapshot {
+    if (!current || Date.parse(next.snapshot.fetchedAt) >= Date.parse(current.snapshot.fetchedAt))
+      current = next
+    error = undefined
+    return { ...current.snapshot }
   }
-
   return {
     current: () => current,
     error: () => error,
-    load(): Promise<void> {
-      ready ??= (async () => {
-        const before = generation
-        try {
-          const raw = await storage.read()
-          if (raw !== null && raw !== undefined && generation === before && !current)
-            current = checkedSnapshot(raw)
-        } catch (cause) {
-          if (generation === before) error = String(cause)
-        }
-      })()
-      return ready
-    },
-    replace(snapshot: Snapshot): Promise<Snapshot> {
-      const candidate = { ...snapshot }
-      return mutate(async () => {
-        try {
-          const next = checkedSnapshot(candidate)
-          await storage.write({ ...next.snapshot })
-          generation++
-          current = next
-          error = undefined
-          return next.snapshot
-        } catch (cause) {
-          error = String(cause)
-          throw cause
-        }
-      })
+    async replace(snapshot: Snapshot): Promise<Snapshot> {
+      try {
+        return install(checkedSnapshot(snapshot))
+      } catch (cause) {
+        error = String(cause)
+        throw cause
+      }
     },
     accept(raw: unknown): void {
       try {
-        const next = checkedSnapshot(raw)
-        if (
-          !current ||
-          Date.parse(next.snapshot.fetchedAt) >= Date.parse(current.snapshot.fetchedAt)
-        ) {
-          generation++
-          current = next
-          error = undefined
-        }
+        install(checkedSnapshot(raw))
       } catch (cause) {
         error = String(cause)
       }
     },
-    remove(): Promise<void> {
-      return mutate(async () => {
-        try {
-          await storage.write(null)
-          generation++
-          current = undefined
-          error = undefined
-        } catch (cause) {
-          error = String(cause)
-          throw cause
-        }
-      })
+    async remove(): Promise<void> {
+      current = undefined
+      error = undefined
     },
   }
 }

@@ -7,7 +7,7 @@
   "category": "contest",
   "icon": "clock-fast",
   "accentColor": "#4527A0",
-  "api": 1,
+  "api": 11,
   "keywords": ["contest", "cwt", "cwops", "cw", "mini-test", "cabrillo", "call-history"],
   "hooks": [
     "activity",
@@ -19,7 +19,6 @@
     "scoring",
     "spotCallFilter:v1"
   ],
-  "domains": ["n1mm.hamdocs.com", "n1mmwp.hamdocs.com"],
   "relevance": {
     "interests": ["cw"]
   },

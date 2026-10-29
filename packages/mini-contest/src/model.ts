@@ -28,7 +28,7 @@ export interface ContestConfig {
   guidance: string
 }
 export interface DownloadedContestConfig extends ContestConfig {
-  historyPrefix: string
+  historyStem: string
   historyAliases: string[]
 }
 export interface ContestManifest {

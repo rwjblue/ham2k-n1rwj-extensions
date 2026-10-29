@@ -83,7 +83,7 @@ could otherwise be mistaken for Ontario.
 
 The source is the public
 [N1MM call-history collection](https://n1mmwp.hamdocs.com/mmfiles/categories/callhistory/).
-The extension discovers the latest listed `K1USNSST-*.txt` file and uses its
+Ham2K (extension API 11 or newer) discovers the latest listed `K1USNSST-*.txt` file and uses its
 names and locations. See N1MM's
 [call-history explanation](https://n1mmwp.hamdocs.com/setup/call-history/)
 for background on these community-maintained files. They are suggestions,
@@ -99,8 +99,10 @@ also refresh **SST N1MM call history** manually under
 **Settings → Accounts, Services & Data Sources** (Data Files on older hosts).
 File discovery is automatic; there is no source URL setting.
 
-N1MM requests allow slower responses within a bounded refresh. Slower or
-failed refreshes retain the last successful file.
+The host handles N1MM discovery, pagination, download forms and freshness
+checks. A failed refresh retains the previous valid native data-file cache.
+The extension validates the received text and keeps a parsed index in memory;
+it does not store the dataset in the host’s size-limited key-value storage.
 
 Typing a callsign uses the downloaded data and your local history; it does
 not download the N1MM file for every contact. The native app keeps the last

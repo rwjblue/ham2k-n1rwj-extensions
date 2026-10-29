@@ -18,7 +18,7 @@ const file =
 afterEach(() => vi.restoreAllMocks())
 
 async function setup(body = file) {
-  const cache = createFileCache({ read: async () => null, write: async () => {} })
+  const cache = createFileCache()
   await cache.replace({
     schema: 1,
     body,

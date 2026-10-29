@@ -15,7 +15,7 @@ afterEach(() => vi.restoreAllMocks())
 
 it('localizes automatic discovery while retaining the personal data-file identity', async () => {
   expect(DataFile.key).toBe('n1rwj-cwt_history')
-  expect(host.kvSet).toHaveBeenCalledWith('last-good-cwt-file', null)
+  expect(host.kvSet).not.toHaveBeenCalled()
   if (typeof DataFile.name !== 'function' || typeof DataFile.description !== 'function')
     throw new Error('Expected localized data-file metadata')
   for (const [locale, name, description] of [

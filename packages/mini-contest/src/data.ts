@@ -1,6 +1,4 @@
 import type { DataFileDefinition } from '@ham2k/extension-sdk'
-import { host } from '@ham2k/extension-sdk'
-import { createN1mmSource, DEFAULT_SOURCE } from '../../n1mm/src/source.ts'
 import { type HistoryFile, parseHistory } from './history.ts'
 import type { ContestManifest, DownloadedContestConfig } from './model.ts'
 
@@ -12,7 +10,6 @@ interface Snapshot {
 }
 export function createHistoryData(config: DownloadedContestConfig, manifest: ContestManifest) {
   let current: { snapshot: Snapshot; parsed: HistoryFile } | undefined
-  const source = createN1mmSource({ filePrefix: config.historyPrefix, label: config.shortName })
   function accept(raw: unknown) {
     if (
       !raw ||
@@ -29,7 +26,7 @@ export function createHistoryData(config: DownloadedContestConfig, manifest: Con
     )
       throw new Error('Invalid history snapshot. Previous data retained.')
     const parsed = parseHistory(config, raw.body)
-    if (!current || raw.fetchedAt >= current.snapshot.fetchedAt)
+    if (!current || Date.parse(raw.fetchedAt) >= Date.parse(current.snapshot.fetchedAt))
       current = {
         snapshot: { schema: 1, body: raw.body, url: raw.url, fetchedAt: raw.fetchedAt },
         parsed,
@@ -45,10 +42,9 @@ export function createHistoryData(config: DownloadedContestConfig, manifest: Con
     category: manifest.key,
     fetchType: 'raw',
     maxAgeInDays: 1,
-    url: DEFAULT_SOURCE,
+    url: `n1mm-history:${config.historyStem}`,
     async rawToJSONData({ body, url }) {
-      const downloaded = await source.sourceText(body, url, host.fetch, host)
-      const snapshot: Snapshot = { schema: 1, ...downloaded, fetchedAt: new Date().toISOString() }
+      const snapshot: Snapshot = { schema: 1, body, url, fetchedAt: new Date().toISOString() }
       accept(snapshot)
       return { ...snapshot }
     },

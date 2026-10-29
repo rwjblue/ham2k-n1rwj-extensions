@@ -22,7 +22,7 @@ export const config: DownloadedContestConfig = {
     { day: 1, hour: 19 },
     { day: 2, hour: 3 },
   ],
-  historyPrefix: 'icwc-mst-',
+  historyStem: 'ICWC-MST',
   historyAliases: ['ICWC-MST', 'MST'],
   exchange: 'serial-name',
   guidance:

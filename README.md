@@ -171,8 +171,8 @@ Previously published releases remain available as historical archives.
    saved CWT references, settings, and data-file identity remain compatible
    with previous releases of this repository.
 2. Refresh the extension's call-history entry under **Settings → Accounts,
-   Services & Data Sources**. Its settings accept an HTTPS N1MM entry or text
-   URL; leaving the source blank discovers the current contest-specific file.
+   Services & Data Sources**. Ham2K API 11 or newer discovers and downloads the current contest-specific
+   file automatically; no source URL setting is needed.
 3. Add the desired session to an operation, configure your sent exchange,
    and log contacts. Always copy and verify the exchange actually sent.
 
@@ -270,7 +270,7 @@ extensions/tools/n1rwj-rbn/     RBN feed, receiver directory, Spots, and panel a
 extensions/tools/n1rwj-psk-reporter/  Live MQTT reception maps and transport
 extensions/tools/n1rwj-contest-calendar/  Upcoming contest feed, cache, and optional panel
 packages/reception/             Shared reception model, map, UI, and geography
-packages/n1mm/                 Generic N1MM parsing, callsigns, and downloads
+packages/n1mm/                 Generic N1MM parsing and callsigns
 packages/contest-history/      Shared CWT/MST/SST operation-history adapter
 packages/mini-contest/          Shared MST/SST hooks, history, scoring, and tests
 mise/tasks/                    Executable automation and its TypeScript config

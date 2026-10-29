@@ -21,6 +21,5 @@ defineExtension({
     registerHook('lookup', { hook: prefill.lookup })
     registerHook('dataFile', { key: DataFile.key, hook: DataFile })
     registerHook(callFilterCategory, { hook: callFilter })
-    void fileCache.load()
   },
 })

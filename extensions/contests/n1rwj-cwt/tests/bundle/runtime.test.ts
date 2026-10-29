@@ -225,7 +225,7 @@ describe('the installable bundle with a simulated host bridge', () => {
       .hook('activity')
       .loggingControls?.({ operation, qso: { their: { call: 'K1ABC' } } }, ctx)
     expect(controls?.[1]?.input).toMatchObject({ field: 'number', suggestedValue: '4567' })
-    expect(restarted.hostCall.mock.calls.every(([method]) => method === 'kvGet')).toBe(true)
+    expect(restarted.hostCall.mock.calls).toHaveLength(0)
   })
 
   it.each([
