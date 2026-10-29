@@ -68,6 +68,6 @@ it('runs the shipped ES2020 bundle with native disk replay and no Node, DOM, fet
   const packed = JSON.parse(
     await readFile(new URL('../build/manifest.json', import.meta.url), 'utf8'),
   )
-  expect(packed.api).toBe(9)
+  expect(packed.api).toBe(13)
   expect(packed.settings).toBeUndefined()
 })

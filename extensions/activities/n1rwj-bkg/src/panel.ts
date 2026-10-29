@@ -32,6 +32,7 @@ export interface PanelView {
   spots: { call: string; detail: string; joining: boolean }[]
   spotsStatus: string
   freshness: string
+  radioReady?: boolean
   warning?: string
 }
 async function profileCall(): Promise<string> {
@@ -105,6 +106,9 @@ export function createPanel(
 ): PanelHook {
   const snapshots = new Map<string, LogSnapshot>()
   const boards = new Map<string, SpotSnapshot>()
+  const spacing = new Map<string, number>()
+  let radioReady = false,
+    radioRead = false
   let profile = '',
     profileAt = -Infinity
   return {
@@ -116,7 +120,7 @@ export function createPanel(
           icon: 'hand-fist',
           description:
             '🤜 Member cards, operation progress and recent member spots. Works on Home and inside any operation; no setup required.',
-          on: ['operation', 'qso', 'qsoLogged', 'spots', 'tick:60'],
+          on: ['operation', 'qso', 'qsoLogged', 'spots', 'radio', 'tick:60'],
         },
       ]
     },
@@ -210,6 +214,7 @@ export function createPanel(
       const age = roster ? Math.max(0, Math.floor((now - roster.downloadedAt) / 3_600_000)) : 0
       const view: PanelView = {
         call,
+        radioReady,
         number: member?.number,
         name: member?.name ?? '',
         status: !roster
@@ -257,9 +262,49 @@ export function createPanel(
             environment.typography.body.fontSize * 1.25 ||
           environment.width < 240 ||
           environment.height < 270)
+      if (environment?.version === 1 && !accessibleText) {
+        if (!radioRead || args.reason === 'radio' || args.reason === 'operation') {
+          radioRead = true
+          try {
+            const radio = await host.readRadio()
+            radioReady = Boolean(
+              radio &&
+                radio.status === 'connected' &&
+                !radio.stale &&
+                radio.frequencyHz !== null &&
+                radio.frequencyHz >= 144_000_000 &&
+                radio.frequencyHz < 148_000_000 &&
+                ['CW', 'CW-R', 'CWR'].includes(radio.mode ?? ''),
+            )
+          } catch {
+            radioReady = false
+          }
+        }
+        view.radioReady = radioReady
+      }
       return environment?.version === 1 && !accessibleText
-        ? { kind: 'scene', scene: bkgScene(view, environment), title }
+        ? {
+            kind: 'scene',
+            scene: bkgScene(view, environment, spacing.get(args.instanceId ?? 'default') ?? 1),
+            title,
+          }
         : { kind: 'markdown', content: panelMarkdown(view), title }
+    },
+    async onEvent(args) {
+      const event = args.event
+      if (
+        event.controlId === 'spot-spacing' &&
+        event.action === 'spot-spacing' &&
+        event.phase === 'commit' &&
+        typeof event.value === 'number' &&
+        event.value > 0 &&
+        Number.isFinite(event.value)
+      ) {
+        const key = args.instanceId ?? 'default'
+        spacing.set(key, Math.min(2, Math.max(0.8, (spacing.get(key) ?? 1) * event.value)))
+        if (spacing.size > 16) spacing.delete(spacing.keys().next().value ?? '')
+      }
+      return { values: {} }
     },
   }
 }

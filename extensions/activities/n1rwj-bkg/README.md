@@ -9,7 +9,7 @@ settings, account, identity picker, or operation activity is required.
 
 1. Install `n1rwj-bkg-0.16.0.h2kext` from the
    [v0.16.0 release](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.16.0)
-   on a host supporting extension API 9.
+   on a host supporting extension API 13.
 2. Ham2K downloads **BKG member roster** through its native Data Files manager.
    It becomes eligible for refresh after one day; native synchronization decides
    when to fetch. Manual refresh and offline cache removal remain in Data Files.
@@ -96,3 +96,16 @@ Automated bundle/kernel checks and browser-rendered scene previews are distinct
 from native UI acceptance and actual chase ranking in the app. See the
 [verification record](../../../../docs/VERIFICATION.md). No native UI or on-air
 acceptance is claimed.
+
+## Native panel controls
+
+Ham2K extension API 13 is required. The BKG card scrolls vertically in short
+panes; pinch or drag the right edge to adjust spot-list spacing. Font sizes
+remain unchanged, and high-contrast or enlarged-text layouts retain native
+Markdown. Spacing is temporary and independent for each panel placement.
+
+The extension requests read-only radio access. A fixed strip follows the
+logging radio’s frequency, mode and connection through native scene bindings;
+radio events update the 2m CW guidance without polling or reading the full log.
+Dial status is context only: it does not prove a qualifying contact or retune
+the radio. Offline roster and hunting features remain usable without a radio.
