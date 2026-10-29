@@ -140,48 +140,64 @@ export function scenePreviewSvg(
   environment: PanelEnvironment,
   source = 'RBN',
 ): string {
-  const layers = scene.layers.map((layer, index) => {
-    const prefix = `preview-layer-${index}-`
-    const clip = `${prefix}bounds`
-    const transform = [
-      `translate(${layer.x + bindingValue(layer.translateX, scene.values)} ${layer.y + bindingValue(layer.translateY, scene.values)})`,
-      `rotate(${bindingValue(layer.rotation, scene.values)} ${(layer.pivot?.[0] ?? 0.5) * layer.width} ${(layer.pivot?.[1] ?? 0.5) * layer.height})`,
-    ].join(' ')
-    let artwork: string
-    if (layer.svg !== undefined) {
-      const root = layer.svg.match(/^\s*<svg\b([^>]*)>([\s\S]*)<\/svg>\s*$/i)
-      if (!root) throw new Error(`Preview cannot read SVG layer ${layer.id}.`)
-      const viewBox = root[1].match(/\bviewBox\s*=\s*(["'])(.*?)\1/i)?.[2]
-      let body = root[2]
-      // Each native layer is its own SVG document. Preserve that ID isolation
-      // when assembling one portable preview document from all the layers.
-      const ids = [...body.matchAll(/\bid\s*=\s*(["'])(.*?)\1/g)].map((match) => match[2])
-      for (const id of ids) {
-        for (const quote of ['"', "'"]) {
-          body = body.split(`id=${quote}${id}${quote}`).join(`id=${quote}${prefix}${id}${quote}`)
-          body = body
-            .split(`href=${quote}#${id}${quote}`)
-            .join(`href=${quote}#${prefix}${id}${quote}`)
-          body = body
-            .split(`url(${quote}#${id}${quote})`)
-            .join(`url(${quote}#${prefix}${id}${quote})`)
+  const layers = scene.layers
+    .filter((layer) => {
+      const condition = layer.when
+      if (!condition) return true
+      const value = scene.strings?.[condition.value] ?? scene.values[condition.value]
+      const matches =
+        value !== undefined &&
+        (condition.is !== undefined
+          ? value === condition.is
+          : condition.in
+            ? condition.in.includes(value)
+            : typeof value === 'number' &&
+              (condition.min === undefined || value >= condition.min) &&
+              (condition.max === undefined || value <= condition.max))
+      return condition.not ? !matches : matches
+    })
+    .map((layer, index) => {
+      const prefix = `preview-layer-${index}-`
+      const clip = `${prefix}bounds`
+      const transform = [
+        `translate(${layer.x + bindingValue(layer.translateX, scene.values)} ${layer.y + bindingValue(layer.translateY, scene.values)})`,
+        `rotate(${bindingValue(layer.rotation, scene.values)} ${(layer.pivot?.[0] ?? 0.5) * layer.width} ${(layer.pivot?.[1] ?? 0.5) * layer.height})`,
+      ].join(' ')
+      let artwork: string
+      if (layer.svg !== undefined) {
+        const root = layer.svg.match(/^\s*<svg\b([^>]*)>([\s\S]*)<\/svg>\s*$/i)
+        if (!root) throw new Error(`Preview cannot read SVG layer ${layer.id}.`)
+        const viewBox = root[1].match(/\bviewBox\s*=\s*(["'])(.*?)\1/i)?.[2]
+        let body = root[2]
+        // Each native layer is its own SVG document. Preserve that ID isolation
+        // when assembling one portable preview document from all the layers.
+        const ids = [...body.matchAll(/\bid\s*=\s*(["'])(.*?)\1/g)].map((match) => match[2])
+        for (const id of ids) {
+          for (const quote of ['"', "'"]) {
+            body = body.split(`id=${quote}${id}${quote}`).join(`id=${quote}${prefix}${id}${quote}`)
+            body = body
+              .split(`href=${quote}#${id}${quote}`)
+              .join(`href=${quote}#${prefix}${id}${quote}`)
+            body = body
+              .split(`url(${quote}#${id}${quote})`)
+              .join(`url(${quote}#${prefix}${id}${quote})`)
+          }
+          body = body.split(`url(#${id})`).join(`url(#${prefix}${id})`)
         }
-        body = body.split(`url(#${id})`).join(`url(#${prefix}${id})`)
-      }
-      artwork = `<svg aria-hidden="true" width="${layer.width}" height="${layer.height}" viewBox="${xml(viewBox ?? `0 0 ${layer.width} ${layer.height}`)}" preserveAspectRatio="none">${body}</svg>`
-    } else if (layer.text) {
-      const text = layer.text
-      const role = Object.values(environment.typography).find(
-        (candidate) => candidate.fontSize === text.size,
-      )
-      const size = role?.scaledFontSize ?? text.size ?? 20
-      const anchor = text.align === 'center' ? 'middle' : text.align === 'end' ? 'end' : 'start'
-      const x = anchor === 'middle' ? layer.width / 2 : anchor === 'end' ? layer.width : 0
-      artwork = `<text x="${x}" y="${layer.height / 2}" dominant-baseline="central" text-anchor="${anchor}" font-family="${xml(text.fontFamily ?? 'sans-serif')}" font-size="${size}" font-weight="${text.fontWeight ?? 400}" letter-spacing="${text.letterSpacing ?? 0}" fill="${xml(text.color ?? environment.colors.onSurface)}">${xml(textValue(text, scene))}</text>`
-    } else throw new Error(`Preview layer ${layer.id} has no artwork or text.`)
-    const opacity = Math.max(0, Math.min(1, bindingValue(layer.opacity, scene.values, 1)))
-    return `<g transform="${transform}" opacity="${opacity}"><title>${xml(layer.id)}</title><defs><clipPath id="${clip}"><rect width="${layer.width}" height="${layer.height}"/></clipPath></defs><g clip-path="url(#${clip})">${artwork}</g></g>`
-  })
+        artwork = `<svg aria-hidden="true" width="${layer.width}" height="${layer.height}" viewBox="${xml(viewBox ?? `0 0 ${layer.width} ${layer.height}`)}" preserveAspectRatio="none">${body}</svg>`
+      } else if (layer.text) {
+        const text = layer.text
+        const role = Object.values(environment.typography).find(
+          (candidate) => candidate.fontSize === text.size,
+        )
+        const size = role?.scaledFontSize ?? text.size ?? 20
+        const anchor = text.align === 'center' ? 'middle' : text.align === 'end' ? 'end' : 'start'
+        const x = anchor === 'middle' ? layer.width / 2 : anchor === 'end' ? layer.width : 0
+        artwork = `<text x="${x}" y="${layer.height / 2}" dominant-baseline="central" text-anchor="${anchor}" font-family="${xml(text.fontFamily ?? 'sans-serif')}" font-size="${size}" font-weight="${text.fontWeight ?? 400}" letter-spacing="${text.letterSpacing ?? 0}" fill="${xml(text.color ?? environment.colors.onSurface)}">${xml(textValue(text, scene))}</text>`
+      } else throw new Error(`Preview layer ${layer.id} has no artwork or text.`)
+      const opacity = Math.max(0, Math.min(1, bindingValue(layer.opacity, scene.values, 1)))
+      return `<g transform="${transform}" opacity="${opacity}"><title>${xml(layer.id)}</title><defs><clipPath id="${clip}"><rect width="${layer.width}" height="${layer.height}"/></clipPath></defs><g clip-path="url(#${clip})">${artwork}</g></g>`
+    })
   // Schematic rectangles communicate reserved space; these are not Material
   // widget renderings. Layout-only controls require an actual native preview.
   for (const [index, control] of (scene.controls ?? []).entries()) {

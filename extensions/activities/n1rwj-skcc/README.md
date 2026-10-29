@@ -6,7 +6,7 @@ product or a substitute for the club’s award managers.
 
 ## Start operating
 
-1. Install `n1rwj-skcc` in a Ham2K host supporting **extension API 9**.
+1. Install `n1rwj-skcc` in a Ham2K host supporting **extension API 12**.
 2. Download **SKCC member roster** through native Data Files. Open
    **Activities → SKCC Companion** and set your usual number, name, location
    and key. The manifest and panel both place these settings under Activities;
@@ -171,3 +171,6 @@ selection, native claims and history/report scope. Live roster parsing has also
 been checked. See the repository [verification record](../../../../docs/VERIFICATION.md)
 for release checks. Installed native UI, cross-device rescan and on-air use are
 separate acceptance tests and have not been established by unit tests.
+
+Settings sections remember which groups you fold. The member roster is persisted
+and replayed by native Data Files; no full roster is written to extension KV.

@@ -1,6 +1,6 @@
 {
   "name": "ham2k-n1rwj-extensions",
-  "version": "0.16.0",
+  "version": "0.17.0",
   "private": true,
   "license": "MPL-2.0",
   "description": "N1RWJ Ham2K extensions: CWT, ICWC MST, K1USN SST, Weekly RTTY Test, and reception maps",
@@ -38,5 +38,10 @@
   "workspaces": [
     "extensions/*/*",
     "packages/*"
-  ]
+  ],
+  "overrides": {
+    "@ham2k/extension-tools@1.13.0": {
+      "sharp": "0.35.5"
+    }
+  }
 }

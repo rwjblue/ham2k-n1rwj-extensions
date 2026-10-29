@@ -59,7 +59,7 @@ versions; use the latest release linked above when installing.
 
 ### SKCC Companion
 
-Install `n1rwj-skcc` on an API-9-capable host, download its member roster,
+Install `n1rwj-skcc` on an API-12-capable host, download its member roster,
 then configure your exchange under **Activities → SKCC Companion**. Add an
 SKCC activity to an operation and the companion panel to its layout. RBN
 can filter to SKCC members; experimental native Chasing and complete-history

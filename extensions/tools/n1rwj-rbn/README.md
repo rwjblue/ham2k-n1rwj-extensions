@@ -3,7 +3,7 @@
 See where the [Reverse Beacon Network](https://www.reversebeacon.net/) has
 heard your CW, RTTY, FT8, and FT4 signals, with a reception map and sortable
 receiver reports provided by [Vail ReRBN](https://vailrerbn.com/).
-Requires Ham2K extension API 5 and native panel controls.
+Requires Ham2K extension API 12 and native panel controls.
 The panel automatically follows your operation's station callsign and location.
 It is read-only: it does not transmit, spot a station, post to POTA, or create
 contacts.
@@ -198,7 +198,7 @@ spotting page when looking for BIGFOOT SSB stations.
 
 ## Install and open the panel
 
-1. Use a Ham2K version supporting extension API 5 and native panel controls. If the panel shows
+1. Use a Ham2K version supporting extension API 12 and native panel controls. If the panel shows
    **App update needed**, update Ham2K before using it.
 2. Download `n1rwj-rbn-<version>.h2kext` from the
    [latest GitHub release](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/latest).
@@ -506,3 +506,7 @@ earlier HTML investigation, see the
 Restart/resume behavior is covered by deterministic tests and isolated SDK bundle
 restarts using a simulated persistent host. Full app restart, offline resume and
 background/foreground behavior still need a native Ham2K runtime check.
+
+Settings use native collapsible sections with stable fold identities. Export
+options and My Signal guidance start folded; spot filters stay open. RBN health
+diagnostics remain outside folded groups, and saved filter keys are unchanged.
