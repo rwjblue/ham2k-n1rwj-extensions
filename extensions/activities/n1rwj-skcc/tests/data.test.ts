@@ -28,82 +28,39 @@ describe('SKCC offline roster persistence', () => {
     ])
       expect(() => checkedSnapshot(invalid)).toThrow()
   })
-  it('restores once, reports changed content, and removes the saved data through native controls', async () => {
-    const read = vi.fn(async () => snapshot)
-    const write = vi.fn(async () => undefined)
+  it('notifies on changed content and removal while keeping the last good roster', async () => {
     const changed = vi.fn()
-    const cache = createRosterCache({ read, write }, changed)
-    await Promise.all([cache.load(), cache.load()])
-    expect(read).toHaveBeenCalledTimes(1)
-    expect(cache.getRoster()?.members[0].name).toBe('Alice')
+    const cache = createRosterCache(changed)
+    cache.accept(snapshot)
     expect(changed).toHaveBeenCalledTimes(1)
     await cache.replace({ ...snapshot, downloadedAt: 200 })
     expect(changed).toHaveBeenCalledTimes(1)
-    await cache.replace({ ...snapshot, body: body.replace('Alice', 'Alicia'), downloadedAt: 300 })
+    const newer = { ...snapshot, body: body.replace('Alice', 'Alicia'), downloadedAt: 300 }
+    await cache.replace(newer)
+    cache.accept(snapshot)
+    expect(await cache.replace(snapshot)).toEqual(newer)
+    expect(cache.getRoster()?.members[0].name).toBe('Alicia')
     expect(changed).toHaveBeenCalledTimes(2)
+    cache.accept({ ...newer, body: 'error' })
+    expect(cache.getRoster()?.members[0].name).toBe('Alicia')
     await cache.remove()
-    expect(write).toHaveBeenLastCalledWith(null)
     expect(cache.getRoster()).toBeUndefined()
     expect(changed).toHaveBeenCalledTimes(3)
   })
-  it('retains the last good roster for invalid native replay, partial refresh, and storage failure', async () => {
-    const write = vi.fn(async () => undefined)
-    const cache = createRosterCache({ read: async () => null, write })
+  it('rejects partial refreshes and preserves the previous index', async () => {
+    const cache = createRosterCache()
     const large = { ...snapshot, body: `${body}\n2|K2ABC|Bob|NY||291|02 Jan 2006|||||A` }
     cache.accept(large)
     const good = cache.getRoster()
-    cache.accept({ ...snapshot, body: 'error', downloadedAt: 200 })
-    expect(cache.getRoster()).toBe(good)
     await expect(cache.replace({ ...snapshot, downloadedAt: 200 })).rejects.toThrow(
       'lost more than 10%',
     )
     expect(cache.getRoster()).toBe(good)
-    write.mockRejectedValueOnce(new Error('Storage unavailable'))
-    await expect(cache.replace({ ...large, downloadedAt: 200 })).rejects.toThrow(
-      'Storage unavailable',
-    )
-    expect(cache.getRoster()).toBe(good)
   })
-  it('prevents an outstanding startup read or older native replay from overwriting newer data', async () => {
-    let restore!: (value: unknown) => void
-    const cache = createRosterCache({
-      read: () =>
-        new Promise((resolve) => {
-          restore = resolve
-        }),
-      write: async () => undefined,
+  it('keeps optional invalidation failures separate from valid native snapshots', async () => {
+    const cache = createRosterCache(() => {
+      throw new Error('Unavailable')
     })
-    const loading = cache.load()
-    cache.accept({ ...snapshot, body: body.replace('Alice', 'Alicia'), downloadedAt: 200 })
-    restore(snapshot)
-    await loading
-    cache.accept(snapshot)
-    expect(cache.getRoster()?.members[0].name).toBe('Alicia')
-  })
-  it('serializes remove/replace and does not resurrect data from an outstanding startup read', async () => {
-    let restore!: (value: unknown) => void
-    const cache = createRosterCache({
-      read: () =>
-        new Promise((resolve) => {
-          restore = resolve
-        }),
-      write: async () => undefined,
-    })
-    const loading = cache.load()
-    await cache.remove()
-    restore(snapshot)
-    await loading
-    expect(cache.getRoster()).toBeUndefined()
-    await Promise.all([cache.replace(snapshot), cache.remove()])
-    expect(cache.getRoster()).toBeUndefined()
-  })
-  it('keeps optional invalidation failures separate from successful data persistence', async () => {
-    const cache = createRosterCache(
-      { read: async () => null, write: async () => undefined },
-      () => {
-        throw new Error('Unavailable')
-      },
-    )
     await cache.replace(snapshot)
     expect(cache.getRoster()?.members).toHaveLength(1)
     expect(cache.error()).toBeUndefined()
@@ -112,7 +69,6 @@ describe('SKCC offline roster persistence', () => {
     const fetch = vi.spyOn(host, 'fetch')
     const settings = vi.spyOn(host, 'getSettings')
     const data = createData()
-    await data.load()
     expect(data.dataFile).toMatchObject({
       key: 'n1rwj-skcc_members',
       category: 'n1rwj-skcc',
@@ -124,7 +80,6 @@ describe('SKCC offline roster persistence', () => {
     expect(data.getRoster()?.members[0].name).toBe('Alice')
     const offline = createData()
     offline.dataFile.onLoadRawData?.(saved)
-    await offline.load()
     expect(offline.getRoster()).toEqual(data.getRoster())
     await expect(
       data.dataFile.rawToJSONData?.({ body: '<html>Offline</html>', url: ROSTER_URL, options: {} }),
@@ -134,5 +89,7 @@ describe('SKCC offline roster persistence', () => {
     expect(data.getRoster()).toBeUndefined()
     expect(fetch).not.toHaveBeenCalled()
     expect(settings).not.toHaveBeenCalled()
+    expect(host.kvGet).not.toHaveBeenCalled()
+    expect(host.kvSet).not.toHaveBeenCalled()
   })
 })

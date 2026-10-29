@@ -1,6 +1,6 @@
 // Copyright © 2026 Robert Jackson
 // SPDX-License-Identifier: MPL-2.0
-import { type DataFileDefinition, host, type JSONValue } from '@ham2k/extension-sdk'
+import type { DataFileDefinition } from '@ham2k/extension-sdk'
 import { KEY, type Roster } from './model.ts'
 import { parseRoster, ROSTER_URL } from './roster.ts'
 
@@ -9,10 +9,6 @@ export interface RosterSnapshot {
   body: string
   source: string
   downloadedAt: number
-}
-interface Storage {
-  read(): Promise<unknown>
-  write(value: JSONValue): Promise<void>
 }
 const sourcePattern =
   /^https:\/\/(?:www\.)?skccgroup\.com\/(?:skimmer-data\.txt|membership_data\/skccdata\.txt)$/
@@ -44,15 +40,11 @@ export function checkedSnapshot(value: unknown): { snapshot: RosterSnapshot; ros
   return { snapshot, roster: parseRoster(snapshot.body, snapshot) }
 }
 
-/** Native Data Files durably persist snapshots. A host-memory KV last-good
- * copy also permits runtime reloads before native replay; cold app starts
- * rely on the native cache. Lookup hooks never perform network work. */
-export function createRosterCache(storage: Storage, onChange: () => void = () => undefined) {
+/** Native Data Files persist snapshots and replay them offline. Only the
+ * parsed roster lives in memory; host KV cannot hold whole datasets. */
+export function createRosterCache(onChange: () => void = () => undefined) {
   let current: ReturnType<typeof checkedSnapshot> | undefined
   let lastError: string | undefined
-  let generation = 0
-  let ready: Promise<void> | undefined
-  let mutations = Promise.resolve()
   function notify() {
     try {
       onChange()
@@ -63,7 +55,6 @@ export function createRosterCache(storage: Storage, onChange: () => void = () =>
   function install(next: ReturnType<typeof checkedSnapshot>) {
     if (current && next.snapshot.downloadedAt < current.snapshot.downloadedAt) return
     const changed = !current || current.roster.revision !== next.roster.revision
-    generation++
     current = next
     lastError = undefined
     if (changed) notify()
@@ -73,51 +64,19 @@ export function createRosterCache(storage: Storage, onChange: () => void = () =>
     if (current && next.roster.members.length < current.roster.members.length * 0.9)
       throw new Error('SKCC roster lost more than 10% of its records. Previous data retained.')
   }
-  function mutate<T>(operation: () => Promise<T>): Promise<T> {
-    const result = mutations.then(operation)
-    mutations = result.then(
-      () => undefined,
-      () => undefined,
-    )
-    return result
-  }
   return {
     getRoster: () => current?.roster,
     error: () => lastError,
-    load(): Promise<void> {
-      ready ??= (async () => {
-        const before = generation
-        try {
-          const saved = await storage.read()
-          if (saved !== null && saved !== undefined && generation === before && !current)
-            install(checkedSnapshot(saved))
-        } catch (cause) {
-          if (generation === before) lastError = String(cause)
-        }
-      })()
-      return ready
-    },
-    replace(snapshot: RosterSnapshot): Promise<RosterSnapshot> {
-      const candidate = { ...snapshot }
-      return mutate(async () => {
-        try {
-          const next = checkedSnapshot(candidate)
-          checkSize(next)
-          if (current && next.snapshot.downloadedAt < current.snapshot.downloadedAt)
-            return current.snapshot
-          await storage.write({ ...next.snapshot })
-          // An accepted newer native replay may arrive while storage writes.
-          if (current && next.snapshot.downloadedAt < current.snapshot.downloadedAt) {
-            await storage.write({ ...current.snapshot })
-            return current.snapshot
-          }
-          install(next)
-          return next.snapshot
-        } catch (cause) {
-          lastError = String(cause)
-          throw cause
-        }
-      })
+    async replace(snapshot: RosterSnapshot): Promise<RosterSnapshot> {
+      try {
+        const next = checkedSnapshot(snapshot)
+        checkSize(next)
+        install(next)
+        return { ...(current ?? next).snapshot }
+      } catch (cause) {
+        lastError = String(cause)
+        throw cause
+      }
     },
     accept(raw: unknown): void {
       try {
@@ -128,32 +87,16 @@ export function createRosterCache(storage: Storage, onChange: () => void = () =>
         lastError = String(cause)
       }
     },
-    remove(): Promise<void> {
-      return mutate(async () => {
-        try {
-          await storage.write(null)
-          generation++
-          current = undefined
-          lastError = undefined
-          notify()
-        } catch (cause) {
-          lastError = String(cause)
-          throw cause
-        }
-      })
+    async remove(): Promise<void> {
+      current = undefined
+      lastError = undefined
+      notify()
     },
   }
 }
 
 export function createData(options: { onChange?: () => void } = {}) {
-  const cache = createRosterCache(
-    {
-      read: () => host.kvGet('last-good-skcc-roster'),
-      write: (value) => host.kvSet('last-good-skcc-roster', value),
-    },
-    options.onChange,
-  )
-  void cache.load()
+  const cache = createRosterCache(options.onChange)
   const dataFile: DataFileDefinition = {
     key: `${KEY}_members`,
     category: KEY,
@@ -169,5 +112,5 @@ export function createData(options: { onChange?: () => void } = {}) {
     onLoadRawData: (raw) => cache.accept(raw),
     onRemoveRawData: () => cache.remove(),
   }
-  return { dataFile, getRoster: cache.getRoster, load: cache.load, error: cache.error }
+  return { dataFile, getRoster: cache.getRoster, error: cache.error }
 }
