@@ -183,6 +183,55 @@ its original MPL-2.0 notices. The shared CWT operation-history adapter is
 consumed unchanged. This work does not affect CWT behavior, and therefore
 requires no update to its temporary upstream PR; CQ WW's PR is also unchanged.
 
+### NCCC Sprint CW
+
+`extensions/contests/n1rwj-ns/` follows the
+[NS CW rules](https://ncccsprint.com/rules.html),
+[NS Ladder guidance](https://ncccsprint.com/ladder.html), and the incorporated
+[2026 NAQP multiplier definitions](https://ncjweb.com/NAQP-Rules.pdf), checked
+October 29, 2026. The sponsor adds Trinidad & Tobago, Aruba and the former
+Netherlands Antilles. Current DXCC entities are used: PJ2/PJ4 supplement
+the North American successor entities. The published host DXCC library supplies
+country identities and continent membership; the extension owns the contest
+exceptions. Canadian NF/LB/NL share the current NL multiplier. Country/state
+abbreviation collisions use station context without changing received text.
+
+The [sponsor's N1MM guidance](https://ncccsprint.com/n1mmlogger.html) names
+SPRINTNS as its logging module. This extension uses `NCCC-SPRINT` as its own
+ADIF/Cabrillo identifier and the Sprint serial/name/QTH column convention;
+it does not claim a mandated weekly log-submission format. Operators post
+scores on 3830 and retain logs. QSY reminders use the explicitly recorded
+CQ/S&P/Unknown role and frequencies. Frequency-only checks remain advisory;
+no QSY check changes the score. Assistance restrictions are documented without
+changing other extensions. Recorded QSO start time approximates the response cutoff.
+
+Native API-11 file discovery uses the code-defined `SPRINTNS` stem. The
+[SPRINTNS download](https://n1mmwp.hamdocs.com/mmfiles/sprintns-txt-3/) checked
+October 29, 2026 has 4,723 contact rows, `Call,Name,State,UserText` columns and
+shared NAQP/Sprint association comments (last edit August 20, 2026).
+The extension accepts those associations deliberately, retains NS-specific
+locations and omits serial hints. No roster is bundled; deterministic test
+rows are synthetic. The source's shared headers explain why requiring only
+an NS comment would incorrectly reject this compatible dataset.
+
+Other loggers' official documentation provides Sprint workflow aids:
+[N1MM](https://n1mmwp.hamdocs.com/manual-supported/contests-setup/setup-hf-contests/)
+documents Run/S&P macros and configurable QSY steps;
+[TR4W's reference](https://tr4w.net/TR4W_Reference_Manual_4.01.pdf) describes
+automatic CQ mode after an S&P contact; and
+[Win-Test](https://docs.win-test.com/wiki/Menu%3AOptions#Sprint_Exchange_Logic)
+selects the Sprint exchange message from whether the received serial is blank.
+These are documented message/workflow aids, not evidence of universal frequency
+lockouts. NS retains an explicit Unknown role and advisory-only checks.
+
+NS extends the serial/name and name/location forms in `packages/mini-contest/`
+to support all three exchanged values, while keeping NS geographic rules in
+the new extension. MST, SST and WRT consume these shared changes and retain
+their existing formats. Original copyright and MPL-2.0 notices are preserved.
+The shared CWT history adapter is consumed unchanged; neither CWT source nor
+behavior is changed. NS and this non-CWT shared contest work are exempt from
+the temporary CWT upstream-PR synchronization requirement.
+
 ### Zombie Shuffle
 
 The midnight radio club artwork, native scene, rebirth watch, identity notes,

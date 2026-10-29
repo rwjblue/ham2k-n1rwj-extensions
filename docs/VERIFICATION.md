@@ -1,5 +1,48 @@
 # Verification and compatibility
 
+## NCCC Sprint CW implementation — 2026-10-29
+
+Added the independent `n1rwj-ns` extension at the repository's synchronized
+development version, **0.17.0**. This local build has not been published or
+submitted to the catalog. Draft next-release notes are in
+[v0.18.0.md](releases/v0.18.0.md), with shared-consumer notes for MST, SST and WRT.
+
+- `mise run format` and `mise run check` pass: **1,936 tests in 149 files**,
+  strict source/test/task typechecks, lint, thirteen official ES2020 builds
+  and thirteen official packages/checksums. NS adds 56 deterministic tests.
+- NS source and bundle checks cover three-part exchanges, native serial
+  descriptors, editing/clearing, scoped local history, UTC/DST and cutoff
+  boundaries, per-band duplicates/multipliers, all current North American
+  DXCCs, the sponsor's South American additions, Canadian aliases,
+  state/country abbreviation collisions, native cached N1MM prefills,
+  CQ/S&P/Unknown controls, advisory QSY checks, checkpoint resumption and exports.
+- The actual `SPRINTNS.txt` download (last edit 2026-08-20, 76,012 bytes,
+  4,723 contact records) is accepted by the official compiled bundle under
+  Node VM. An existing record supplies name/QTH while offline; a missing
+  callsign remains blank, and received serials are never suggested. The
+  native host's download/freshness UI itself is not exercised by that probe.
+- `mise run verify-host n1rwj-ns` accepts all seven hooks against the installed
+  **Ham2K Mac Logger (Next) 26.9.0, build 184** kernel. Kernel SHA-256:
+  `7cdaf082cae88298ae61786d01f4d3ee7ab33a10890c9c6cebd8016e3f83e3cf`.
+  Shared-library compatibility and activation pass under Node VM. This is
+  distinct from a native app installation, UI/serial-allocation test or on-air
+  acceptance; those remain pending.
+- `mise run release:notes v0.18.0` validates and previews all thirteen audience
+  sections. No third-party dependency versions changed; the lockfile only
+  registers the new workspace. Existing published release records are retained.
+
+QSO start time approximates the sponsor's response/callsign cutoff. QSY is
+advisory, never changing points, multipliers, duplicates or permission to save.
+Recorded CQ anchors require a completed contact elsewhere before return;
+frequency-only proximity checks acknowledge that separate nearby CQs may be
+valid. Missing data and older checkpoints remain explicitly uncertain.
+An operation-scoped guide cache shares cold reads, rejects stale responses,
+and recovers native payloads missing UUID only from a unique creation identity.
+Operators must disable external spotting assistance. NS registers a native
+API-11 data-file hook for prefills, with no spot source or history spot filter. CWT
+source and the shared CWT history adapter remain unchanged; NS and this shared
+MST/SST/WRT work are exempt from CWT upstream synchronization.
+
 ## Release 0.17.0 publication — 2026-10-29
 
 Published [v0.17.0](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.17.0)

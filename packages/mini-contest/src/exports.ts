@@ -9,7 +9,7 @@ import {
   startMillisOf,
 } from '@ham2k/extension-sdk'
 import { qsonToCabrillo } from '@ham2k/lib-qson-cabrillo'
-import { exchangeText, received, sent, validSerial } from './exchange.ts'
+import { exchangeText, hasSerial, received, sent, validSerial } from './exchange.ts'
 import {
   type ContestConfig,
   type ContestManifest,
@@ -31,7 +31,7 @@ export function createExports(config: ContestConfig, manifest: ContestManifest) 
       const receivedText = exchangeText(config, theirs)
       if (sentText) fields.push({ name: 'STX_STRING', value: sentText })
       if (receivedText) fields.push({ name: 'SRX_STRING', value: receivedText })
-      if (config.exchange === 'serial-name') {
+      if (hasSerial(config)) {
         if (validSerial(ours.value)) fields.push({ name: 'STX', value: String(Number(ours.value)) })
         if (validSerial(theirs.value))
           fields.push({ name: 'SRX', value: String(Number(theirs.value)) })
@@ -111,6 +111,17 @@ export function createExports(config: ContestConfig, manifest: ContestManifest) 
           qsoParts(qso) {
             const ours = sent(config, args.operation, qso)
             const theirs = received(config, qso)
+            if (config.exchange === 'serial-name-location')
+              return [
+                call || '-',
+                ours.value || '-',
+                ours.name || '-',
+                ours.location || '-',
+                text(object(qso.their).call) || '-',
+                theirs.value || '-',
+                theirs.name || '-',
+                theirs.location || '-',
+              ]
             // Sponsor-linked N1MM definitions omit RST for these contests.
             // Their Cabrillo columns use name then serial/location, even
             // when the on-air MST exchange sends the serial first.

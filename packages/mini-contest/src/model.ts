@@ -2,7 +2,7 @@ import type { FormField, JSONValue } from '@ham2k/extension-sdk'
 
 export type Qson = Record<string, JSONValue>
 export interface ContestConfig {
-  type: 'mst' | 'sst' | 'wrt'
+  type: 'mst' | 'sst' | 'wrt' | 'ns'
   name: string
   shortName: string
   adifId: string
@@ -14,7 +14,8 @@ export interface ContestConfig {
   mode: 'CW' | 'RTTY'
   bands: string[]
   powerClasses: typeof POWER_CLASSES
-  multiplier: 'callsign' | 'sst-location'
+  multiplier: 'callsign' | 'sst-location' | ((qso: Qson, location: string) => string | undefined)
+  ineligibleReason?: (qso: Qson, operation: Qson) => string | undefined
   setupLocationSuggestions?: FormField['suggestions']
   locationInput?: {
     label: string
@@ -24,12 +25,13 @@ export interface ContestConfig {
     guess(their: Qson): string
     valid(value: string): boolean
   }
-  exchange: 'serial-name' | 'name-location'
+  exchange: 'serial-name' | 'name-location' | 'serial-name-location'
   guidance: string
 }
 export interface DownloadedContestConfig extends ContestConfig {
   historyStem: string
   historyAliases: string[]
+  historyLocation?: (value: string, call: string) => string
 }
 export interface ContestManifest {
   key: string

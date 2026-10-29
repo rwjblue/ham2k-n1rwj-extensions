@@ -22,7 +22,7 @@ function score(config: ContestConfig, qsos: Qson[], session?: string) {
   return { tally, verdicts, scoresheet }
 }
 function qso(
-  type: 'mst' | 'sst' | 'wrt',
+  type: ContestConfig['type'],
   call: string,
   band = '20m',
   location = 'MA',

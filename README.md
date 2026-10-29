@@ -14,6 +14,7 @@ your signal is heard. Published extensions are available as ready-to-install
 | [CWops CWT](extensions/contests/n1rwj-cwt/README.md) (`n1rwj-cwt`) | CWT sessions, exchange suggestions, scoring, and exports |
 | [ICWC MST](extensions/contests/n1rwj-mst/README.md) (`n1rwj-mst`) | MST sessions, name suggestions, outgoing serials, scoring, and exports |
 | [K1USN SST](extensions/contests/n1rwj-sst/README.md) (`n1rwj-sst`) | SST sessions, name/location suggestions, scoring, and exports |
+| [NCCC Sprint CW](extensions/contests/n1rwj-ns/README.md) (`n1rwj-ns`) | Half-hour NS sessions, serial/name/QTH exchanges, per-band multipliers, and exports |
 | [Weekly RTTY Test](extensions/contests/n1rwj-wrt/README.md) (`n1rwj-wrt`) | Half-hour RTTY sessions, name/QTH suggestions, callsign multipliers, and exports |
 | [RandomGram](extensions/contests/n1rwj-randomgram/README.md) (`n1rwj-randomgram`) | Supplied TX lists, a large exchange readout, listening-only entries, keyer templates, and received-group submission exports |
 | [Zombie Shuffle](extensions/contests/n1rwj-zombie/README.md) (`n1rwj-zombie`) | Friendly graveyard scene, per-band rebirth watch, spooky visitor book, 2026 CW exchanges, scoring, and exports |
@@ -218,6 +219,19 @@ contest, its data sources, exchange suggestions, and scoring, including how
 MST serial numbers work. [Verification](docs/VERIFICATION.md) separates
 automated checks from tests performed in the native Ham2K app.
 
+### NCCC Sprint CW
+
+[NS](extensions/contests/n1rwj-ns/README.md) runs Fridays 0230–0300 UTC
+(Thursday evening in North America) on 160, 80, 40, 20 and 15 meters, at
+100 W maximum. It combines outgoing serials with name/QTH entry, NS-specific
+state/province/country multipliers per band, and ADIF/Cabrillo exports.
+Native N1MM call history, local NS contacts and host lookups supply name/QTH
+suggestions; copy each received serial on air. CQ/S&P/Unknown entry and the
+optional NS Sprint guide provide advisory QSY reminders without changing scores.
+NS requires extension API 11. Observe the 1 kHz Sprint QSY rule and
+disable RBN/packet assistance. Build with `mise run pack n1rwj-ns`; publication
+and native UI/on-air acceptance are pending.
+
 ### Weekly RTTY Test
 
 [WRT](extensions/contests/n1rwj-wrt/README.md) runs Fridays 0145–0215 UTC on
@@ -264,6 +278,7 @@ installation and logging tests.
 ```text
 extensions/contests/n1rwj-cwt/   CWT manifest, source, and tests
 extensions/contests/n1rwj-mst/   MST manifest and configuration
+extensions/contests/n1rwj-ns/    NCCC Sprint CW exchange, geography and tests
 extensions/contests/n1rwj-sst/   SST manifest and configuration
 extensions/contests/n1rwj-randomgram/  Issued code groups, exchange pane, and submissions
 extensions/tools/n1rwj-rbn/     RBN feed, receiver directory, Spots, and panel adapter
@@ -272,7 +287,7 @@ extensions/tools/n1rwj-contest-calendar/  Upcoming contest feed, cache, and opti
 packages/reception/             Shared reception model, map, UI, and geography
 packages/n1mm/                 Generic N1MM parsing and callsigns
 packages/contest-history/      Shared CWT/MST/SST operation-history adapter
-packages/mini-contest/          Shared MST/SST hooks, history, scoring, and tests
+packages/mini-contest/          Shared MST/SST/WRT/NS hooks, history, scoring, and tests
 mise/tasks/                    Executable automation and its TypeScript config
 scripts/                       TypeScript implementation of repository tooling
 ```

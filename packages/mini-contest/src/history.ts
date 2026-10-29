@@ -2,7 +2,7 @@ import type { HookContext } from '@ham2k/extension-sdk'
 import { createHistoryAdapter } from '../../contest-history/src/index.ts'
 import { callLookupKeys, normalizeCall } from '../../n1mm/src/callsign.ts'
 import { parseN1mm } from '../../n1mm/src/parse.ts'
-import { firstName, LOCATIONS, location, validLocation } from './exchange.ts'
+import { firstName, hasLocation, location, validLocation } from './exchange.ts'
 import {
   type ContestConfig,
   type DownloadedContestConfig,
@@ -41,8 +41,12 @@ export function parseHistory(config: DownloadedContestConfig, body: string): His
     const rawLocation = location(row.fields.exch1 || row.fields.state)
     // AK/HI from generic history become the actual SST exchange, DX. An
     // unrelated numeric exchange must never be interpreted as a location.
-    let qth = ['AK', 'HI', 'PR'].includes(rawLocation) ? 'DX' : rawLocation
-    if (config.exchange === 'name-location' && qth && !LOCATIONS.includes(qth)) {
+    let qth = config.historyLocation
+      ? config.historyLocation(rawLocation, row.call)
+      : ['AK', 'HI', 'PR'].includes(rawLocation)
+        ? 'DX'
+        : rawLocation
+    if (hasLocation(config) && rawLocation && (!qth || !validLocation(config, qth))) {
       // Community files can contain unsupported exchanges. Keep the name
       // and other usable records, but never guess a location from this value.
       warnings++
@@ -52,7 +56,7 @@ export function parseHistory(config: DownloadedContestConfig, body: string): His
       ...records[row.call],
       call: row.call,
       ...(name ? { name } : {}),
-      ...(config.exchange === 'name-location' && qth ? { location: qth } : {}),
+      ...(hasLocation(config) && qth ? { location: qth } : {}),
     }
   }
   return {
@@ -70,7 +74,7 @@ function compatibleEntry(config: ContestConfig, qso: Qson): HistoryEntry | undef
     ? {
         call,
         name: firstName(ref.name),
-        location: config.exchange === 'name-location' ? location(ref.location) : undefined,
+        location: hasLocation(config) ? location(ref.location) : undefined,
         timestamp: typeof qso.startAtMillis === 'number' ? qso.startAtMillis : undefined,
       }
     : undefined

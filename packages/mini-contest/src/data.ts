@@ -36,9 +36,11 @@ export function createHistoryData(config: DownloadedContestConfig, manifest: Con
     key: `${manifest.key}_history`,
     name: `${config.shortName} N1MM call history`,
     description:
-      config.exchange === 'serial-name'
-        ? 'Name suggestions only. Received serials must always be copied on the air.'
-        : 'Name and state/province/DX suggestions; verify the received exchange on the air.',
+      config.exchange === 'serial-name-location'
+        ? 'Name and QTH suggestions only. Received serials must always be copied on the air.'
+        : config.exchange === 'serial-name'
+          ? 'Name suggestions only. Received serials must always be copied on the air.'
+          : 'Name and state/province/DX suggestions; verify the received exchange on the air.',
     category: manifest.key,
     fetchType: 'raw',
     maxAgeInDays: 1,

@@ -15,6 +15,8 @@ import {
   firstName,
   guessedLocation,
   guessedName,
+  hasLocation,
+  hasSerial,
   location,
   received,
   serial,
@@ -91,7 +93,7 @@ export function createActivity(
           uppercase: true,
         },
       ]
-      if (config.exchange === 'name-location')
+      if (hasLocation(config))
         elements.push({
           type: 'field',
           fieldType: 'text',
@@ -154,8 +156,9 @@ export function createActivity(
         color: manifest.accentColor,
         input,
       })
-      if (config.exchange === 'serial-name')
-        return [
+      const controls: LoggingControlDescriptor[] = []
+      if (hasSerial(config))
+        controls.push(
           control('ourSerial', 'Sent #', 10, {
             kind: 'serial',
             refType: config.type,
@@ -170,18 +173,9 @@ export function createActivity(
             pattern: '[0-9]+',
             maxLength: 6,
           }),
-          control('name', 'Name', 30, {
-            kind: 'text',
-            refType: config.type,
-            field: 'name',
-            uppercase: true,
-            maxLength: 20,
-            suggestedValue: name || ' ',
-            placeholder: name || undefined,
-          }),
-        ]
-      return [
-        control('name', 'Name', 10, {
+        )
+      controls.push(
+        control('name', 'Name', hasSerial(config) ? 30 : 10, {
           kind: 'text',
           refType: config.type,
           field: 'name',
@@ -190,17 +184,26 @@ export function createActivity(
           suggestedValue: name || ' ',
           placeholder: name || undefined,
         }),
-        control('location', config.locationInput?.label ?? 'State / province / DX', 20, {
-          kind: 'text',
-          refType: config.type,
-          field: 'location',
-          uppercase: true,
-          pattern: config.locationInput?.pattern ?? '[A-Z]{2}',
-          maxLength: config.locationInput?.maxLength ?? 4,
-          suggestedValue: qth || ' ',
-          placeholder: qth || undefined,
-        }),
-      ]
+      )
+      if (hasLocation(config))
+        controls.push(
+          control(
+            'location',
+            config.locationInput?.label ?? 'State / province / DX',
+            hasSerial(config) ? 40 : 20,
+            {
+              kind: 'text',
+              refType: config.type,
+              field: 'location',
+              uppercase: true,
+              pattern: config.locationInput?.pattern ?? '[A-Z]{2}',
+              maxLength: config.locationInput?.maxLength ?? 4,
+              suggestedValue: qth || ' ',
+              placeholder: qth || undefined,
+            },
+          ),
+        )
+      return controls
     },
     async processQsoBeforeSave({ operation, qso }, _ctx: HookContext) {
       if (!refOf(operation, config.type)) return null
@@ -208,8 +211,9 @@ export function createActivity(
       const hasReceived =
         ref &&
         ('name' in ref ||
-          (config.exchange === 'serial-name' ? 'theirSerial' in ref : 'location' in ref))
-      if (config.exchange === 'serial-name')
+          (hasSerial(config) && 'theirSerial' in ref) ||
+          (hasLocation(config) && 'location' in ref))
+      if (hasSerial(config))
         return {
           our: { exchange: serial(ref?.ourSerial) },
           ...(hasReceived
@@ -228,10 +232,7 @@ export function createActivity(
     },
     async decorateRef({ ref }, _ctx: HookContext) {
       const session = sessionFor(config, ref.ref)
-      const ours = [
-        firstName(ref.ourName),
-        config.exchange === 'name-location' ? location(ref.ourLocation) : '',
-      ]
+      const ours = [firstName(ref.ourName), hasLocation(config) ? location(ref.ourLocation) : '']
         .filter(Boolean)
         .join(' ')
       return {
@@ -250,10 +251,7 @@ export function createActivity(
       return {
         for: session ? sessionLabel(config, session) : config.shortName,
         subtitle:
-          [
-            firstName(ref.ourName),
-            config.exchange === 'name-location' ? location(ref.ourLocation) : '',
-          ]
+          [firstName(ref.ourName), hasLocation(config) ? location(ref.ourLocation) : '']
             .filter(Boolean)
             .join(' ') || undefined,
       }

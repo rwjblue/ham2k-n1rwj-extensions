@@ -46,34 +46,39 @@ export function guessedLocation(their: Qson): string {
 export function validLocation(config: ContestConfig, value: string): boolean {
   return config.locationInput ? config.locationInput.valid(value) : LOCATIONS.includes(value)
 }
-export function received(config: ContestConfig, qso: Qson): { name: string; value: string } {
+export function hasSerial(config: ContestConfig): boolean {
+  return config.exchange !== 'name-location'
+}
+export function hasLocation(config: ContestConfig): boolean {
+  return config.exchange !== 'serial-name'
+}
+export interface Exchange {
+  name: string
+  value: string
+  location?: string
+}
+export function received(config: ContestConfig, qso: Qson): Exchange {
   const ref = refOf(qso, config.type)
   return {
     name: firstName(ref?.name),
-    value: config.exchange === 'serial-name' ? serial(ref?.theirSerial) : location(ref?.location),
+    value: hasSerial(config) ? serial(ref?.theirSerial) : location(ref?.location),
+    ...(config.exchange === 'serial-name-location' ? { location: location(ref?.location) } : {}),
   }
 }
-export function sent(
-  config: ContestConfig,
-  operation: Qson,
-  qso: Qson,
-): { name: string; value: string } {
+export function sent(config: ContestConfig, operation: Qson, qso: Qson): Exchange {
   const op = refOf(operation, config.type)
   return {
     name: firstName(op?.ourName),
-    value:
-      config.exchange === 'serial-name'
-        ? serial(refOf(qso, config.type)?.ourSerial)
-        : location(op?.ourLocation),
+    value: hasSerial(config)
+      ? serial(refOf(qso, config.type)?.ourSerial)
+      : location(op?.ourLocation),
+    ...(config.exchange === 'serial-name-location' ? { location: location(op?.ourLocation) } : {}),
   }
 }
-export function exchangeText(
-  config: ContestConfig,
-  exchange: { name: string; value: string },
-): string {
+export function exchangeText(config: ContestConfig, exchange: Exchange): string {
   return (
-    config.exchange === 'serial-name'
-      ? [exchange.value, exchange.name]
+    hasSerial(config)
+      ? [exchange.value, exchange.name, exchange.location]
       : [exchange.name, exchange.value]
   )
     .filter(Boolean)

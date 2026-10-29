@@ -3,7 +3,7 @@
   "version": "0.17.0",
   "private": true,
   "license": "MPL-2.0",
-  "description": "N1RWJ Ham2K extensions: CWT, ICWC MST, K1USN SST, Weekly RTTY Test, and reception maps",
+  "description": "N1RWJ Ham2K extensions: CWT, ICWC MST, K1USN SST, NCCC Sprint CW, Weekly RTTY Test, and reception maps",
   "type": "module",
   "engines": {
     "node": "24.x"

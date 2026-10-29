@@ -1,0 +1,26 @@
+{
+  "key": "n1rwj-ns",
+  "name": "N1RWJ NCCC Sprint CW",
+  "shortName": "NS",
+  "version": "0.17.0",
+  "description": "NCCC Sprint CW with N1MM prefills, CQ/S&P QSY reminders, serial/name/QTH exchanges, per-band multipliers and exports.",
+  "category": "contest",
+  "icon": "clock-fast",
+  "accentColor": "#5E35B1",
+  "api": 11,
+  "keywords": ["contest", "ns", "nccc", "sprint", "cw", "ladder", "cabrillo"],
+  "hooks": ["activity", "adifFields", "dataFile", "export", "panel", "ref:ns", "scoring"],
+  "domains": [],
+  "relevance": { "interests": ["cw"] },
+  "sharedDependencies": {
+    "@ham2k/lib-callsigns": "^1.0.2",
+    "@ham2k/lib-country-files": "^1.0.202605301",
+    "@ham2k/lib-dxcc-data": "^1.0.1",
+    "@ham2k/lib-format-tools": "^1.2.0",
+    "@ham2k/lib-geo-tools": "^1.1.1",
+    "@ham2k/lib-operation-data": "^1.1.3",
+    "@ham2k/lib-qson-cabrillo": "^1.2.0",
+    "i18next": "^23.16.8",
+    "liquidjs": "^10.28.0"
+  }
+}

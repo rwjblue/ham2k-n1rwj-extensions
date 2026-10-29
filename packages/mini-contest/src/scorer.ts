@@ -8,7 +8,15 @@ import {
   contestSummary,
 } from '@ham2k/extension-sdk'
 import { isCallsign, normalizeCall } from '../../n1mm/src/callsign.ts'
-import { canonicalLocation, LOCATIONS, received, validLocation, validSerial } from './exchange.ts'
+import {
+  canonicalLocation,
+  hasLocation,
+  hasSerial,
+  LOCATIONS,
+  received,
+  validLocation,
+  validSerial,
+} from './exchange.ts'
 import { type ContestConfig, contestMode, object, type Qson, refOf, text } from './model.ts'
 import { sessionFor, sessionLabel } from './schedule.ts'
 
@@ -57,11 +65,18 @@ export function createScorer(config: ContestConfig): ContestScorer<Scoresheet> {
       ) {
         return result({ value: 0, alerts: [OUTSIDE_SESSION] })
       }
+      const ineligible = config.ineligibleReason?.(qso, operation)
+      if (ineligible) return result({ value: 0, alerts: [ineligible] })
       const worked = scoresheet.worked[call]
       if (worked?.includes(band)) return result({ value: 0, dupe: true, alerts: ['duplicate'] })
       const exchange = received(config, qso)
+      const qth = exchange.location ?? exchange.value
       const locationMult =
-        config.multiplier === 'sst-location' ? sstMultiplier(qso, exchange.value) : undefined
+        typeof config.multiplier === 'function'
+          ? config.multiplier(qso, qth)
+          : config.multiplier === 'sst-location'
+            ? sstMultiplier(qso, qth)
+            : undefined
       const mult =
         config.multiplier === 'callsign'
           ? call
@@ -77,11 +92,11 @@ export function createScorer(config: ContestConfig): ContestScorer<Scoresheet> {
       scoresheet.points++
       scoresheet.bands[band] = (scoresheet.bands[band] ?? 0) + 1
       const score: QsoScoreVerdict = { value: 1, dupe: false, band, notices }
-      if (!exchange.name || !exchange.value) score.alerts = ['missingExchange']
+      if (!exchange.name || !exchange.value || (hasLocation(config) && !qth))
+        score.alerts = ['missingExchange']
       else if (
-        config.exchange === 'serial-name'
-          ? !validSerial(exchange.value)
-          : !validLocation(config, exchange.value)
+        (hasSerial(config) && !validSerial(exchange.value)) ||
+        (hasLocation(config) && !validLocation(config, qth))
       )
         score.alerts = ['invalidExchange']
       else if (config.multiplier === 'sst-location' && exchange.value === 'DX' && !mult)
@@ -101,7 +116,14 @@ export function createScorer(config: ContestConfig): ContestScorer<Scoresheet> {
           total: points * mults,
           arithmetic: contestArithmetic({ qsos: points, points, mults }, ctx),
           detail: config.bands
-            .map((band) => `**${band}**: ${scoresheet.bands[band] ?? 0} QSOs`)
+            .map((band) => {
+              const qsos = `**${band}**: ${scoresheet.bands[band] ?? 0} QSOs`
+              if (typeof config.multiplier !== 'function') return qsos
+              const count = Object.keys(scoresheet.multipliers).filter((key) =>
+                key.startsWith(`${band}|`),
+              ).length
+              return `${qsos}, ${count} mult${count === 1 ? '' : 's'}`
+            })
             .join('\n'),
           extra: { points, qsos: points, mults },
         },
