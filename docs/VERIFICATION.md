@@ -1,5 +1,48 @@
 # Verification and compatibility
 
+## Release 0.18.2 publication — 2026-10-30
+
+Published [v0.18.2](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.18.2)
+from signed main commit `a30d8ab2b0101c82c5b7cabc155bb5cce45d50b1` at
+**12:09:30 US Eastern (16:09:30 UTC)**, after the
+[check workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/41087096373)
+passed for that exact commit. GitHub verifies both the release commit and
+settings implementation commit `4b6ad216e8d8ac58a7148b425942ea8def8a2de1`.
+The release tag points to the tested preparation commit, and its body exactly
+matches `docs/releases/v0.18.2.md`.
+
+- Local `mise run release v0.18.2 --dry-run` passes **1,951 tests in 150
+  files**, strict source/test/task types, lint, thirteen official ES2020
+  builds/packages and all 26 synchronized release assets.
+- Both jobs of the
+  [release workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/41087309802)
+  passed. GitHub archives thirteen bundles and thirteen checksum files.
+- `mise run release:catalog v0.18.2 --dry-run` downloaded and validated all
+  archives/checksums. The authored notes select only RBN, SKCC Companion and
+  Zombie Shuffle, skipping the ten unchanged catalog entries.
+- The official publisher accepted all three submissions and their scoped
+  release notes for `stable`, with status **pending review**. It explicitly
+  reports that omitting `settings.section` makes each panel its own category
+  in Application Preferences and requires review. No retries were made.
+
+| Extension | Submission accepted (UTC) | Catalog status | Public approved version at verification |
+| --- | --- | --- | --- |
+| RBN | 16:10:27 | Pending review | 0.17.0 |
+| SKCC Companion | 16:10:28 | Pending review | 0.17.0 |
+| Zombie Shuffle | 16:10:29 | Pending review | 0.18.0 |
+
+The public endpoints do not yet list the pending 0.18.2 submissions as
+approved versions or current updates. The review request follows the
+maintainer's guidance: native grouped preferences with a separate read-only
+About dialog, without sidebar entries or Common Preferences fields. Settings
+keys and operation/per-panel scopes are preserved. Native Ham2K UI acceptance
+remains separate from unit, VM bundle and publication verification.
+
+Dependencies, shared runtime code and CWT behavior are unchanged; these
+independent settings updates and synchronized personal release packaging are
+exempt from upstream CWT synchronization. The pre-existing
+`docs/ZOMBIE-VIDEO-BRIEF.md` remains untouched and uncommitted.
+
 ## Release 0.18.1 publication — 2026-10-30
 
 Published [v0.18.1](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.18.1)

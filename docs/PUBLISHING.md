@@ -19,6 +19,34 @@ remain historical; no new release or catalog submission accompanies removal.
 
 ## Current release status
 
+[v0.18.2](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.18.2)
+was published from signed main commit `a30d8ab2b0101c82c5b7cabc155bb5cce45d50b1`
+on **October 30, 2026 at 12:09:30 US Eastern (16:09:30 UTC)**. All
+**thirteen bundles and thirteen checksum files** are available. The
+[check workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/41087096373)
+and both jobs of the
+[release workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/41087309802)
+passed. Downloaded assets passed `mise run release:catalog v0.18.2 --dry-run`,
+and the release body exactly matches `docs/releases/v0.18.2.md`.
+
+**RBN, SKCC Companion and Zombie Shuffle 0.18.2 were accepted for `stable`
+and are pending catalog review.** Each submission requests an inline category
+in Application Preferences, following the maintainer's guidance. The catalog
+explicitly held the missing `settings.section` for review; no sidebar entries
+or Common Preferences fields are requested. At verification, the public
+catalog still serves RBN/SKCC 0.17.0 and Zombie 0.18.0. The other ten catalog
+entries were skipped. No duplicate submission or retry was made.
+
+All checks passed: **1,951 tests in 150 files**, strict types, lint, thirteen
+builds and official packages. Settings keys and operation/per-panel scopes
+are preserved. These independent settings changes and synchronized personal
+release packaging do not change CWT behavior and are exempt from upstream
+CWT synchronization. Native UI acceptance remains separate. See the
+[release notes](releases/v0.18.2.md) and
+[verification record](VERIFICATION.md#release-0182-publication--2026-10-30).
+
+### Previous releases
+
 [v0.18.1](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.18.1)
 was published from signed main commit `81b9f8c051bc0bb74b37bf10b93d81199ab54bd1`
 on **October 30, 2026 at 00:52:06 US Eastern (04:52:06 UTC)**. All
@@ -41,8 +69,6 @@ builds and official packages. BKG icon metadata and synchronized personal
 release packaging are exempt from upstream CWT synchronization. See the
 [release notes](releases/v0.18.1.md) and
 [verification record](VERIFICATION.md#release-0181-publication--2026-10-30).
-
-### Previous releases
 
 [v0.18.0](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.18.0)
 was published from signed main commit `646b660c8c9b48d852f6bccadc1e1cbe60f06bb3`
