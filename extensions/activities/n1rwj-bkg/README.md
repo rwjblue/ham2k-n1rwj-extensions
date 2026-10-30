@@ -84,6 +84,15 @@ Recruit submission, authentication and OG-specific hunting are outside this
 first cut. Membership requires a voluntary 2m CW contact with an existing member
 and the club's normal recruit review; the extension never enrolls anyone.
 
+## Catalog images
+
+The [BKG catalog listing](https://catalog.ham2k.net/extensions/n1rwj-bkg?channel=stable)
+uses the club's existing logo as its lead gallery image, followed by a clearly
+labeled static panel preview with synthetic callsigns. The gallery and search
+thumbnails are hosted by the catalog separately from extension versions.
+Sources, captions and screenshot-only update instructions are kept in
+[`screenshots/`](screenshots/README.md).
+
 ## Development and verification
 
 - `mise run test extensions/activities/n1rwj-bkg/tests`
