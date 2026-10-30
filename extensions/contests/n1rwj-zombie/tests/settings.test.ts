@@ -23,6 +23,7 @@ it('offers an About row and opens the offline guide without reading or saving se
       key: manifest.key,
       title: 'Zombie Shuffle',
       icon: manifest.icon,
+      section: 'activities',
       sidebar: false,
     },
   ])

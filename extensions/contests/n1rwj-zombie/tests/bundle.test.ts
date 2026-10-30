@@ -62,15 +62,16 @@ it('activates its official ES2020 bundle, scores elapsed rebirths and suggests l
       key: manifest.key,
       title: 'Zombie Shuffle',
       icon: manifest.icon,
+      section: 'activities',
       sidebar: false,
     },
   ])
-  expect(manifest).not.toHaveProperty('settings')
-  expect(definition).not.toHaveProperty('settings')
+  expect(manifest.settings).toEqual({ section: 'activities' })
+  expect(definition).toMatchObject({ settings: manifest.settings })
   const builtManifest = JSON.parse(
     await readFile(new URL('../build/manifest.json', import.meta.url), 'utf8'),
   )
-  expect(builtManifest).not.toHaveProperty('settings')
+  expect(builtManifest.settings).toEqual(manifest.settings)
   const operation: Qson = {
     uuid: 'bundle-operation',
     stationCall: 'N1RWJ',

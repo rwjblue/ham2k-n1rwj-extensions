@@ -5,7 +5,7 @@ operation's **Exports** view. By default, RBN adds one file: an HTML reception
 report containing the maps, receiver timelines, collection history, and contact
 context together. It is selected by default and opens offline in a browser.
 
-For other workflows, open **Settings → Application Preferences → RBN → Exports → Additional export files**
+For other workflows, open **Settings → Spotting → RBN → Exports → Additional export files**
 and select only the companions you need. Reopen the operation's **Exports** view
 after changing the preference. Clearing the selection restores the single HTML
 report. These choices persist across restarts and apply across operations; spot

@@ -21,6 +21,7 @@ export function createSettings(
           key: KEY,
           title: 'SKCC Companion',
           icon: 'key',
+          section: 'activities',
           sidebar: false,
           dataFilesSection: true,
         },

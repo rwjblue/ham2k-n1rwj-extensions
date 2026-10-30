@@ -46,16 +46,16 @@ commit-message-default: auto
 - Group each extension's global settings into one native `settingsPanel`, using
   headers for related controls and an About row that opens a separate read-only
   dialog for longer guidance and links. Keep operation and per-panel options in
-  their existing scope; preserve settings storage keys. Following maintainer
-  guidance, Zombie Shuffle, SKCC Companion and RBN appear as inline categories
-  in Application Preferences: omit `settings.section` in their manifests and
-  `section` on their panels, and explicitly set `sidebar: false`. This placement
-  requires catalog review under the current SDK rules; explain it in release
-  notes. Do not request sidebar entries or Common Preferences fields. Use
-  `dataFilesSection` only for data management. For any panel placed in a host
-  section instead, declare matching manifest and panel sections; those entries
-  open dialogs. Check current SDK/host/catalog guidance before changing placement;
-  panel code alone is not a catalog declaration.
+  their existing scope; preserve settings storage keys. Keep Zombie Shuffle and
+  SKCC Companion under `activities`, and RBN under `spotting`. Declare matching
+  `settings.section` in the manifest and `section` on the panel, and explicitly
+  set `sidebar: false`. Do not remove those section declarations to get inline
+  controls: that creates standalone Application Preferences categories and
+  changes the requested placement. Under the current host, section entries open
+  a grouped settings panel; its About row opens a separate read-only dialog.
+  Do not request new categories, sidebar entries or Common Preferences fields.
+  Use `dataFilesSection` only for data management. Check current SDK/host/catalog
+  guidance before changing placement; panel code alone is not a catalog declaration.
 - Keep the personal extension key `n1rwj-cwt` distinct from the original.
   Keep CWT reference and exchange/export conventions compatible. Preserve
   Sebastian Delmont's upstream copyright, attribution, and MPL-2.0 license.

@@ -867,22 +867,23 @@ The authenticated v0.2.1, v0.3.0, and v0.3.1 upload attempts were blocked by
 Cloudflare before catalog validation. The successful v0.3.2 retry established
 that the deployed catalog accepts `stable`; the other channels remain unverified.
 
-## Preferences placement review
+## Preferences placement
 
-Following the Ham2K maintainer’s guidance, Zombie Shuffle, SKCC Companion and
-RBN use inline categories in **Application Preferences**, with native grouped
-controls and a separate **About** action. Their manifests omit
-`settings.section`, their panel descriptors omit `section`, and their panels
-explicitly set `sidebar: false`. Settings keys and operation/per-panel scopes
-are preserved. No sidebar entries or Common Preferences fields are requested.
+Keep Zombie Shuffle and SKCC Companion under **Activities**, and RBN under
+**Spotting**. Declare the section in both the manifest's `settings.section`
+and the panel descriptor's `section`, with `sidebar: false` on the panel.
+Native headers group the controls; an **About** action opens longer guidance
+in a separate read-only dialog. Preserve settings keys and operation/per-panel
+scopes. No standalone categories, sidebar entries or Common Preferences fields
+are requested. The current host opens each section entry in a settings panel;
+headers alone do not make its controls inline in the parent section.
 
-The current SDK treats a `settingsPanel` without `settings.section` as a new
-category requiring catalog review. Include the requested inline placement and
-the maintainer’s guidance in each affected extension’s next release notes.
-The official `h2kext-pack` CLI’s `held for review on the catalog` warning is
-expected for these three extensions; it does not indicate a packaging failure. Declaring
-`activities` or `spotting` instead would restore the row that opens the whole
-panel in a dialog.
+Version 0.18.2 incorrectly omitted both section declarations to create inline
+categories. That was an implementation mistake, not a request from the user or
+maintainer. It triggered catalog review for new Application Preferences
+categories. The corrective release restores the existing section placements
+while retaining the separate About dialogs. Historical release notes retain
+what was actually submitted.
 
 ## Review and recovery
 

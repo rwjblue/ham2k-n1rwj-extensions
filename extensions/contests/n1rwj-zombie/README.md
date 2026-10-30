@@ -37,10 +37,10 @@ event-day UTC offset and flexible-hours setting from setup. It refreshes once
 per minute in the scene and detailed watch. The backdrop fills the host's
 square panel surface, and the panel selector has an original illustrated preview.
 
-Open **Settings → Application Preferences → Zombie Shuffle → About Zombie Shuffle**
+Open **Settings → Activities → Zombie Shuffle → About Zombie Shuffle**
 for an offline event overview and illustration, plus links to the official rules,
-summary sheets and this guide. The Zombie Shuffle heading contains the About
-row, with no separate sidebar entry. Exchange setup stays in the operation;
+summary sheets and this guide. The Activities entry opens the About row,
+with no separate sidebar entry. Exchange setup stays in the operation;
 display and motion options stay in each panel’s tune settings.
 
 The **Rebirth watch** shows when previously worked callsigns can count again
@@ -130,7 +130,7 @@ K7TQ · N0MII · W1PID · WD7Y · AD4TJ · N4VE · NB7O · N3XTR**
 
 The original email puts a line break between `N7CQR` and `K7TQ`; these are
 two calls. Source Message-ID: `20261030014009.50176.qmail@modulo.zianet.com`.
-The same list is available offline through **About Zombie Shuffle** in Application Preferences.
+The same list is available offline through **Settings → Activities → Zombie Shuffle → About Zombie Shuffle**.
 
 These stations are expected to send `4321`. The announcement supplies neither
 their spooky names nor their operating times. Lookup notes recognize exact

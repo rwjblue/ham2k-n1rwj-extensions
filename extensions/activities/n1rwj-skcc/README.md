@@ -8,9 +8,9 @@ product or a substitute for the club’s award managers.
 
 1. Install `n1rwj-skcc` in a Ham2K host supporting **extension API 12**.
 2. Download **SKCC member roster** through native Data Files. Open
-   **Settings → Application Preferences → SKCC Companion** and set your usual
-   number, name, location and key. Native controls appear directly under the
-   SKCC Companion heading, grouped by purpose. **About SKCC Companion** opens
+   **Settings → Activities → SKCC Companion** and set your usual
+   number, name, location and key. The section entry opens grouped native
+   controls. **About SKCC Companion** opens
    the operating guidance, history/chasing help and official links in a separate
    dialog. No separate sidebar entry or Common Preferences fields are requested.
 3. Add **SKCC contacts and hunting**, or a specific SKCC event edition, to an

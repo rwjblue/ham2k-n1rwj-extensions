@@ -2,7 +2,7 @@
   "key": "n1rwj-ns",
   "name": "N1RWJ NCCC Sprint CW",
   "shortName": "NS",
-  "version": "0.18.2",
+  "version": "0.18.3",
   "description": "NCCC Sprint CW with N1MM prefills, CQ/S&P QSY reminders, serial/name/QTH exchanges, per-band multipliers and exports.",
   "category": "contest",
   "icon": "clock-fast",

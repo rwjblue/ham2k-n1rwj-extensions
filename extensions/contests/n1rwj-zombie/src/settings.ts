@@ -15,6 +15,7 @@ export function createZombieSettings(
           key: manifest.key,
           title: 'Zombie Shuffle',
           icon: manifest.icon,
+          section: 'activities',
           sidebar: false,
         },
       ]

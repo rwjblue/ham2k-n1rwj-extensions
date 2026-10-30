@@ -223,16 +223,17 @@ describe('SKCC installable ES2020 bundle', () => {
         key: manifest.key,
         title: 'SKCC Companion',
         icon: 'key',
+        section: 'activities',
         sidebar: false,
         dataFilesSection: true,
       },
     ])
-    expect(manifest).not.toHaveProperty('settings')
-    expect(runtime.definition).not.toHaveProperty('settings')
+    expect(manifest.settings).toEqual({ section: 'activities' })
+    expect(runtime.definition).toMatchObject({ settings: manifest.settings })
     const packedManifest = JSON.parse(
       await readFile(new URL('../build/manifest.json', import.meta.url), 'utf8'),
     )
-    expect(packedManifest).not.toHaveProperty('settings')
+    expect(packedManifest.settings).toEqual(manifest.settings)
     expect(runtime.hostCall.mock.calls.every(([method]) => method === 'kvGet')).toBe(true)
   })
 

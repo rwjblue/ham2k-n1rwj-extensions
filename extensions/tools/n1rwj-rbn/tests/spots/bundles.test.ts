@@ -231,16 +231,16 @@ it('defaults to merging without an activity and toggles cached spots across rest
   const runtime = await harness({}, [])
   const ctx = { online: false }
   expect(await runtime.settings.getPanels?.({}, ctx)).toEqual([
-    { key: 'n1rwj-rbn', title: 'RBN', icon: 'radar', sidebar: false },
+    { key: 'n1rwj-rbn', title: 'RBN', icon: 'radar', section: 'spotting', sidebar: false },
   ])
-  expect(manifest).not.toHaveProperty('settings')
-  expect(
-    runtime.definitions.find((definition) => definition.key === manifest.key),
-  ).not.toHaveProperty('settings')
+  expect(manifest.settings).toEqual({ section: 'spotting' })
+  expect(runtime.definitions.find((definition) => definition.key === manifest.key)).toMatchObject({
+    settings: manifest.settings,
+  })
   const builtManifest = JSON.parse(
     await readFile(new URL('../../build/manifest.json', import.meta.url), 'utf8'),
   )
-  expect(builtManifest).not.toHaveProperty('settings')
+  expect(builtManifest.settings).toEqual(manifest.settings)
   const activity = runtime.hook<ActivityHook>('n1rwj-rbn', 'activity')
   expect(await activity.loggingControls?.({ operation: {} }, ctx)).toEqual([])
   const form = await runtime.settings.getDefinition({ panelKey: 'n1rwj-rbn' }, ctx)
@@ -285,7 +285,7 @@ it('defaults to merging without an activity and toggles cached spots across rest
   expect(await activity.loggingControls?.({ operation: {} }, ctx)).toEqual([])
 })
 
-it('opens RBN guidance separately from inline controls without changing settings or requesting data', async () => {
+it('opens RBN guidance separately from grouped controls without changing settings or requesting data', async () => {
   const runtime = await harness(
     {
       'extension_n1rwj-rbn': { spotMinWpm: 12, additionalExportFormats: ['json'], unrelated: 42 },

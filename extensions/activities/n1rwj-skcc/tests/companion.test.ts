@@ -198,7 +198,7 @@ describe('SKCC companion panel', () => {
 })
 
 describe('SKCC settings and history actions', () => {
-  it('groups inline preferences with native data management and a separate About action', async () => {
+  it('groups preferences under Activities with native data management and a separate About action', async () => {
     const { prefs, audit } = stores(),
       hook = createSettings(prefs, () => roster, audit)
     expect(await hook.getPanels()).toEqual([
@@ -206,6 +206,7 @@ describe('SKCC settings and history actions', () => {
         key: 'n1rwj-skcc',
         title: 'SKCC Companion',
         icon: 'key',
+        section: 'activities',
         sidebar: false,
         dataFilesSection: true,
       },
