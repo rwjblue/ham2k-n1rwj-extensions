@@ -19,6 +19,35 @@ remain historical; no new release or catalog submission accompanies removal.
 
 ## Current release status
 
+[v0.18.0](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.18.0)
+was published from signed main commit `646b660c8c9b48d852f6bccadc1e1cbe60f06bb3`
+on **October 30, 2026 at 00:05:48 US Eastern (04:05:48 UTC)**. All
+**thirteen bundles and thirteen checksum files** are available. The
+[check workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/41000890727)
+and both jobs of the
+[release workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/41000969587)
+passed. Downloaded assets passed `mise run release:catalog v0.18.0 --dry-run`,
+and the release body exactly matches `docs/releases/v0.18.0.md`.
+
+**MST, NS, SST, WRT and Zombie are approved and current at 0.18.0 on `stable`**,
+released between **04:07:01.883 and 04:07:09.987 UTC**. The other eight catalog
+entries were skipped because their behavior is unchanged. Public bundle bytes,
+sizes, SHA-256 hashes and scoped notes match GitHub for all five submissions.
+Zombie includes the 16 announced bonus calls, native spot markers and `4321`
+number prefills with correction/clearing precedence. API-1 discovery and the
+host's update endpoint offer Zombie 0.18.0 to existing 0.17.0 installations;
+API-13 discovery offers all five updated extensions.
+
+All checks passed: **1,948 tests in 150 files**, strict types, lint, thirteen
+builds and official packages. This release also introduces NCCC Sprint CW and
+its shared MST/SST/WRT support. Zombie, NS and personal release packaging do
+not change CWT behavior and are exempt from upstream CWT synchronization.
+Native UI/on-air acceptance remains separate. See the
+[release notes](releases/v0.18.0.md) and
+[verification record](VERIFICATION.md#release-0180-publication--2026-10-30).
+
+### Previous releases
+
 [v0.17.0](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.17.0)
 was published from signed main commit `ad433250bb949e6a2b1053f2fef74079f1a26078`
 on **October 29, 2026 at 19:15:39 US Eastern (23:15:39 UTC)**. All
@@ -49,8 +78,6 @@ separately from native device/on-air acceptance. CWT changes are synchronized
 to [upstream PR #1](https://github.com/ham2k/extensions/pull/1); other extensions
 and personal packaging are exempt. See the [release notes](releases/v0.17.0.md)
 and [verification record](VERIFICATION.md#release-0170-publication--2026-10-29).
-
-### Previous releases
 
 [v0.16.0](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.16.0)
 was published from signed main commit `3bac28646dbef95d5e079a1be5f8109a6f996927`

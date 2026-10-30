@@ -1,5 +1,44 @@
 # Verification and compatibility
 
+## Release 0.18.0 publication — 2026-10-30
+
+Published [v0.18.0](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.18.0)
+from signed main commit `646b660c8c9b48d852f6bccadc1e1cbe60f06bb3` at
+**00:05:48 US Eastern (04:05:48 UTC)**. GitHub verifies the release-preparation
+commit and Zombie implementation commit
+`5f7911f1efc74711913c84b67d34a3e38317ffef`. The tag points to the exact tested
+release commit, and its body matches the authored notes file.
+
+- Local `mise run release v0.18.0 --dry-run` and the
+  [check workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/41000890727)
+  pass: **1,948 tests in 150 files**, strict types, lint, thirteen official
+  ES2020 builds and thirteen packages/checksums.
+- Both jobs of the
+  [release workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/41000969587)
+  passed. GitHub archives **thirteen bundles and thirteen checksum files**.
+- `mise run release:catalog v0.18.0 --dry-run` downloaded and validated all
+  archives/checksums and selected MST, NS, SST, WRT and Zombie, skipping the
+  eight unchanged catalog entries. Log:
+  `/tmp/ham2k-catalog-v0.18.0-dry-run.log`.
+- All five submitted extensions are **approved** and current at **0.18.0**
+  on `stable`, released between **04:07:01.883 and 04:07:09.987 UTC**. Their
+  public bundle bytes, sizes, SHA-256 hashes and scoped notes match the GitHub
+  assets and authored sections.
+- Zombie's public bundle is **102,377 bytes**, SHA-256
+  `e4351b17166c08fad82b7c28c326ec2cccd298373b1c8077b2e25acf2ac95c3b`.
+  API-1 and API-13 discovery offer Zombie 0.18.0, and the host's update endpoint
+  offers it to an installed 0.17.0 with API 1. API-13 discovery offers all five
+  submitted extensions. Verification metadata:
+  `/tmp/ham2k-v0.18.0-verified.json`.
+
+The Zombie update adds announced bonus markers and native `4321` prefills.
+It preserves copied-number scoring, corrections, clearing and 2026 scope.
+NS and its shared MST/SST/WRT changes were already on main. None of these
+changes affects CWT behavior; synchronized version-only packaging is also
+exempt from upstream CWT synchronization. The pre-existing video brief was
+left uncommitted. Native UI and on-air acceptance remain distinct from these
+source/bundle/publication checks.
+
 ## Zombie Shuffle 2026 bonus announcement — 2026-10-29
 
 Verified NA5N's original QRP-L message, “Zombie Shuffle Friday Oct. 30,”
