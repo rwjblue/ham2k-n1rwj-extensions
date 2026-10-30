@@ -19,6 +19,36 @@ remain historical; no new release or catalog submission accompanies removal.
 
 ## Current release status
 
+[v0.18.3](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.18.3)
+was published from signed main commit `ab7c9b042b73642e160ece4cbc632a8bc8396b5c`
+on **October 30, 2026 at 12:28:27 US Eastern (16:28:27 UTC)**, after
+[CI](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/41089598240)
+passed for that exact commit. Both jobs of the
+[release workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/41090210800)
+passed. All thirteen bundles and thirteen checksum files are available, and
+downloaded assets passed `mise run release:catalog v0.18.3 --dry-run`.
+The GitHub body and three catalog note sections match `docs/releases/v0.18.3.md`.
+
+**RBN, SKCC Companion and Zombie Shuffle are approved and current at 0.18.3
+on `stable`.** Their published bundle bytes, sizes and SHA-256 hashes match
+GitHub. The archives declare `spotting` for RBN and `activities` for SKCC and
+Zombie. They keep grouped controls and separate About dialogs without new
+categories, sidebar entries or Common Preferences fields. The other ten
+catalog entries were skipped.
+
+This corrects the unintended standalone categories in v0.18.2. All three
+pending 0.18.2 catalog submissions were withdrawn through the signed-in
+publisher dashboard. Their GitHub archive and authored notes remain historical.
+
+Local and CI checks pass **1,951 tests in 150 files**, strict types, lint,
+thirteen builds and official packages. CWT behavior is unchanged; independent
+settings corrections and synchronized personal packaging are exempt from
+upstream CWT synchronization. Native Ham2K UI acceptance remains separate.
+See the [release notes](releases/v0.18.3.md) and
+[verification record](VERIFICATION.md#release-0183-publication--2026-10-30).
+
+### Previous releases
+
 [v0.18.2](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.18.2)
 was published from signed main commit `a30d8ab2b0101c82c5b7cabc155bb5cce45d50b1`
 on **October 30, 2026 at 12:09:30 US Eastern (16:09:30 UTC)**. All
@@ -29,13 +59,12 @@ and both jobs of the
 passed. Downloaded assets passed `mise run release:catalog v0.18.2 --dry-run`,
 and the release body exactly matches `docs/releases/v0.18.2.md`.
 
-**RBN, SKCC Companion and Zombie Shuffle 0.18.2 were accepted for `stable`
-and are pending catalog review.** Each submission requests an inline category
-in Application Preferences, following the maintainer's guidance. The catalog
-explicitly held the missing `settings.section` for review; no sidebar entries
-or Common Preferences fields are requested. At verification, the public
-catalog still serves RBN/SKCC 0.17.0 and Zombie 0.18.0. The other ten catalog
-entries were skipped. No duplicate submission or retry was made.
+**All three 0.18.2 catalog submissions were withdrawn and superseded by
+0.18.3.** They were initially accepted for `stable` with pending review because
+they omitted `settings.section`. The standalone categories were an incorrect
+implementation of the requested layout; the intended placement remained under
+Activities and Spotting. At initial verification, the public catalog still
+served RBN/SKCC 0.17.0 and Zombie 0.18.0. Ten unchanged entries were skipped.
 
 All checks passed: **1,951 tests in 150 files**, strict types, lint, thirteen
 builds and official packages. Settings keys and operation/per-panel scopes
@@ -44,8 +73,6 @@ release packaging do not change CWT behavior and are exempt from upstream
 CWT synchronization. Native UI acceptance remains separate. See the
 [release notes](releases/v0.18.2.md) and
 [verification record](VERIFICATION.md#release-0182-publication--2026-10-30).
-
-### Previous releases
 
 [v0.18.1](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.18.1)
 was published from signed main commit `81b9f8c051bc0bb74b37bf10b93d81199ab54bd1`

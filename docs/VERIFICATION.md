@@ -1,5 +1,53 @@
 # Verification and compatibility
 
+## Release 0.18.3 publication — 2026-10-30
+
+Published [v0.18.3](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.18.3)
+from signed main commit `ab7c9b042b73642e160ece4cbc632a8bc8396b5c` at
+**12:28:27 US Eastern (16:28:27 UTC)**, after the
+[check workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/41089598240)
+passed for that exact commit. GitHub verifies its signature, and the release
+tag resolves to that commit. Both jobs of the
+[release workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/41090210800)
+passed. The GitHub release body exactly matches `docs/releases/v0.18.3.md`.
+
+- Local `mise run release v0.18.3 --dry-run` and CI pass **1,951 tests in
+  150 files**, strict types, lint, thirteen official ES2020 builds/packages
+  and all 26 synchronized release assets.
+- `mise run release:catalog v0.18.3 --dry-run` downloads and validates all
+  thirteen archives/checksums, selecting RBN, SKCC and Zombie and skipping
+  the ten unchanged extensions.
+- All three public catalog entries are **approved** and current at **0.18.3**
+  on `stable`. Their public bundle bytes exactly match the GitHub assets,
+  sizes, checksums and catalog SHA-256 values. Their scoped catalog notes
+  exactly match the authored release sections.
+- The downloaded archives' `manifest.json` files declare `spotting` for RBN
+  and `activities` for SKCC and Zombie. Bundle tests independently assert the
+  matching panel descriptors, `sidebar: false`, and separate About actions.
+
+| Extension | Approved release (UTC) | Bundle bytes | Settings section |
+| --- | --- | --- | --- |
+| RBN | 16:29:23.119 | 323,367 | `spotting` |
+| SKCC Companion | 16:29:24.544 | 84,063 | `activities` |
+| Zombie Shuffle | 16:29:25.696 | 102,525 | `activities` |
+
+Before publishing the correction, withdrew only the three pending 0.18.2
+stable submissions through the signed-in publisher dashboard. The rendered
+version rows confirmed **withdrawn** for RBN, SKCC and Zombie; previously
+approved versions were not changed. Evidence:
+`/tmp/ham2k-v0.18.2-withdrawn.json` and
+`/tmp/ham2k-v0.18.2-withdrawn.jpg`. Published-byte verification metadata is in
+`/tmp/ham2k-v0.18.3-verified.json`.
+
+The 0.18.2 standalone categories came from an incorrect interpretation of the
+requested layout. The correction keeps the original Activities/Spotting
+placements, grouped native controls and separate read-only About dialogs.
+Existing settings keys and operation/per-panel scopes are preserved. Native
+Ham2K UI acceptance remains distinct from source, bundle and catalog checks.
+CWT behavior is unchanged; these independent settings corrections and
+synchronized personal release packaging are exempt from upstream CWT
+synchronization. The pre-existing video brief remains uncommitted.
+
 ## Release 0.18.2 publication — 2026-10-30
 
 Published [v0.18.2](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.18.2)
@@ -31,12 +79,13 @@ matches `docs/releases/v0.18.2.md`.
 | SKCC Companion | 16:10:28 | Pending review | 0.17.0 |
 | Zombie Shuffle | 16:10:29 | Pending review | 0.18.0 |
 
-The public endpoints do not yet list the pending 0.18.2 submissions as
-approved versions or current updates. The review request follows the
-maintainer's guidance: native grouped preferences with a separate read-only
-About dialog, without sidebar entries or Common Preferences fields. Settings
-keys and operation/per-panel scopes are preserved. Native Ham2K UI acceptance
-remains separate from unit, VM bundle and publication verification.
+At publication, the public endpoints did not list the pending 0.18.2
+submissions as approved versions or current updates. All three were later
+withdrawn and superseded by 0.18.3. Creating standalone categories was an
+incorrect interpretation of the requested layout; Activities and Spotting
+placement should have been retained. Historical authored notes record what
+was actually submitted. Native Ham2K UI acceptance remains separate from
+unit, VM bundle and publication verification.
 
 Dependencies, shared runtime code and CWT behavior are unchanged; these
 independent settings updates and synchronized personal release packaging are
