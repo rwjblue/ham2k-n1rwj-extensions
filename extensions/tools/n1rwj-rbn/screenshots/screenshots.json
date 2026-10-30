@@ -1,0 +1,7 @@
+{
+  "1-native-map.jpg": "RBN map and receivers observing public WG1V reports. Historical native macOS capture of the v0.3.2 compact-layout candidate, Next build 170 (September 2026).",
+  "2-native-compact-map.jpg": "RBN in a narrow macOS window; public WG1V reports. Historical v0.3.2 candidate, Next build 170 (September 2026). Not a physical-phone capture.",
+  "3-native-preferences.png": "RBN remains under Application Preferences → Spotting. Native Ham2K Next build 186 with v0.18.3, October 30, 2026; cropped to the preferences pane.",
+  "4-native-settings.png": "Grouped RBN spot controls in v0.18.3. Native Next build 186, October 30, 2026. The service health check timed out during capture; controls are unchanged.",
+  "5-native-about.png": "The separate RBN About guide explains My Signal, Spots and exports. Cropped native Ham2K Next build 186 capture with v0.18.3, October 30, 2026."
+}
