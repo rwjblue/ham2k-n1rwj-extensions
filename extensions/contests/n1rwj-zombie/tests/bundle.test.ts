@@ -4,6 +4,7 @@ import type {
   ActivityHook,
   DynamicSettingsPanel,
   ExtensionDefinition,
+  FormDefinition,
   LookupHook,
   PanelHook,
   RegisterHookParams,
@@ -39,8 +40,13 @@ it('activates its official ES2020 bundle, scores elapsed rebirths and suggests l
   const definition = definitions[0]
   if (!definition) throw new Error('Missing Zombie extension')
   const called: string[] = []
+  const shownForms: FormDefinition[] = []
   await definition.onActivation({
     registerHook: (category, params) => registered.set(category, params),
+    showForm: async (form) => {
+      shownForms.push(form)
+      return null
+    },
     hostCall: async (method) => {
       called.push(method)
       throw new Error(`Unexpected host call: ${method}`)
@@ -48,22 +54,23 @@ it('activates its official ES2020 bundle, scores elapsed rebirths and suggests l
   })
   expect([...registered.keys()].sort()).toEqual([...manifest.hooks].sort())
   expect(registered.get('activity')?.key).toBe(manifest.key)
-  const settings = registered.get('settingsPanel')?.hook as DynamicSettingsPanel
+  const settings = registered.get('settingsPanel')?.hook as DynamicSettingsPanel & {
+    showAbout(): Promise<null>
+  }
   expect(await settings.getPanels?.({}, { online: false })).toEqual([
     {
       key: manifest.key,
       title: 'Zombie Shuffle',
       icon: manifest.icon,
-      section: 'activities',
       sidebar: false,
     },
   ])
-  expect(manifest.settings).toEqual({ section: 'activities' })
-  expect(definition).toMatchObject({ settings: manifest.settings })
+  expect(manifest).not.toHaveProperty('settings')
+  expect(definition).not.toHaveProperty('settings')
   const builtManifest = JSON.parse(
     await readFile(new URL('../build/manifest.json', import.meta.url), 'utf8'),
   )
-  expect(builtManifest.settings).toEqual(manifest.settings)
+  expect(builtManifest).not.toHaveProperty('settings')
   const operation: Qson = {
     uuid: 'bundle-operation',
     stationCall: 'N1RWJ',
@@ -124,7 +131,16 @@ it('activates its official ES2020 bundle, scores elapsed rebirths and suggests l
   expect(manifest.hooks).not.toContain('dataFile')
   expect(manifest).not.toHaveProperty('domains')
   expect(builtManifest).not.toHaveProperty('domains')
-  const guide = await settings.getDefinition({ panelKey: manifest.key }, { online: false })
+  const preferences = await settings.getDefinition({ panelKey: manifest.key }, { online: false })
+  expect(preferences.elements).toContainEqual(
+    expect.objectContaining({ type: 'action', style: 'row', method: 'showAbout' }),
+  )
+  expect(shownForms).toEqual([])
+  await settings.showAbout()
+  expect(shownForms).toHaveLength(1)
+  const guide = shownForms[0]
+  if (!guide) throw new Error('Missing About dialog')
+  expect(guide.title).toBe('About Zombie Shuffle')
   expect(guide.elements.every((element) => !['field', 'action'].includes(element.type))).toBe(true)
   const guideText = guide.elements
     .filter((element) => element.type === 'markdown')

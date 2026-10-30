@@ -13,7 +13,7 @@ export const ZOMBIE_GUIDE_URL =
  * submission deadline, so this page deliberately supplies no 2026 deadline. */
 export function zombieAboutDefinition(): FormDefinition {
   return {
-    title: 'Zombie Shuffle',
+    title: 'About Zombie Shuffle',
     subtitle: 'CQ BOO! There is always room for one more Zombie.',
     elements: [
       {

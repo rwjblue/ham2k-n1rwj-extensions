@@ -19,9 +19,6 @@
     "scoring",
     "settingsPanel"
   ],
-  "settings": {
-    "section": "activities"
-  },
   "relevance": {
     "interests": ["cw"]
   },

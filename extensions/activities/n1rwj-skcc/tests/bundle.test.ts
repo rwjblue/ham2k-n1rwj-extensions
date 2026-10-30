@@ -9,6 +9,7 @@ import type {
   DynamicSettingsPanel,
   ExportHook,
   ExtensionDefinition,
+  FormDefinition,
   HookContext,
   LookupHook,
   PanelHook,
@@ -28,7 +29,7 @@ type HookTypes = {
   export: ExportHook
   lookup: LookupHook
   panel: PanelHook
-  settingsPanel: DynamicSettingsPanel
+  settingsPanel: DynamicSettingsPanel & { showAbout(): Promise<null> }
   'spotCallFilter:v1': CallFilterHook
 }
 let bundle: string
@@ -66,6 +67,7 @@ function harness() {
   const storage = new Map<string, unknown>()
   const definitions: ExtensionDefinition[] = []
   const registered = new Map<string, Map<string, RegisterHookParams>>()
+  const showForm = vi.fn(async (_form: FormDefinition) => null)
   const hostCall = vi.fn(async (method: string, params: Record<string, unknown>) => {
     if (method === 'getSettings') return structuredClone({ extensions: groups })
     if (method === 'setSettings') {
@@ -102,6 +104,7 @@ function harness() {
   const definition = required(definitions[0])
   definition.onActivation({
     hostCall,
+    showForm,
     registerHook: (category, entry) => {
       const entries = registered.get(category) ?? new Map()
       if (entries.has(entry.key)) throw new Error(`Duplicate ${category}/${entry.key}`)
@@ -116,6 +119,7 @@ function harness() {
     storage,
     hostCall,
     invokeLocal,
+    showForm,
     hook<K extends keyof HookTypes>(category: K, key = manifest.key): HookTypes[K] {
       return required(registered.get(category)?.get(key)).hook as HookTypes[K]
     },
@@ -214,16 +218,39 @@ describe('SKCC installable ES2020 bundle', () => {
     )
     expect(withQrz?.notes).toContain('**SKCC 2T** · Member')
     for (const field of ['name', 'note', 'emoji', 'grid']) expect(withQrz).not.toHaveProperty(field)
-    expect(await runtime.hook('settingsPanel').getPanels?.({}, ctx)).toMatchObject([
-      { key: manifest.key, section: 'activities', sidebar: false, dataFilesSection: true },
+    expect(await runtime.hook('settingsPanel').getPanels?.({}, ctx)).toEqual([
+      {
+        key: manifest.key,
+        title: 'SKCC Companion',
+        icon: 'key',
+        sidebar: false,
+        dataFilesSection: true,
+      },
     ])
-    expect(manifest.settings).toEqual({ section: 'activities' })
-    expect(runtime.definition).toMatchObject({ settings: manifest.settings })
+    expect(manifest).not.toHaveProperty('settings')
+    expect(runtime.definition).not.toHaveProperty('settings')
     const packedManifest = JSON.parse(
       await readFile(new URL('../build/manifest.json', import.meta.url), 'utf8'),
     )
-    expect(packedManifest.settings).toEqual(manifest.settings)
+    expect(packedManifest).not.toHaveProperty('settings')
     expect(runtime.hostCall.mock.calls.every(([method]) => method === 'kvGet')).toBe(true)
+  })
+
+  it('dispatches the separate About action through the host without editing saved settings', async () => {
+    const runtime = harness()
+    const saved = structuredClone(runtime.groups)
+    runtime.hostCall.mockClear()
+    await expect(runtime.hook('settingsPanel').showAbout()).resolves.toBeNull()
+    expect(runtime.showForm).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ title: 'About SKCC Companion' }),
+      {},
+    )
+    const form = required(runtime.showForm.mock.calls[0]?.[0])
+    expect(form.elements.every((element) => !['field', 'action'].includes(element.type))).toBe(true)
+    expect(JSON.stringify(form)).toContain('not an official SKCC product')
+    expect(JSON.stringify(form)).toContain('A reload alone does not rebuild')
+    expect(runtime.groups).toEqual(saved)
+    expect(runtime.hostCall).not.toHaveBeenCalled()
   })
 
   it('retains the native disk snapshot after bad refresh and restores it with empty runtime KV', async () => {

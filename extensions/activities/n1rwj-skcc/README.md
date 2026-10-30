@@ -8,11 +8,11 @@ product or a substitute for the club’s award managers.
 
 1. Install `n1rwj-skcc` in a Ham2K host supporting **extension API 12**.
 2. Download **SKCC member roster** through native Data Files. Open
-   **Activities → SKCC Companion** and set your usual number, name, location
-   and key. The manifest and panel both place these settings under Activities;
-   no separate sidebar entry or Common Preferences fields are requested.
-   Older hosts without Activities can still show a standalone preferences
-   category; update Ham2K for the grouped placement.
+   **Settings → Application Preferences → SKCC Companion** and set your usual
+   number, name, location and key. Native controls appear directly under the
+   SKCC Companion heading, grouped by purpose. **About SKCC Companion** opens
+   the operating guidance, history/chasing help and official links in a separate
+   dialog. No separate sidebar entry or Common Preferences fields are requested.
 3. Add **SKCC contacts and hunting**, or a specific SKCC event edition, to an
    operation. It can coexist with POTA or another activity. Review the SKCC
    setup, especially your transmitted location when operating away from home.

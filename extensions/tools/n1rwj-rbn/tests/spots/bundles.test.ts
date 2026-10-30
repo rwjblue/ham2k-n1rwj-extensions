@@ -7,6 +7,7 @@ import type {
   ExportHook,
   ExportOptionsRequest,
   ExtensionDefinition,
+  FormDefinition,
   JSONValue,
   RegisterHookParams,
   SpotsHook,
@@ -25,6 +26,7 @@ async function harness(saved: Record<string, JSONValue> = {}, contests = ['cwt',
   const definitions: ExtensionDefinition[] = []
   const registered = new Map<string, Map<string, RegisterHookParams>>()
   const hostCalls = vi.fn()
+  const showForm = vi.fn(async (_form: FormDefinition) => null)
   const sharedModules = Object.fromEntries(
     await Promise.all(
       Object.keys(manifest.sharedDependencies).map(async (name) => {
@@ -102,6 +104,7 @@ async function harness(saved: Record<string, JSONValue> = {}, contests = ['cwt',
     const categories = new Map<string, RegisterHookParams>()
     registered.set(definition.key, categories)
     definition.onActivation({
+      showForm,
       registerHook: (category, hook) => {
         categories.set(category, hook)
       },
@@ -141,6 +144,7 @@ async function harness(saved: Record<string, JSONValue> = {}, contests = ['cwt',
   return {
     definitions,
     hostCalls,
+    showForm,
     preferences,
     requests,
     registered,
@@ -227,16 +231,16 @@ it('defaults to merging without an activity and toggles cached spots across rest
   const runtime = await harness({}, [])
   const ctx = { online: false }
   expect(await runtime.settings.getPanels?.({}, ctx)).toEqual([
-    { key: 'n1rwj-rbn', title: 'RBN', icon: 'radar', section: 'spotting', sidebar: false },
+    { key: 'n1rwj-rbn', title: 'RBN', icon: 'radar', sidebar: false },
   ])
-  expect(manifest.settings).toEqual({ section: 'spotting' })
-  expect(runtime.definitions.find((definition) => definition.key === manifest.key)).toMatchObject({
-    settings: manifest.settings,
-  })
+  expect(manifest).not.toHaveProperty('settings')
+  expect(
+    runtime.definitions.find((definition) => definition.key === manifest.key),
+  ).not.toHaveProperty('settings')
   const builtManifest = JSON.parse(
     await readFile(new URL('../../build/manifest.json', import.meta.url), 'utf8'),
   )
-  expect(builtManifest.settings).toEqual(manifest.settings)
+  expect(builtManifest).not.toHaveProperty('settings')
   const activity = runtime.hook<ActivityHook>('n1rwj-rbn', 'activity')
   expect(await activity.loggingControls?.({ operation: {} }, ctx)).toEqual([])
   const form = await runtime.settings.getDefinition({ panelKey: 'n1rwj-rbn' }, ctx)
@@ -279,6 +283,45 @@ it('defaults to merging without an activity and toggles cached spots across rest
   await edit(false)
   await runtime.action('resetAllSpotSettings')
   expect(await activity.loggingControls?.({ operation: {} }, ctx)).toEqual([])
+})
+
+it('opens RBN guidance separately from inline controls without changing settings or requesting data', async () => {
+  const runtime = await harness(
+    {
+      'extension_n1rwj-rbn': { spotMinWpm: 12, additionalExportFormats: ['json'], unrelated: 42 },
+    },
+    [],
+  )
+  const form = await runtime.settings.getDefinition({ panelKey: 'n1rwj-rbn' }, { online: false })
+  expect(form.elements[form.elements.length - 1]).toMatchObject({
+    type: 'action',
+    style: 'row',
+    label: 'About RBN',
+    method: 'showAbout',
+  })
+  expect(form.elements).toContainEqual(expect.objectContaining({ key: 'spotMinWpm', value: 12 }))
+  expect(form.elements).toContainEqual(
+    expect.objectContaining({ key: 'additionalExportFormats', value: ['json'] }),
+  )
+  expect(JSON.stringify(form)).not.toContain('The My Signal map and receiver reports')
+  expect(JSON.stringify(form)).not.toContain('Reports cover the last ten minutes')
+  const saved = structuredClone(runtime.preferences)
+  const requests = runtime.requests.mock.calls.length
+  runtime.hostCalls.mockClear()
+  expect(runtime.showForm).not.toHaveBeenCalled()
+  await expect(runtime.settings.showAbout({}, { online: false })).resolves.toBeNull()
+  expect(runtime.showForm).toHaveBeenCalledExactlyOnceWith(
+    expect.objectContaining({ title: 'About RBN' }),
+    {},
+  )
+  const about = runtime.showForm.mock.calls[0]?.[0]
+  expect(about?.elements.every((element) => !['field', 'action'].includes(element.type))).toBe(true)
+  expect(JSON.stringify(about)).toContain('Spots filters never affect My Signal')
+  expect(JSON.stringify(about)).toContain('Reports cover the last ten minutes')
+  expect(JSON.stringify(about)).toContain('directory metadata only when their nodes agree')
+  expect(runtime.preferences).toEqual(saved)
+  expect(runtime.hostCalls).not.toHaveBeenCalled()
+  expect(runtime.requests).toHaveBeenCalledTimes(requests)
 })
 
 it('offers one bundled reception report by default and persists only opted-in companions', async () => {

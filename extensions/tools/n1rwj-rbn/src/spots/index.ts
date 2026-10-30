@@ -13,6 +13,7 @@ import { host } from '@ham2k/extension-sdk'
 import type { TimerDriver } from '../../../../../packages/reception/src/timers.ts'
 import manifest from '../../manifest.json'
 import type { Continent } from '../data/continents.ts'
+import { rbnAboutDefinition } from './about.ts'
 import { createSpotFeed } from './feed.ts'
 import { allCalls, discoverFilters, type FilterBridge, matchFilter } from './filters.ts'
 import { createHealthCheck } from './health.ts'
@@ -41,6 +42,7 @@ interface Options {
   getSettings?: typeof host.getSettings
   setSettings?: typeof host.setSettings
   getLocation?: typeof host.getLocation
+  showForm?: typeof host.showForm
   continentNear?: (location: DeviceLocation) => Continent | null
 }
 
@@ -263,6 +265,10 @@ export function createRbnSpots(options: Options) {
     })
   }
   const actions = {
+    async showAbout(_args: unknown, _ctx: HookContext) {
+      await (options.showForm ?? host.showForm)(rbnAboutDefinition())
+      return null
+    },
     resetAllSpotSettings: (_args: unknown, _ctx: HookContext) => reset('all'),
     resetSpotCallFilter: (_args: unknown, _ctx: HookContext) => reset('history'),
     resetSpotMode: (_args: unknown, _ctx: HookContext) => reset('mode'),
@@ -277,9 +283,7 @@ export function createRbnSpots(options: Options) {
     ...actions,
     kind: 'dynamic',
     async getPanels() {
-      return [
-        { key: manifest.key, title: 'RBN', icon: 'radar', section: 'spotting', sidebar: false },
-      ]
+      return [{ key: manifest.key, title: 'RBN', icon: 'radar', sidebar: false }]
     },
     async getDefinition(_args, ctx) {
       const [selected, health] = await Promise.all([

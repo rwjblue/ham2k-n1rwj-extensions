@@ -32,9 +32,6 @@
     "chasing"
   ],
   "adifFieldsScope": "always",
-  "settings": {
-    "section": "activities"
-  },
   "domains": ["skccgroup.com", "www.skccgroup.com"],
   "relevance": {
     "interests": ["cw"]

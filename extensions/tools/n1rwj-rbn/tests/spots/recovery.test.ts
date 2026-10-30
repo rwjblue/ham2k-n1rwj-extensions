@@ -229,7 +229,10 @@ it('shows fresh partial spots and a settings warning, then clears that warning a
     'K1ABC',
   ])
   const elements = (await definition()).elements
-  const warning = elements[elements.length - 1]
+  const warning = elements.find(
+    (element) =>
+      element.type === 'markdown' && element.text.includes('RBN queries could not be refreshed'),
+  )
   expect(warning).toMatchObject({ type: 'markdown', text: expect.any(String) })
   if (warning?.type !== 'markdown') throw new Error('Missing settings status')
   expect(warning.text).not.toBe('')
@@ -240,8 +243,16 @@ it('shows fresh partial spots and a settings warning, then clears that warning a
   now += 61_000
   expect(await runtime.spots.fetchSpots({}, ctx)).toHaveLength(1)
   const recoveredElements = (await definition()).elements
-  expect(recoveredElements[recoveredElements.length - 1]).toMatchObject({
-    type: 'markdown',
-    text: expect.stringContaining('Reports cover the last ten minutes'),
-  })
+  expect(recoveredElements).not.toContainEqual(
+    expect.objectContaining({
+      type: 'markdown',
+      text: expect.stringContaining('RBN queries could not be refreshed'),
+    }),
+  )
+  expect(recoveredElements).toContainEqual(
+    expect.objectContaining({
+      type: 'action',
+      method: 'showAbout',
+    }),
+  )
 })

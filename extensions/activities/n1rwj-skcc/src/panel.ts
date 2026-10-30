@@ -137,7 +137,7 @@ export function createPanel(
         return {
           kind: 'markdown',
           content:
-            'Download **SKCC member roster** in Data Files, then configure your usual exchange under Activities → SKCC Companion. Names and membership lookups work offline after download.',
+            'Download **SKCC member roster** in Data Files, then configure your usual exchange under Application Preferences → SKCC Companion. Names and membership lookups work offline after download.',
         }
       lines.push(
         `${roster.members.length.toLocaleString()} roster entries · downloaded ${md(new Date(roster.downloadedAt).toISOString().slice(0, 10))}.`,

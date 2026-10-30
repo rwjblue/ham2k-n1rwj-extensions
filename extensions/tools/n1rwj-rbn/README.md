@@ -15,7 +15,7 @@ Part of the [N1RWJ extension family](../../../README.md).
 Open the operation's **Exports** view for one offline HTML report containing
 receiver maps, fifteen-minute UTC SNR timelines, and contact context. To add
 Markdown, individual-observation CSV, collected-evidence JSON, SVG map, or
-contact-context CSV, choose the files you need in **Settings → Spotting → RBN → Exports →
+contact-context CSV, choose the files you need in **Settings → Application Preferences → RBN → Exports →
 Additional export files**, then reopen **Exports**. No companion files are shown
 by default. Your choices persist across restarts and apply across operations.
 Exports use already-saved evidence or an exact-call rolling My Signal cache;
@@ -28,12 +28,12 @@ See [collection behavior, limits, and generated examples](../../../docs/RBN-EXPO
 
 ## Find stations in Spots
 
-Global settings live in one dialog under **Settings → Spotting → RBN**.
-The manifest and panel both declare that placement, with no separate sidebar
-entry or Common Preferences fields. Older hosts without Spotting can still
-show a standalone preferences category; update Ham2K for grouped placement.
+Global settings appear directly under the **RBN** heading in
+**Settings → Application Preferences**, with grouped native controls.
+**About RBN** opens general guidance and links in a separate dialog.
+No separate sidebar entry or Common Preferences fields are requested.
 
-Opening **Settings → Spotting → RBN** checks the
+Opening **Settings → Application Preferences → RBN** checks the
 [Vail ReRBN health endpoint](https://vailrerbn.com/docs/endpoints#health).
 A warning at the top explains a failed check, service or database problem,
 or offline state. Settings remain editable while the check fails. The request
@@ -43,7 +43,7 @@ Spots refreshes do not run health checks. A healthy API and database do not
 guarantee live reports or a match for your filters.
 
 Enable **N1RWJ RBN** and select **RBN** in the native Spots source filter.
-Open **Settings → Spotting → RBN → Spots — Who I might hear** to choose:
+Open **Settings → Application Preferences → RBN → Spots — Who I might hear** to choose:
 
 - **Allow merging of RBN spots:** on by default. Nearby stations can merge in
   the native Spots panel, and the extension contributes no RBN activity control.
@@ -117,8 +117,8 @@ No device coordinates are sent to a network service or saved in settings.
 If the receiver directory loads later, the next settings view or Spots refresh
 can use the same fix to suggest a continent, provided no explicit choice was made.
 All these settings apply only to Spots, across operations. They never filter
-the **My Signal** map or its receiver reports. The **My Signal — Who hears me**
-section points to that panel's separate tune settings in your operation.
+the **My Signal** map or its receiver reports. **About RBN** explains that
+panel’s separate tune settings in your operation.
 Every enabled filter must match; multiple entries within a filter are alternatives.
 Receiver selection happens
 before reports are collapsed to the newest station/band/mode observation.

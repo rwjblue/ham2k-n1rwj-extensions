@@ -38,22 +38,13 @@ export function settingsDefinition(
   ).filter((call) => /-\d+$/.test(call))
   if (!choices.some((entry) => entry.value === selected.key))
     choices.push({ label: `Unavailable: ${selected.key}`, value: selected.key })
+  const notice =
+    selected.unavailable || radiusIssue(selected.raw) || speedIssue(selected.raw) || status
   return {
     elements: [
       ...(health
         ? [{ type: 'markdown' as const, text: `> **${health.title}**\n>\n> ${health.message}` }]
         : []),
-      {
-        type: 'header',
-        style: 'section',
-        key: 'rbn-my-signal',
-        collapsed: true,
-        title: 'My Signal — Who hears me',
-      },
-      {
-        type: 'markdown',
-        text: 'The My Signal map and receiver reports show who hears your station. Configure them with the tune button beside the My Signal panel title in your operation. The Spots filters below never affect My Signal.',
-      },
       {
         type: 'header',
         style: 'section',
@@ -67,7 +58,7 @@ export function settingsDefinition(
         key: 'additionalExportFormats',
         label: 'Additional export files',
         description:
-          'The HTML reception report includes maps, timelines, and contact context. By default it is the only RBN export. Select any companion files you need, then reopen the operation’s Exports view to refresh the list. These choices apply across operations.',
+          'Optional companion files for the HTML report. Reopen the operation’s Exports view after changing this selection.',
         value: additionalExportFormats(selected.raw),
         options: additionalExportChoices,
         defaultValue: [],
@@ -79,10 +70,6 @@ export function settingsDefinition(
         title: 'Spots — Who I might hear',
       },
       reset('resetAllSpotSettings', 'Reset all spot settings'),
-      {
-        type: 'markdown',
-        text: `Reset defaults: allow merging; ${stationLabel}; All modes; no CW speed limits; all skimmers and grid regions; ${continentLabel}; no distance limit or origin grid. Receiver-continent defaults use the local suggestion, then your last selection. All settings below apply only to RBN Spots, across operations.`,
-      },
       {
         type: 'field',
         fieldType: 'checkbox',
@@ -114,14 +101,11 @@ export function settingsDefinition(
       reset('resetSpotMode', 'Reset mode — All'),
       { type: 'header', style: 'section', key: 'rbn-speed', title: 'CW speed range' },
       {
-        type: 'markdown',
-        text: 'Default: no speed limit. Leave either end blank for an open-ended range. Limits include the entered speeds and apply only to CW, including in All mode. CW reports without a known positive speed are excluded while a limit is set.',
-      },
-      {
         type: 'field',
         fieldType: 'number',
         key: 'spotMinWpm',
         label: 'Minimum CW speed (WPM)',
+        description: 'Blank means no minimum. Applies only to CW.',
         placeholder: 'No minimum',
         value: selected.raw.spotMinWpm ?? '',
       },
@@ -130,15 +114,12 @@ export function settingsDefinition(
         fieldType: 'number',
         key: 'spotMaxWpm',
         label: 'Maximum CW speed (WPM)',
+        description: 'Blank means no maximum. Applies only to CW.',
         placeholder: 'No maximum',
         value: selected.raw.spotMaxWpm ?? '',
       },
       reset('resetSpotSpeed', 'Reset CW speed range — No limits'),
       { type: 'header', style: 'section', key: 'rbn-receivers', title: 'Receivers' },
-      {
-        type: 'markdown',
-        text: 'Nearby receivers can help you find stations to try; reception at your station is not guaranteed. Every enabled receiver filter must match.',
-      },
       {
         type: 'field',
         fieldType: 'text',
@@ -201,19 +182,15 @@ export function settingsDefinition(
         value: selected.raw.spotRadiusMiles ?? '',
       },
       reset('resetSpotDistance', 'Reset distance — No limit or origin'),
-      {
-        type: 'markdown',
-        text: 'Distance is approximate, measured between grid centers. Refresh the RBN receiver directory in Data Files to load continents and updated grids. Bare receiver IDs use directory metadata only when their nodes agree. Conflicting node grids are excluded from grid-region and distance filters. Receivers with no known continent are excluded when continents are selected; receivers with no known grid are excluded when a grid region or distance limit is set.',
-      },
       { type: 'sectionEnd' },
+      ...(notice ? [{ type: 'markdown' as const, text: notice }] : []),
       {
-        type: 'markdown',
-        text:
-          selected.unavailable ||
-          radiusIssue(selected.raw) ||
-          speedIssue(selected.raw) ||
-          status ||
-          'Reports cover the last ten minutes on 160–10m, including WARC bands. Choose All calls to compare with an unfiltered RBN website view. Busy receivers or bands may exceed the bounded snapshot. Changes apply on the next Spots refresh.',
+        type: 'action',
+        style: 'row',
+        key: 'about',
+        label: 'About RBN',
+        icon: 'information-outline',
+        method: 'showAbout',
       },
     ],
   }

@@ -1,9 +1,10 @@
 // Copyright © 2026 Robert Jackson
 // SPDX-License-Identifier: MPL-2.0
 import { type DynamicSettingsPanel, type FormElement, host } from '@ham2k/extension-sdk'
+import { skccAboutDefinition } from './about.ts'
 import { analyzeAdif, reportMarkdown } from './applications.ts'
 import type { AuditStore } from './audit-store.ts'
-import { HOME, KEY, memberNumber, type RosterGetter, text } from './model.ts'
+import { KEY, memberNumber, type RosterGetter, text } from './model.ts'
 import { DEFAULTS, KEY_OPTIONS, type PreferencesStore, validMonth } from './preferences.ts'
 
 export function createSettings(
@@ -20,7 +21,6 @@ export function createSettings(
           key: KEY,
           title: 'SKCC Companion',
           icon: 'key',
-          section: 'activities',
           sidebar: false,
           dataFilesSection: true,
         },
@@ -31,10 +31,6 @@ export function createSettings(
       const p = preferences.get(),
         roster = getRoster()
       const fields: FormElement[] = [
-        {
-          type: 'markdown',
-          text: 'Recognize members, log the exchange, find friendly CW contacts and follow your SKCC goals. Suggestions remain editable. Only recorded exchanges and approved keying qualify for award reports.',
-        },
         { type: 'header', style: 'section', key: 'skcc-exchange', title: 'Your usual exchange' },
         {
           type: 'field',
@@ -130,10 +126,6 @@ export function createSettings(
           method: 'clearHistory',
         },
         {
-          type: 'markdown',
-          text: 'The panel distinguishes this operation from a dated imported-history snapshot. Importing here analyzes a copy; it does not insert contacts into the logger. Use the SKCC audit and application exports while this analysis is loaded. Native Chasing checklists use Ham2K’s own log.',
-        },
-        {
           type: 'header',
           style: 'section',
           key: 'skcc-offline',
@@ -143,8 +135,8 @@ export function createSettings(
         {
           type: 'markdown',
           text: roster
-            ? `${roster.members.length.toLocaleString()} roster entries. Last downloaded ${new Date(roster.downloadedAt).toISOString()}. Refresh or remove **SKCC member roster** in the host’s Data Files controls.`
-            : 'Download **SKCC member roster** in the host’s Data Files controls. Names, member lookup and award evaluation then work offline.',
+            ? `${roster.members.length.toLocaleString()} roster entries. Last downloaded ${new Date(roster.downloadedAt).toISOString()}. Manage **SKCC member roster** in Data Files.`
+            : 'Download **SKCC member roster** in Data Files.',
         },
         {
           type: 'header',
@@ -154,39 +146,31 @@ export function createSettings(
           collapsed: true,
         },
         {
-          type: 'markdown',
-          text: 'Native award checklists require a host with EXP CHASE enabled. After refreshing the membership roster, reload the extension below, then turn EXP CHASE off and back on on a device holding the complete log. That asks the host to recalculate historical eligibility. A reload alone does not rebuild an unchanged program version. The companion reports always use the currently loaded roster.',
-        },
-        {
           type: 'field',
           fieldType: 'checkbox',
           key: 'rebuildChecklists',
           label: 'Reload the native chasing roster (either toggle direction)',
+          description: 'Requires EXP CHASE. See About SKCC Companion for the rebuild steps.',
           value: p.rebuildChecklists,
           restartOnChange: true,
         },
         {
-          type: 'header',
-          style: 'section',
-          key: 'skcc-about',
-          title: 'About SKCC Companion',
-          collapsed: true,
+          type: 'sectionEnd',
         },
         {
-          type: 'markdown',
-          text: 'Personal N1RWJ extension, not an official SKCC product. SKCCLogger and SKCC Skimmer remain useful companions. Award thresholds mean ready for review, not sponsor approval. SKS is unassisted: close native spots, chasing, RBN and sked assistance when operating it.',
+          type: 'action',
+          style: 'row',
+          key: 'about',
+          label: 'About SKCC Companion',
+          method: 'showAbout',
+          icon: 'information-outline',
         },
-        { type: 'link', label: 'SKCC home and award rules', url: HOME },
-        {
-          type: 'link',
-          label: 'Monthly Brag and bonus member',
-          url: `${HOME}operating_activities/monthly_brag/`,
-        },
-        { type: 'link', label: 'SKCC Sked Page', url: 'https://sked.skccgroup.com/' },
-        { type: 'link', label: 'Manual-key policy', url: `${HOME}keypolicy.php` },
       ]
-      fields.push({ type: 'sectionEnd' })
       return { title: 'SKCC Companion', elements: fields }
+    },
+    async showAbout() {
+      await deps.showForm(skccAboutDefinition())
+      return null
     },
     async validateField({ fieldKey, value }) {
       if (['myNumber', 'bragBonusNumber'].includes(fieldKey) && text(value) && !memberNumber(value))

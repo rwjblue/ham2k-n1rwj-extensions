@@ -1,4 +1,4 @@
-import type { BoardSpot, PanelRenderArgs } from '@ham2k/extension-sdk'
+import type { BoardSpot, FormDefinition, PanelRenderArgs } from '@ham2k/extension-sdk'
 import { describe, expect, it, vi } from 'vitest'
 import { createAuditStore } from '../src/audit-store.ts'
 import { analyzeAwards } from '../src/awards.ts'
@@ -198,7 +198,7 @@ describe('SKCC companion panel', () => {
 })
 
 describe('SKCC settings and history actions', () => {
-  it('groups settings under Activities with native data management', async () => {
+  it('groups inline preferences with native data management and a separate About action', async () => {
     const { prefs, audit } = stores(),
       hook = createSettings(prefs, () => roster, audit)
     expect(await hook.getPanels()).toEqual([
@@ -206,7 +206,6 @@ describe('SKCC settings and history actions', () => {
         key: 'n1rwj-skcc',
         title: 'SKCC Companion',
         icon: 'key',
-        section: 'activities',
         sidebar: false,
         dataFilesSection: true,
       },
@@ -214,6 +213,31 @@ describe('SKCC settings and history actions', () => {
     const form = await hook.getDefinition()
     expect(JSON.stringify(form)).toContain('EXP CHASE')
     expect(JSON.stringify(form)).toContain('restartOnChange')
+    expect(form.elements).not.toContainEqual(expect.objectContaining({ type: 'link' }))
+    expect(JSON.stringify(form)).not.toContain('Personal N1RWJ extension')
+    expect(form.elements[form.elements.length - 2]).toEqual({ type: 'sectionEnd' })
+    expect(form.elements[form.elements.length - 1]).toMatchObject({
+      type: 'action',
+      style: 'row',
+      label: 'About SKCC Companion',
+      method: 'showAbout',
+    })
+  })
+  it('opens read-only SKCC guidance without loading or writing preferences', async () => {
+    const { prefs, audit, deps } = stores()
+    const showForm = vi.fn(async (_form: FormDefinition) => null)
+    const hook = createSettings(prefs, () => roster, audit, { showForm })
+    await expect(hook.showAbout()).resolves.toBeNull()
+    expect(showForm).toHaveBeenCalledOnce()
+    const form = showForm.mock.calls[0]?.[0]
+    expect(form).toMatchObject({ title: 'About SKCC Companion' })
+    expect(form?.elements.every((element) => !['field', 'action'].includes(element.type))).toBe(
+      true,
+    )
+    expect(JSON.stringify(form)).toContain('not an official SKCC product')
+    expect(JSON.stringify(form)).toContain('A reload alone does not rebuild')
+    expect(deps.getSettings).not.toHaveBeenCalled()
+    expect(deps.setSettings).not.toHaveBeenCalled()
   })
   it('validates values and clears a month-specific bonus when the month changes', async () => {
     const { prefs, audit } = stores(),
