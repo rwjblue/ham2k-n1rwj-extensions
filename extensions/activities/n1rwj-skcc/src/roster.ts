@@ -115,7 +115,8 @@ export function parseRoster(
       (headers.includes('MBRSTATUS') && !['A', 'IA', 'SK'].includes(entry.MBRSTATUS)) ||
       (!redacted && !validCall(call) && !(status === 'IA' && /^[A-Z0-9-]{1,64}$/.test(call))) ||
       (status === 'A' && (!entry.NAME || historicalSuffix.test(call))) ||
-      (!redacted && !/^[A-Z0-9 -]{1,32}$/i.test(entry.SPC))
+      // Country labels can contain Unicode letters, such as Türkiye's TÜR.
+      (!redacted && !/^[\p{L}\p{M}0-9 -]{1,32}$/u.test(entry.SPC))
     )
       throw new Error(`Invalid SKCC identity on row ${row}`)
     const oldCalls =

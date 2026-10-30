@@ -48,6 +48,28 @@ describe('SKCC roster decoding', () => {
     expect(lookupMember(inconsistent, 'K5ABC')?.status).toBe('IA')
     expect(lookupMember(inconsistent, 'K6ABC')?.status).toBe('SK')
   })
+  it.each(['TÜR', 'TU\u0308R'])(
+    'preserves Unicode letters in active member locations: %s',
+    (spc) => {
+      const roster = parseRoster(body.replace('|MA|', `|${spc}|`))
+      expect(lookupMember(roster, 'K1ABC')).toMatchObject({ spc, status: 'A' })
+    },
+  )
+  it.each([
+    [header, '31550|TA1MK/EX|Mit|TÜR|TA1MK|390|01 Nov 2026|||||A'],
+    [
+      'SKCCNR|CALL|NAME|QTH|SPC|OLDCALL|SKCC|DXCODE|JOINDATE|CENTDATE|TRIBDATE|TX8DATE|SENDATE|DXENTITY',
+      '31550|TA1MK/EX|Mit|Istanbul|TÜR|TA1MK|31550|390|01 Nov 2026|||||Turkey',
+    ],
+  ])('accepts the published Turkish /EX record with schema %s', (schema, row) => {
+    const roster = parseRoster(`${schema}\n${row}`)
+    expect(lookupMember(roster, 'TA1MK')).toMatchObject({
+      number: '31550',
+      call: 'TA1MK/EX',
+      spc: 'TÜR',
+      status: 'IA',
+    })
+  })
   it('supports the rich public schema and recognizes its inactive privacy placeholders', () => {
     const rich =
       'SKCCNR|CALL|NAME|QTH|SPC|OLDCALL|SKCC|DXCODE|JOINDATE|CENTDATE|TRIBDATE|TX8DATE|SENDATE|DXENTITY\n1C|K1ABC|Alice|Boston|MA|W1OLD|1|291|02 Jan 2006|15 Jan 2007||||USA\n170|call|name|qth|spc|oldcall|skcc|||||||'
@@ -72,6 +94,7 @@ describe('SKCC roster decoding', () => {
     body.replace('|A\n', '|UNKNOWN\n'),
     body.replace('K1ABC|', 'NOTACALL|'),
     body.replace('W1OLD|', 'bad alias|'),
+    ...['', 'TÜR!', 'TÜR🙂', 'Ü'.repeat(33)].map((spc) => body.replace('|MA|', `|${spc}|`)),
     body.replace('|NAME|', '|CALL|'),
     `${body}\nK9ABC`,
     `${body}\u0000`,

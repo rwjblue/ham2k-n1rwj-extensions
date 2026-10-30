@@ -264,7 +264,8 @@ describe('SKCC installable ES2020 bundle', () => {
       diskCache = JSON.stringify(value)
       await data.onLoadRawData?.(value)
     }
-    await refresh(body)
+    // Published row 31551 previously prevented the entire roster from loading.
+    await refresh(`${body}\n31550|TA1MK/EX|Mit|TÜR|TA1MK|390|01 Nov 2026|||||A`)
     const good = diskCache
     await expect(refresh('<html>Unavailable</html>')).rejects.toThrow()
     expect(diskCache).toBe(good)
@@ -273,6 +274,11 @@ describe('SKCC installable ES2020 bundle', () => {
     await restarted
       .hook('dataFile', `${manifest.key}_members`)
       .onLoadRawData?.(JSON.parse(diskCache))
+    expect(
+      await restarted
+        .hook('spotCallFilter:v1')
+        .matchCalls({ version: 1, calls: ['K2ABC', 'TA1MK', 'TA1MK/EX'] }, ctx),
+    ).toEqual({ version: 1, available: true, calls: ['K2ABC'] })
     const controls = await restarted
       .hook('activity')
       .loggingControls?.({ operation, qso: { their: { call: 'K2ABC' } } }, ctx)
