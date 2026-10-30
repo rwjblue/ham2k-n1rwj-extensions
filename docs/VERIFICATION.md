@@ -1,6 +1,25 @@
 # Verification and compatibility
 
-## BKG catalog icon and v0.18.1 preparation — 2026-10-30
+## Release 0.18.1 publication — 2026-10-30
+
+Published [v0.18.1](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.18.1)
+from signed main commit `81b9f8c051bc0bb74b37bf10b93d81199ab54bd1` at
+**00:52:06 US Eastern (04:52:06 UTC)**. The
+[check workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/41005209502)
+and both jobs of the
+[release workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/41005255774)
+passed. All thirteen bundle/checksum pairs uploaded, and the GitHub release
+body exactly matches the authored notes. Downloaded assets passed
+`mise run release:catalog v0.18.1 --dry-run`, selecting only BKG and skipping
+the other twelve extensions.
+
+The public catalog approves BKG 0.18.1 on `stable`, released at
+**04:53:17.827 UTC**, with icon `fa-hand-fist`. Its **35,775-byte** bundle
+matches the GitHub asset and catalog SHA-256
+`b8194de89d2a5bff5db8f1d4f6198f1c418d5f7555898c2dcd2961ff3f6b38c2`.
+Both existing gallery images remain published. A fresh browser render of
+the public listing shows the white fist on its gold background and the
+0.18.1 download link; its CSS mask loads `/icons/fa-hand-fist.svg`.
 
 The catalog badge requested `hand-fist` as a Material Design Icons name, but
 the fist belongs to Font Awesome. The catalog's missing-icon path answered

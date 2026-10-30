@@ -19,6 +19,31 @@ remain historical; no new release or catalog submission accompanies removal.
 
 ## Current release status
 
+[v0.18.1](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.18.1)
+was published from signed main commit `81b9f8c051bc0bb74b37bf10b93d81199ab54bd1`
+on **October 30, 2026 at 00:52:06 US Eastern (04:52:06 UTC)**. All
+**thirteen bundles and thirteen checksum files** are available. The
+[check workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/41005209502)
+and both jobs of the
+[release workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/41005255774)
+passed. Downloaded assets passed `mise run release:catalog v0.18.1 --dry-run`,
+and the release body exactly matches `docs/releases/v0.18.1.md`.
+
+**BKG Companion is approved and current at 0.18.1 on `stable`**, released at
+**04:53:17.827 UTC**. Its public bundle bytes, size and SHA-256 match GitHub.
+The other twelve catalog entries were skipped. The corrected `fa-hand-fist`
+icon now renders in the live catalog header, and the existing two gallery
+images remain intact. The same icon name is used in the panel picker and
+Worked the Gang program.
+
+All checks passed: **1,948 tests in 150 files**, strict types, lint, thirteen
+builds and official packages. BKG icon metadata and synchronized personal
+release packaging are exempt from upstream CWT synchronization. See the
+[release notes](releases/v0.18.1.md) and
+[verification record](VERIFICATION.md#release-0181-publication--2026-10-30).
+
+### Previous releases
+
 [v0.18.0](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.18.0)
 was published from signed main commit `646b660c8c9b48d852f6bccadc1e1cbe60f06bb3`
 on **October 30, 2026 at 00:05:48 US Eastern (04:05:48 UTC)**. All
@@ -45,8 +70,6 @@ not change CWT behavior and are exempt from upstream CWT synchronization.
 Native UI/on-air acceptance remains separate. See the
 [release notes](releases/v0.18.0.md) and
 [verification record](VERIFICATION.md#release-0180-publication--2026-10-30).
-
-### Previous releases
 
 [v0.17.0](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.17.0)
 was published from signed main commit `ad433250bb949e6a2b1053f2fef74079f1a26078`
