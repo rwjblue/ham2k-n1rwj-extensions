@@ -1,11 +1,11 @@
 {
   "key": "n1rwj-bkg",
   "name": "BKG Companion",
-  "version": "0.18.0",
+  "version": "0.18.1",
   "description": "Find Brass Knuckle Gang members, work the whole gang, and discover 2m CW joining opportunities. Daily offline roster, member cards and native chasing for everyone.",
   "category": "activity",
   "api": 13,
-  "icon": "hand-fist",
+  "icon": "fa-hand-fist",
   "accentColor": "#D4AF37",
   "keywords": ["bkg", "brass knuckle gang", "2m", "cw", "members", "chasing"],
   "hooks": ["dataFile", "lookup", "panel", "chasing"],

@@ -1,5 +1,24 @@
 # Verification and compatibility
 
+## BKG catalog icon and v0.18.1 preparation — 2026-10-30
+
+The catalog badge requested `hand-fist` as a Material Design Icons name, but
+the fist belongs to Font Awesome. The catalog's missing-icon path answered
+HTML instead of SVG, leaving only the brass-colored circular background.
+The BKG manifest, panel picker and Worked the Gang program now use the
+documented `fa-hand-fist` name. Its catalog icon endpoint returns a real SVG.
+
+`mise run release:notes v0.18.1` validated all thirteen extension sections.
+Only BKG has extension-specific changes; dependencies and shared runtime code
+are unchanged. `mise run format` and `mise run release v0.18.1 --dry-run`
+passed lint, strict typechecks, **1,948 tests across 150 files**, all thirteen
+ES2020 builds/official packages and all 26 release bundle/checksum pairs.
+The existing catalog gallery is separate from the icon and remains intact.
+
+The fix changes only BKG icon metadata and synchronized personal release
+packaging, exempt from upstream CWT synchronization. Existing
+`docs/ZOMBIE-VIDEO-BRIEF.md` remains untouched and outside the release commit.
+
 ## Release 0.18.0 publication — 2026-10-30
 
 Published [v0.18.0](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.18.0)

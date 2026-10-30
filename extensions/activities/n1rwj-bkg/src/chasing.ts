@@ -15,7 +15,7 @@ export function createChasing(getRoster: RosterGetter): ChasingHook {
   return {
     program: {
       label: 'Worked the Gang',
-      icon: 'hand-fist',
+      icon: 'fa-hand-fist',
       color: '#D4AF37',
       version: 2,
       editions: 'lifetime',

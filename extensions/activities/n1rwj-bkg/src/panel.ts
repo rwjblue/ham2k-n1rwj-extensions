@@ -122,7 +122,7 @@ export function createPanel(
         {
           key: 'gang',
           title: 'BKG',
-          icon: 'hand-fist',
+          icon: 'fa-hand-fist',
           description:
             '🤜 Member cards, operation progress and recent member spots. Works on Home and inside any operation; no setup required.',
           on: ['operation', 'qso', 'qsoLogged', 'spots', 'radio', 'tick:60'],
