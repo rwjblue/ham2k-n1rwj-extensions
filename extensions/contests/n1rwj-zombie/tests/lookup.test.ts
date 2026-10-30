@@ -1,5 +1,6 @@
 import type { HookContext } from '@ham2k/extension-sdk'
 import { describe, expect, it, vi } from 'vitest'
+import { ANNOUNCED_2026_BONUS_CALLS } from '../src/bonus.ts'
 import { createZombieHistory } from '../src/history.ts'
 import { createZombieLookup } from '../src/lookup.ts'
 import type { Qson } from '../src/model.ts'
@@ -52,6 +53,63 @@ function notes(
 }
 
 describe('Zombie static identity lookup', () => {
+  it('annotates all announced bonus stations on spots without requiring contact history', async () => {
+    const { lookup, ctx } = setup()
+    for (const call of ANNOUNCED_2026_BONUS_CALLS) {
+      const results = await lookup.lookupCall({ operation, qso: {}, callInfo: { call } }, ctx)
+      expect(results[0]).toMatchObject({
+        call,
+        scope: 'operation',
+        note: '⚡ 2026 bonus station',
+        emoji: '⚡',
+      })
+      expect(notes(results)).toContain('**Announced 2026 bonus station**')
+      expect(notes(results)).toContain('Expected number **4321**')
+      expect(notes(results)).toContain('NA5N’s October 29 QRP-L announcement')
+      expect(notes(results)).toContain('confirm the full exchange on air')
+      expect(results[0]).not.toHaveProperty('online')
+      expect(results[0]).not.toHaveProperty('exchange')
+      expect(results[0]).not.toHaveProperty('name')
+      expect(results[0]).not.toHaveProperty('state')
+    }
+    expect(ctx.getQsos).not.toHaveBeenCalled()
+  })
+
+  it('keeps the announced assignment separate from copied corrections, clearing and history hints', async () => {
+    const { lookup, history, ctx } = setup()
+    vi.spyOn(history, 'suggestions').mockResolvedValue({
+      zombieNumber: '0007',
+      zombieName: 'OLD GHOST',
+      spc: 'NM',
+    })
+    const qso: Qson = {
+      their: { call: 'NA5N' },
+      refs: [{ type: 'zombie', theirZombieNumber: '002', theirZombieName: '', theirSpc: '' }],
+    }
+    const original = JSON.stringify(qso)
+    const results = await lookup.lookupCall({ operation, qso, callInfo: { call: 'NA5N' } }, ctx)
+    expect(notes(results)).toContain('**Announced 2026 bonus station**')
+    expect(notes(results)).toContain('**Current exchange** · #002')
+    expect(notes(results)).not.toContain('History hints')
+    expect(notes(results)).not.toContain('OLD GHOST')
+    expect(JSON.stringify(qso)).toBe(original)
+  })
+
+  it('uses the live callsign and selected event for announcements, including when history fails', async () => {
+    const { lookup, history, ctx } = setup()
+    vi.spyOn(history, 'suggestions').mockRejectedValue(new Error('History unavailable'))
+    const query = (qso: Qson, op: Qson = operation) =>
+      lookup.lookupCall({ operation: op, qso, callInfo: { call: 'NA5N' } }, ctx)
+    expect(notes(await query({ their: { call: 'na5n/qrp' } }))).toContain(
+      '**Announced 2026 bonus station**',
+    )
+    expect(notes(await query({ their: { call: 'K1ABC' } }))).not.toContain('bonus station')
+    expect(await query({ their: { call: '' } })).toEqual([])
+    expect(await query({ their: { call: null } })).toEqual([])
+    for (const year of ['2025', '2027'])
+      expect(await query({}, { refs: [{ type: 'zombie', ref: year }] })).toEqual([])
+  })
+
   it('does not mark an unknown spot as a Zombie participant', async () => {
     const { lookup, ctx } = setup()
     expect(

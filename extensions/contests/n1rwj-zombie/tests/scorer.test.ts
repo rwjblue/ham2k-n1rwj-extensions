@@ -60,6 +60,18 @@ const numbered = (uuid: string, call: string, number: string, band = '40m') =>
   })
 
 describe('Zombie scoring and rebirth', () => {
+  it('scores the copied number independently of the announced bonus calls', () => {
+    const { scoresheet, qsoScores } = scoreLog(operation, [
+      numbered('announced', 'NA5N', '111'),
+      numbered('unlisted', 'K9XYZ', '4321'),
+      numbered('missing', 'K4BAI', ''),
+    ])
+    expect(scoresheet.bands['40m']).toEqual({ qsos: 2, bonusQsos: 1, numberSum: 4432 })
+    expect(qsoScores.announced.value).toBe(111)
+    expect(qsoScores.unlisted.value).toBe(4321)
+    expect(qsoScores.missing.alerts).toContain('missingExchange')
+  })
+
   it('matches the official formula, including 4321 in both QSO and number totals', () => {
     const { scoresheet } = scoreLog(operation, [
       numbered('a', 'K1ABC', '111'),

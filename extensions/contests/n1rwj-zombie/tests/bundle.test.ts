@@ -4,6 +4,7 @@ import type {
   ActivityHook,
   DynamicSettingsPanel,
   ExtensionDefinition,
+  LookupHook,
   PanelHook,
   RegisterHookParams,
   ScoringHook,
@@ -125,6 +126,31 @@ it('activates its official ES2020 bundle, scores elapsed rebirths and suggests l
   expect(builtManifest).not.toHaveProperty('domains')
   const guide = await settings.getDefinition({ panelKey: manifest.key }, { online: false })
   expect(guide.elements.every((element) => !['field', 'action'].includes(element.type))).toBe(true)
+  const guideText = guide.elements
+    .filter((element) => element.type === 'markdown')
+    .map((element) => element.text)
+    .join('\n')
+  expect(guideText).toContain('NA5N announced these 16 bonus stations')
+  expect(guideText).toContain('N7CQR · K7TQ')
+  const lookup = registered.get('lookup')?.hook as LookupHook
+  for (const call of ['N7CQR', 'K7TQ', 'NA5N/QRP']) {
+    const annotations = await lookup.lookupCall(
+      { operation, qso: {}, callInfo: { call } },
+      { online: false },
+    )
+    expect(annotations[0]).toMatchObject({ call, note: '⚡ 2026 bonus station' })
+    expect(annotations[0]?.notes?.join('\n')).toContain('Expected number **4321**')
+  }
+  expect(
+    await lookup.lookupCall(
+      {
+        operation: { refs: [{ type: 'zombie', ref: '2027' }] },
+        qso: {},
+        callInfo: { call: 'NA5N' },
+      },
+      { online: false },
+    ),
+  ).toEqual([])
   const activity = registered.get('activity')?.hook as ActivityHook
   const controls = await activity.loggingControls?.(
     { operation, qso: { their: { call: 'K1ABC' } } },
@@ -135,8 +161,14 @@ it('activates its official ES2020 bundle, scores elapsed rebirths and suggests l
     { field: 'theirZombieNumber', kind: 'text', suggestedValue: '0007' },
     { field: 'theirZombieName', suggestedValue: 'GHOST' },
   ])
-  const unknown = await activity.loggingControls?.(
+  const bonus = await activity.loggingControls?.(
     { operation, qso: { their: { call: 'AB9CA' } } },
+    { online: false },
+  )
+  expect(bonus?.[1]?.input).toMatchObject({ suggestedValue: '4321' })
+  expect(bonus?.[2]?.input).toMatchObject({ suggestedValue: ' ' })
+  const unknown = await activity.loggingControls?.(
+    { operation, qso: { their: { call: 'K9XYZ' } } },
     { online: false },
   )
   expect(unknown?.[1]?.input).toMatchObject({ suggestedValue: ' ' })

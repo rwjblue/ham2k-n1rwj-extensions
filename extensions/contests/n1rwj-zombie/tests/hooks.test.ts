@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import manifest from '../manifest.json'
 import { createActivity } from '../src/activity.ts'
+import { ANNOUNCED_2026_BONUS_CALLS } from '../src/bonus.ts'
 import { createExports } from '../src/exports.ts'
 import { object, type Qson } from '../src/model.ts'
 
@@ -84,6 +85,93 @@ describe('Zombie Shuffle activity', () => {
       expect.objectContaining({ kind: 'serial' }),
     )
     expect(await activity.loggingControls({ operation: {}, qso: {} }, ctx)).toEqual([])
+  })
+
+  it('prefills 4321 for announced bonus calls and unambiguous portable forms while offline', async () => {
+    const { activity } = createActivity(manifest)
+    const getQsos = vi.fn(async () => [])
+    for (const call of [...ANNOUNCED_2026_BONUS_CALLS, ' na5n/qrp ', 'VE3/NB6M']) {
+      const controls = await activity.loggingControls(
+        { operation, qso: { their: { call, name: 'Directory Name' } } },
+        { ...ctx, getQsos },
+      )
+      expect(controls[1]?.input).toMatchObject({
+        kind: 'text',
+        field: 'theirZombieNumber',
+        suggestedValue: '4321',
+      })
+      expect(controls[0]?.input).toMatchObject({ suggestedValue: ' ' })
+      expect(controls[2]?.input).toMatchObject({ suggestedValue: ' ' })
+    }
+    expect(getQsos.mock.calls.length).toBeLessThanOrEqual(1)
+  })
+
+  it('uses the announced bonus number ahead of older personal-number history', async () => {
+    const { activity } = createActivity(manifest)
+    const controls = await activity.loggingControls(
+      { operation, qso: { their: { call: 'NA5N' } } },
+      {
+        ...ctx,
+        getHistoryForCall: async () => [
+          {
+            uuid: 'old-na5n',
+            their: { call: 'NA5N' },
+            refs: [
+              {
+                type: 'zombie',
+                ref: '2025',
+                theirSpc: 'NM',
+                theirZombieNumber: '004',
+                theirZombieName: 'PANCHO',
+              },
+            ],
+          },
+        ],
+      },
+    )
+    expect(controls.map(({ input }) => input)).toMatchObject([
+      { suggestedValue: 'NM' },
+      { suggestedValue: '4321' },
+      { suggestedValue: 'PANCHO' },
+    ])
+  })
+
+  it('preserves entered numbers and explicit blanks and keeps an applied bonus prefill stable', async () => {
+    const { activity } = createActivity(manifest)
+    for (const value of ['0007', '3333', '4321', '', null, 1234]) {
+      const qso: Qson = {
+        their: { call: 'NA5N' },
+        refs: [{ type: 'zombie', theirZombieNumber: value }],
+      }
+      const original = JSON.stringify(qso)
+      for (let refresh = 0; refresh < 2; refresh++) {
+        const controls = await activity.loggingControls({ operation, qso }, ctx)
+        expect(controls[1]?.input).toMatchObject({
+          suggestedValue: value === null || value === '' ? ' ' : String(value),
+        })
+      }
+      expect(JSON.stringify(qso)).toBe(original)
+      const patch = await activity.processQsoBeforeSave({ operation, qso }, ctx)
+      expect(patch?.their?.exchange).toBe(value === null ? '' : String(value))
+    }
+  })
+
+  it('withdraws the bonus suggestion for unknown calls and never applies another event’s roster', async () => {
+    const { activity } = createActivity(manifest)
+    const numberFor = async (call: string, op: Qson = operation) =>
+      (await activity.loggingControls({ operation: op, qso: { their: { call } } }, ctx))[1]?.input
+    expect(await numberFor('NA5N')).toMatchObject({ suggestedValue: '4321' })
+    for (const call of ['', 'K1ABC', 'NA5', 'NA5N/K4BAI', 'N7CQRK7TQ'])
+      expect(await numberFor(call)).toMatchObject({ suggestedValue: ' ' })
+    for (const year of ['2025', '2027', ''])
+      expect(await numberFor('NA5N', { refs: [{ type: 'zombie', ref: year }] })).toMatchObject({
+        suggestedValue: ' ',
+      })
+    const patch = await activity.processQsoBeforeSave(
+      { operation, qso: { their: { call: 'NA5N' } } },
+      ctx,
+    )
+    expect(patch?.their?.exchange).toBe('')
   })
 
   it('preserves complete spooky names, free-form locations and leading zeros when projecting an exchange', async () => {

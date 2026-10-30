@@ -66,6 +66,10 @@ separately; clearing a field suppresses its hint. Cached lookup notes never
 claim a station is active or a rebirth is ready. Native scoring continues to
 provide the current draft's duplicate and eligible-again messages.
 
+The 2026 operation also identifies the organizer's announced bonus calls
+in lookup and spot notes with **⚡ 2026 bonus station**. This assignment is
+shown separately from copied exchanges and history hints.
+
 For operations with start/break setup overrides, the panel shows guidance
 instead of reconstructing a timeline the panel API does not supply. Native
 scoring, Info and exports continue to use the canonical segment timeline.
@@ -116,6 +120,29 @@ three-digit telephone area code. The number is fixed exchange text, never an
 incrementing QSO serial. In 2026, designated bonus stations send `4321`.
 The setup keeps your regular number separate from bonus-station status and
 each saved contact retains its effective sent exchange.
+
+### Announced 2026 bonus stations
+
+NA5N's **October 29, 2026 QRP-L announcement**, “Zombie Shuffle Friday Oct. 30,”
+names these 16 stations:
+
+**K4BAI · AB9CA · NB6M · W2EB · NA5N · WB9HFK · WA5BDU · N7CQR ·
+K7TQ · N0MII · W1PID · WD7Y · AD4TJ · N4VE · NB7O · N3XTR**
+
+The original email puts a line break between `N7CQR` and `K7TQ`; these are
+two calls. Source Message-ID: `20261030014009.50176.qmail@modulo.zianet.com`.
+The same list is available offline in **Settings → Activities → Zombie Shuffle**.
+
+These stations are expected to send `4321`. The announcement supplies neither
+their spooky names nor their operating times. Lookup notes recognize exact
+calls and unambiguous portable forms only for the 2026 event. They do not
+confirm activity or award points. When you enter an announced bonus call,
+the Zombie number field prefills **`4321`** ahead of older history. Confirm
+it on air; an entered number or deliberately cleared field takes precedence,
+and the prefill does not supply a spooky name or location. Scoring uses the
+exchange you log, including a `4321` from a station added after this announcement.
+
+### Copying the exchange
 
 Copy the exchange actually transmitted. SPC accepts full country names and
 unusual locations rather than SST's two-letter/DX rules. Zombie names are

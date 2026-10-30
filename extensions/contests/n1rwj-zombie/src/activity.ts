@@ -6,6 +6,7 @@ import type {
   LoggingControlDescriptor,
   RefHandlerHook,
 } from '@ham2k/extension-sdk'
+import { isAnnouncedBonusStation } from './bonus.ts'
 import { effectiveSent, exchangeText, received } from './exchange.ts'
 import { createZombieHistory } from './history.ts'
 import {
@@ -129,9 +130,19 @@ export function createActivity(manifest: Manifest) {
       ]
     },
     async loggingControls({ operation, qso }, ctx) {
-      if (!refOf(operation)) return []
+      const op = refOf(operation)
+      if (!op) return []
       const hints = await history.suggestions(operation, qso ?? {}, ctx)
       const spc = hints.spc || zombieSpcSuggestion(object(qso?.their))
+      const copied = refOf(qso ?? {})
+      // Presence includes deliberate clearing. Retaining an already suggested
+      // value also keeps repeated native control refreshes stable.
+      const number =
+        copied && 'theirZombieNumber' in copied
+          ? received(qso ?? {}).zombieNumber
+          : isAnnouncedBonusStation(text(object(qso?.their).call), text(op.ref))
+            ? BONUS_NUMBER
+            : hints.zombieNumber
       const control = (
         field: string,
         label: string,
@@ -161,7 +172,7 @@ export function createActivity(manifest: Manifest) {
       })
       return [
         control('theirSpc', 'State / province / country (_ = space)', 'SPC', 10, spc),
-        control('theirZombieNumber', 'Zombie number', 'Zombie #', 20, hints.zombieNumber, true),
+        control('theirZombieNumber', 'Zombie number', 'Zombie #', 20, number, true),
         control('theirZombieName', 'Zombie name (_ = space)', 'Name', 30, hints.zombieName),
       ]
     },

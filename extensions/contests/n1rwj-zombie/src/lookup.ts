@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MPL-2.0
 import type { CallInfoLookup, LookupHook } from '@ham2k/extension-sdk'
 import { isCallsign, normalizeCall } from '../../../../packages/n1mm/src/callsign.ts'
+import { isAnnouncedBonusStation } from './bonus.ts'
 import { received } from './exchange.ts'
 import type { createZombieHistory, ZombieSuggestions } from './history.ts'
 import { zombieIdentityNotes } from './info.ts'
@@ -9,7 +10,7 @@ import { EVENT_REF, type Exchange, object, refOf, text } from './model.ts'
 
 type ZombieAnnotation = CallInfoLookup & { note?: string; emoji?: string }
 
-/** Static, scoped identity notes. No cached readiness, roster claim or network access. */
+/** Static, scoped identity and announced bonus notes. No cached readiness or network access. */
 export function createZombieLookup(history: ReturnType<typeof createZombieHistory>): LookupHook {
   return {
     async lookupCall({ callInfo, operation, qso }, ctx) {
@@ -19,6 +20,7 @@ export function createZombieLookup(history: ReturnType<typeof createZombieHistor
       // Native spots omit their.call and can use the supplied callsign instead.
       const call = normalizeCall(text('call' in their ? their.call : callInfo.call))
       if (!isCallsign(call)) return []
+      const announcedBonus = isAnnouncedBonusStation(call, text(refOf(operation)?.ref))
       let suggestions: ZombieSuggestions = {}
       try {
         suggestions = await history.suggestions(
@@ -43,20 +45,23 @@ export function createZombieLookup(history: ReturnType<typeof createZombieHistor
       const copied = received(qso)
       const hasCopied = Object.values(copied).some(Boolean)
       const hasHints = Object.values(hints).some(Boolean)
-      // Unknown spots are not evidence of Zombie participation. A live
-      // logging draft may still show the event's exchange-entry guidance.
-      if (!('call' in their) && !hasCopied && !hasHints) return []
+      // Unknown spots are not evidence of Zombie participation. Announced
+      // bonus calls can be identified without a copied exchange or history.
+      // A live logging draft may still show exchange-entry guidance.
+      if (!('call' in their) && !hasCopied && !hasHints && !announcedBonus) return []
       const annotation: ZombieAnnotation = {
         call,
         source: 'n1rwj-zombie',
         scope: 'operation',
-        note: hasCopied
-          ? '👻 Zombie exchange'
-          : hasHints
-            ? '👻 Zombie history hint'
-            : '👻 Zombie Shuffle exchange',
-        emoji: '👻',
-        notes: zombieIdentityNotes({ call, copied, hints }),
+        note: announcedBonus
+          ? '⚡ 2026 bonus station'
+          : hasCopied
+            ? '👻 Zombie exchange'
+            : hasHints
+              ? '👻 Zombie history hint'
+              : '👻 Zombie Shuffle exchange',
+        emoji: announcedBonus ? '⚡' : '👻',
+        notes: zombieIdentityNotes({ call, copied, hints, announcedBonus }),
       }
       return [annotation]
     },

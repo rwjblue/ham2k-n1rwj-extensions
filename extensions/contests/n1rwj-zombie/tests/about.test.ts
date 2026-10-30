@@ -3,6 +3,7 @@ import type { FormDefinition, FormLinkElement } from '@ham2k/extension-sdk'
 import { describe, expect, it } from 'vitest'
 import { ZOMBIE_GUIDE_URL, zombieAboutDefinition } from '../src/about.ts'
 import { zombieAboutArtwork, zombieAboutArtworkSourceHash } from '../src/about-art.ts'
+import { ANNOUNCED_2026_BONUS_CALLS } from '../src/bonus.ts'
 import { RULES_URL } from '../src/model.ts'
 import { zombiePanelPreview } from '../src/panel-preview.ts'
 
@@ -69,6 +70,15 @@ describe('Zombie Shuffle about page', () => {
     expect(text).toContain('each band keeps its own rebirth clock')
     expect(text).toContain('does not confirm who is on the air')
     expect(text).toContain('Copy and confirm the exchange you hear')
+  })
+
+  it('lists the organizer’s 16 announced bonus calls with their source and on-air exchange guidance', () => {
+    const text = markdown(zombieAboutDefinition())
+    expect(text).toContain('QRP-L on October 29, 2026')
+    for (const call of ANNOUNCED_2026_BONUS_CALLS) expect(text).toContain(call)
+    expect(text).toContain('Listen for **4321**')
+    expect(text).toContain('copy their full exchange on air')
+    expect(text).toContain('Scoring uses the number you copy')
   })
 
   it('is a static, read-only definition with independent results for each opening', () => {

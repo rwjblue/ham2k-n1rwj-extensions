@@ -1,5 +1,49 @@
 # Verification and compatibility
 
+## Zombie Shuffle 2026 bonus announcement — 2026-10-29
+
+Verified NA5N's original QRP-L message, “Zombie Shuffle Friday Oct. 30,”
+through Fastmail. It names 16 bonus calls; `N7CQR` and `K7TQ` are separated
+by a line break in the original. Message-ID:
+`20261030014009.50176.qmail@modulo.zianet.com` (received October 29 US Eastern).
+The [official 2026 rules](https://www.zianet.com/qrp/ZOMBIE/pg.html) confirm
+the date, local hours and `4321` bonus exchange, but do not list the calls.
+
+Added the announced calls to the offline event overview and operation-scoped
+lookup/spot notes for 2026, including unambiguous portable forms. Announced
+assignments appear separately from copied exchanges and history suggestions.
+The number field prefills `4321` for announced bonus calls ahead of older
+personal-number history. A number already present on the draft, including a
+deliberate blank, wins; repeated refreshes retain the applied suggestion.
+The host's native touched-field handling also preserves typed corrections
+and clearing. Names and locations still use their existing sources. The roster
+does not award points or establish current activity. The existing scorer uses
+the exchange actually logged, including bonus exchanges from stations absent
+from this announcement.
+
+- `mise run format` and `mise run check` pass: **1,948 tests in 150 files**,
+  strict source/test/task typechecks, lint, thirteen official ES2020 builds
+  and thirteen official packages/checksums.
+- Twelve new deterministic tests cover the exact roster, normalization,
+  portable and ambiguous calls, event-year scope, corrections/clearing,
+  optional-history failures, offline guidance and copied-number scoring,
+  plus all 16 bonus prefills, older-history precedence, stable repeated
+  refreshes and withholding suggestions outside the announced event/calls.
+  The existing compiled-bundle test also exercises bonus lookup notes,
+  the offline list and native number-prefill descriptors without network access.
+- Inspected the published SDK activity contract and host
+  `logging_controls_exchange.dart`: `applySuggestedValues` skips touched
+  fields, `restore` marks saved values touched, and callsign changes withdraw
+  only untouched suggestions. Native UI interaction remains untested here.
+- `mise run release:notes v0.18.0 n1rwj-zombie` validates all thirteen audience
+  sections and previews the updated Zombie notes in the existing authored file.
+
+These are unpublished changes at the synchronized **0.17.0** development
+version, with notes prepared for **v0.18.0**. Source and Node VM bundle checks
+are distinct from native Ham2K UI and on-air acceptance. Only Zombie source,
+tests and guidance changed; shared code and CWT behavior are unchanged, so
+upstream CWT synchronization is exempt.
+
 ## NCCC Sprint CW implementation — 2026-10-29
 
 Added the independent `n1rwj-ns` extension at the repository's synchronized

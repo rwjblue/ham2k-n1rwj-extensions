@@ -97,6 +97,7 @@ export interface ZombieIdentityInfoInput {
   call: string
   copied?: Partial<Exchange>
   hints?: Partial<Exchange>
+  announcedBonus?: boolean
 }
 
 /** Stable event identity only. Timed eligibility must never enter cached notes. */
@@ -106,6 +107,11 @@ export function zombieIdentityNotes(input: ZombieIdentityInfoInput): string[] {
   const hints = identityFields(input.hints)
   return [
     `🪦👻 **Zombie Shuffle 2026** · ${strong(input.call)}`,
+    ...(input.announcedBonus
+      ? [
+          `⚡ **Announced 2026 bonus station** · Expected number **${BONUS_NUMBER}**. NA5N’s October 29 QRP-L announcement; confirm the full exchange on air.`,
+        ]
+      : []),
     ...(copied.length ? [`🎃 **Current exchange** · ${copied.join(' · ')}`] : []),
     ...(hints.length ? [`📖 **History hints — confirm on air** · ${hints.join(' · ')}`] : []),
     ...(!copied.length && !hints.length

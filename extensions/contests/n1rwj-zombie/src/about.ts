@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MPL-2.0
 import type { FormDefinition } from '@ham2k/extension-sdk'
 import { zombieAboutArtwork } from './about-art.ts'
+import { ANNOUNCED_2026_BONUS_CALLS } from './bonus.ts'
 import { BONUS_NUMBER, EVENT_REF, RULES_URL } from './model.ts'
 
 export const ZOMBIE_GUIDE_URL =
@@ -35,6 +36,11 @@ export function zombieAboutDefinition(): FormDefinition {
       {
         type: 'markdown',
         text: `**Friday, October 30, ${EVENT_REF} · 15:00–midnight local time.** HI, AK and DX may use other hours during the Shuffle. Operate **CW at 5 W or less** on 80, 40, 20, 15 or 10 meters.\n\nSend **RST · state/province/country · Zombie number · Zombie name**. Assigned Zombie numbers last for life; a three-digit telephone area code also works. Only designated ${EVENT_REF} bonus stations send **${BONUS_NUMBER}**.\n\nA station can rise again on the **same band after two elapsed hours**. Contact it sooner on another band. The 10 m and 15 m scores share a group, but each band keeps its own rebirth clock.`,
+      },
+      { type: 'divider', title: '2026 bonus stations' },
+      {
+        type: 'markdown',
+        text: `NA5N announced these 16 bonus stations on QRP-L on October 29, 2026:\n\n**${ANNOUNCED_2026_BONUS_CALLS.join(' · ')}**\n\nListen for **${BONUS_NUMBER}** as their Zombie number. Lookup notes identify these announced stations in the 2026 operation; copy their full exchange on air. The number field prefills **${BONUS_NUMBER}** for these calls; your corrections and deliberate clearing take precedence. The announcement does not say when each station will be active. Scoring uses the number you copy.`,
       },
       { type: 'divider', title: 'At the logging table' },
       {
