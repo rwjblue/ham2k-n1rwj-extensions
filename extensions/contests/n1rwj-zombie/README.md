@@ -7,8 +7,8 @@ rebirth rule, previous-contact suggestions, score breakdown, ADIF, and a plain-t
 submission summary. This extension is independently installable as
 `n1rwj-zombie`, with activity/reference type `zombie`.
 
-Download `n1rwj-zombie-0.16.0.h2kext` from the
-[v0.16.0 release](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.16.0)
+Download `n1rwj-zombie-0.18.0.h2kext` from the
+[v0.18.0 release](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.18.0)
 and install it through Ham2K's extension settings. Building from source is also
 supported:
 

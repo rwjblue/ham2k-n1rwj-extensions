@@ -93,8 +93,8 @@ links, export instructions, certificate requests, and verification limits.
 
 ### Zombie Shuffle
 
-Install `n1rwj-zombie-0.16.0.h2kext` from
-[v0.16.0](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.16.0).
+Install `n1rwj-zombie-0.18.0.h2kext` from
+[v0.18.0](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.18.0).
 Create a dedicated **Zombie Shuffle 2026** operation and configure your sent
 exchange and event-day UTC offset. Add **Edit Layout → Add a Panel → Zombie
 Shuffle** for the graveyard, rebirth watch and Book of the Undead. Panel settings

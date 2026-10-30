@@ -27,7 +27,7 @@ session rather than accumulating a season's best weeks.
 ## Get started
 
 1. Build `mise run pack n1rwj-ns` from the repository root. Install
-   `dist/n1rwj-ns-0.17.0.h2kext` through Ham2K's **Install from file** option.
+   `dist/n1rwj-ns-0.18.0.h2kext` through Ham2K's **Install from file** option.
    This new extension has not yet been published to GitHub or the catalog.
 2. Create a **new operation for each session**, add **NS** or **NCCC Sprint**,
    and choose the correct Friday UTC session. Set your name, sent QTH and power.
