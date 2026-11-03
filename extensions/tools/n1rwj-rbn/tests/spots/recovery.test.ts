@@ -207,7 +207,7 @@ it('preserves partial reports and honors retryAfter when another band is rate li
 it('shows fresh partial spots and a settings warning, then clears that warning after recovery', async () => {
   let now = at
   let failed = true
-  const preferences: Record<string, JSONValue> = { spotCallFilter: 'none', spotContinents: [] }
+  const preferences: Record<string, JSONValue> = { spotContinents: [] }
   const runtime = createRbnSpots({
     now: () => now,
     lookup: () => undefined,
@@ -220,7 +220,6 @@ it('shows fresh partial spots and a settings warning, then clears that warning a
     setSettings: async (values) => {
       Object.assign(preferences, values)
     },
-    bridge: { invokeAll: async () => [], invokeOne: async () => [] },
   })
   const ctx = { online: true }
   const definition = () => runtime.settings.getDefinition({ panelKey: 'n1rwj-rbn' }, ctx)

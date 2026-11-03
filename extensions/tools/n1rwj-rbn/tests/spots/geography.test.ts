@@ -32,7 +32,7 @@ it('combines receiver continents with other filters before deduplication, indepe
     now,
   )
   const select = (raw: Record<string, unknown>) =>
-    selectSpots(reports, undefined, readPreferences(raw), lookup, now)
+    selectSpots(reports, readPreferences(raw), lookup, now)
   expect(select({ spotContinents: ['NA'], spotGrids: 'FN' })).toMatchObject([
     { their: { call: 'JA1DX' }, spot: { sourceInfo: { spotter: 'K1NEAR' } } },
   ])
@@ -57,12 +57,11 @@ it('uses directory grid then report fallback, excludes unknown positions only wi
     spotRadiusMiles: 1,
     spotContinents: ['NA'],
   })
-  expect(selectSpots(reports, undefined, prefs, lookup, now).map((s) => s.their.call)).toEqual([
+  expect(selectSpots(reports, prefs, lookup, now).map((s) => s.their.call)).toEqual([
     'K1ABC',
     'N2ABC',
   ])
-  expect(selectSpots(reports, undefined, readPreferences({}), lookup, now)).toHaveLength(3)
-  expect(selectSpots(reports, new Set(['N2ABC']), prefs, lookup, now)).toHaveLength(1)
+  expect(selectSpots(reports, readPreferences({}), lookup, now)).toHaveLength(3)
 })
 
 it('uses unanimous family locations for bare reports without inventing an exact receiver ID', () => {
@@ -77,7 +76,6 @@ it('uses unanimous family locations for bare reports without inventing an exact 
   const reports = parseReports([row('KM3T', 'JO31')], 'rbn', now)
   const selected = selectSpots(
     reports,
-    undefined,
     readPreferences({ spotRadiusGrid: 'FN41FR', spotRadiusMiles: 100, spotContinents: ['NA'] }),
     directory.lookup,
     now,
@@ -88,7 +86,6 @@ it('uses unanimous family locations for bare reports without inventing an exact 
   expect(
     selectSpots(
       reports,
-      undefined,
       readPreferences({ spotSkimmers: 'KM3T-2, KM3T-3' }),
       directory.lookup,
       now,
@@ -111,7 +108,7 @@ it('rejects ambiguous family grids before deduplication while retaining known ex
     now,
   )
   const select = (raw: Record<string, unknown>) =>
-    selectSpots(reports, undefined, readPreferences(raw), directory.lookup, now)
+    selectSpots(reports, readPreferences(raw), directory.lookup, now)
   expect(select({})[0].spot.sourceInfo?.spotter).toBe('KM3T')
   expect(select({ spotContinents: ['NA'] })[0].spot.sourceInfo?.spotter).toBe('KM3T')
   for (const preferences of [
@@ -127,11 +124,10 @@ it('rejects ambiguous family grids before deduplication while retaining known ex
 it('uses great-circle miles across the date line and includes the exact distance boundary', () => {
   const reports = parseReports([row('W1RX', 'RJ90')], 'rbn', now)
   const prefs = readPreferences({ spotRadiusGrid: 'AJ00', spotRadiusMiles: 150 })
-  expect(selectSpots(reports, undefined, prefs, () => undefined, now)).toHaveLength(1)
+  expect(selectSpots(reports, prefs, () => undefined, now)).toHaveLength(1)
   expect(
     selectSpots(
       reports,
-      undefined,
       readPreferences({ spotRadiusGrid: 'AJ00', spotRadiusMiles: 100 }),
       () => undefined,
       now,
@@ -144,7 +140,6 @@ it('uses great-circle miles across the date line and includes the exact distance
   expect(
     selectSpots(
       reports,
-      undefined,
       { ...prefs, radius: { ...radius, miles: boundary } },
       () => undefined,
       now,
@@ -153,7 +148,6 @@ it('uses great-circle miles across the date line and includes the exact distance
   expect(
     selectSpots(
       reports,
-      undefined,
       { ...prefs, radius: { ...radius, miles: boundary - 0.001 } },
       () => undefined,
       now,

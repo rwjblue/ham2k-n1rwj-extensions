@@ -19,12 +19,12 @@ import type { createRbnSpots } from '../../src/spots/index.ts'
 type RbnSettings = ReturnType<typeof createRbnSpots>['settings']
 type ResetMethod = keyof Omit<RbnSettings, keyof DynamicSettingsPanel>
 
-/** Actual bundles, separate SDK copies, the documented kernel dispatch boundary. */
-async function harness(saved: Record<string, JSONValue> = {}, contests = ['cwt', 'mst', 'sst']) {
+/** Exercise the built RBN extension through its SDK activation callbacks. */
+async function harness(saved: Record<string, JSONValue> = {}) {
   const now = Date.parse('2026-10-02T16:00:00Z')
   const preferences: Record<string, JSONValue> = structuredClone(saved)
-  const definitions: ExtensionDefinition[] = []
-  const registered = new Map<string, Map<string, RegisterHookParams>>()
+  let definition: ExtensionDefinition | undefined
+  const registered = new Map<string, RegisterHookParams>()
   const hostCalls = vi.fn()
   const showForm = vi.fn(async (_form: FormDefinition) => null)
   const sharedModules = Object.fromEntries(
@@ -61,88 +61,55 @@ async function harness(saved: Record<string, JSONValue> = {}, contests = ['cwt',
     },
     __polo: {
       sharedModules,
-      defineExtension: (definition: ExtensionDefinition) => definitions.push(definition),
-      invokeLocal: async (
-        category: string,
-        method: string,
-        args: unknown,
-        online: boolean,
-        key?: string,
-      ) => {
-        const results = []
-        for (const [extension, categories] of registered) {
-          const registration = categories.get(category)
-          if (!registration || (key && key !== (registration.key ?? extension))) continue
-          const hookKey = registration.key ?? extension
-          try {
-            const hook = registration.hook as Record<
-              string,
-              (args: unknown, ctx: unknown) => unknown
-            >
-            results.push({
-              key: hookKey,
-              ok: true,
-              value: await hook[method](args, { online, locale: 'en' }),
-            })
-          } catch (error) {
-            results.push({ key: hookKey, ok: false, error: String(error) })
-          }
-        }
-        return results
+      defineExtension: (extension: ExtensionDefinition) => {
+        definition = extension
       },
     },
   })
   runInContext('delete Object.hasOwn', context)
-  for (const path of ['tools/n1rwj-rbn', ...contests.map((name) => `contests/n1rwj-${name}`)]) {
-    runInContext(
-      await readFile(new URL(`../../../../${path}/build/index.js`, import.meta.url), 'utf8'),
-      context,
-      { timeout: 5000 },
-    )
-  }
-  for (const definition of definitions) {
-    const categories = new Map<string, RegisterHookParams>()
-    registered.set(definition.key, categories)
-    definition.onActivation({
-      showForm,
-      registerHook: (category, hook) => {
-        categories.set(category, hook)
-      },
-      hostCall: async (method, params) => {
-        hostCalls(method, params)
-        if (method === 'getSettings') return { extensions: preferences }
-        if (method === 'setSettings') {
-          const key = `extension_${definition.key}`
-          preferences[key] = {
-            ...((preferences[key] as Record<string, JSONValue>) ?? {}),
-            ...(params.values as Record<string, JSONValue>),
-          }
-          return null
+  runInContext(await readFile(new URL('../../build/index.js', import.meta.url), 'utf8'), context, {
+    timeout: 5000,
+  })
+  if (!definition) throw new Error('Missing RBN extension definition')
+  definition.onActivation({
+    showForm,
+    registerHook: (category, hook) => {
+      registered.set(category, hook)
+    },
+    hostCall: async (method, params) => {
+      hostCalls(method, params)
+      if (method === 'getSettings') return { extensions: preferences }
+      if (method === 'setSettings') {
+        const key = 'extension_n1rwj-rbn'
+        preferences[key] = {
+          ...((preferences[key] as Record<string, JSONValue>) ?? {}),
+          ...(params.values as Record<string, JSONValue>),
         }
-        if (method === 'kvGet' || method === 'kvSet') return null
-        if (method === 'getLocation') return null
-        if (method === 'fetch') {
-          if (params.url === 'https://vailrerbn.com/api/v1/health')
-            return { status: 200, body: '{"status":"ok","database":"connected"}' }
-          return requests(String(params.url))
-        }
-        throw new Error(`Unexpected host call: ${method}`)
-      },
-    })
-  }
-  function hook<T>(key: string, category: string): T {
-    const entry = registered.get(key)?.get(category)
-    if (!entry) throw new Error(`Missing ${category} from ${key}`)
+        return null
+      }
+      if (method === 'kvGet' || method === 'kvSet') return null
+      if (method === 'getLocation') return null
+      if (method === 'fetch') {
+        if (params.url === 'https://vailrerbn.com/api/v1/health')
+          return { status: 200, body: '{"status":"ok","database":"connected"}' }
+        return requests(String(params.url))
+      }
+      throw new Error(`Unexpected host call: ${method}`)
+    },
+  })
+  function hook<T>(category: string): T {
+    const entry = registered.get(category)
+    if (!entry) throw new Error(`Missing RBN ${category} hook`)
     return entry.hook as T
   }
-  const spots = hook<SpotsHook>('n1rwj-rbn', 'spots')
-  const settings = hook<RbnSettings>('n1rwj-rbn', 'settingsPanel')
+  const spots = hook<SpotsHook>('spots')
+  const settings = hook<RbnSettings>('settingsPanel')
   const ctx = { online: true, locale: 'en' }
   // Settle the optional one-shot device-location probe in this locationless host.
   await settings.getDefinition({ panelKey: 'n1rwj-rbn' }, ctx)
   await new Promise((resolve) => setTimeout(resolve, 0))
   return {
-    definitions,
+    definition,
     hostCalls,
     showForm,
     preferences,
@@ -153,34 +120,21 @@ async function harness(saved: Record<string, JSONValue> = {}, contests = ['cwt',
     settings,
     action: (method: ResetMethod) => settings[method]({ panelKey: 'n1rwj-rbn', state: {} }, ctx),
     fetch: () => spots.fetchSpots({}, ctx),
-    choose: (value: string) =>
-      settings.onChangeField(
-        { panelKey: 'n1rwj-rbn', fieldKey: 'spotCallFilter', value, state: {} },
-        ctx,
-      ),
-    load: (contest: string, body: string) =>
-      hook<DataFileDefinition>(`n1rwj-${contest}`, 'dataFile').onLoadRawData?.({
-        schema: 1,
-        body,
-        url: 'https://n1mm.hamdocs.com/history.txt',
-        fetchedAt: new Date().toISOString(),
-      }),
   }
 }
 
 it('bundled RBN recognizes new and already-saved station refs offline without changing contacts', async () => {
-  const runtime = await harness(
-    { 'extension_n1rwj-rbn': { unrelated: 42, spotAllowMerging: false } },
-    [],
-  )
-  const activity = runtime.hook<ActivityHook>('n1rwj-rbn', 'activity')
-  expect(runtime.definitions[0].hooks).toContain('activity')
+  const runtime = await harness({
+    'extension_n1rwj-rbn': { unrelated: 42, spotAllowMerging: false },
+  })
+  const activity = runtime.hook<ActivityHook>('activity')
+  expect(runtime.definition.hooks).toContain('activity')
   expect(activity.operationControls).toBeUndefined()
   expect(activity.suggest).toBeUndefined()
   expect(activity.processQsoBeforeSave).toBeUndefined()
-  expect(runtime.registered.get('n1rwj-rbn')?.has('export')).toBe(true)
+  expect(runtime.registered.has('export')).toBe(true)
   for (const category of ['adifFields', 'adifImport']) {
-    expect(runtime.registered.get('n1rwj-rbn')?.has(category)).toBe(false)
+    expect(runtime.registered.has(category)).toBe(false)
   }
   const args: Parameters<NonNullable<ActivityHook['loggingControls']>>[0][] = [
     { operation: {} },
@@ -228,20 +182,20 @@ it('bundled RBN recognizes new and already-saved station refs offline without ch
 })
 
 it('defaults to merging without an activity and toggles cached spots across restarts', async () => {
-  const runtime = await harness({}, [])
+  const runtime = await harness()
   const ctx = { online: false }
   expect(await runtime.settings.getPanels?.({}, ctx)).toEqual([
     { key: 'n1rwj-rbn', title: 'RBN', icon: 'radar', section: 'spotting', sidebar: false },
   ])
   expect(manifest.settings).toEqual({ section: 'spotting' })
-  expect(runtime.definitions.find((definition) => definition.key === manifest.key)).toMatchObject({
+  expect(runtime.definition).toMatchObject({
     settings: manifest.settings,
   })
   const builtManifest = JSON.parse(
     await readFile(new URL('../../build/manifest.json', import.meta.url), 'utf8'),
   )
   expect(builtManifest.settings).toEqual(manifest.settings)
-  const activity = runtime.hook<ActivityHook>('n1rwj-rbn', 'activity')
+  const activity = runtime.hook<ActivityHook>('activity')
   expect(await activity.loggingControls?.({ operation: {} }, ctx)).toEqual([])
   const form = await runtime.settings.getDefinition({ panelKey: 'n1rwj-rbn' }, ctx)
   expect(form.elements).toContainEqual(
@@ -267,14 +221,12 @@ it('defaults to merging without an activity and toggles cached spots across rest
     separate.map((spot) => [{ type: 'rbn', ref: spot.their.call }]),
   )
   expect(await activity.loggingControls?.({ operation: {} }, ctx)).toHaveLength(1)
-  const restarted = await harness(runtime.preferences, [])
+  const restarted = await harness(runtime.preferences)
   expect((await restarted.fetch()).map((spot) => spot.refs)).toEqual(
     separate.map((spot) => spot.refs),
   )
   expect(
-    await restarted
-      .hook<ActivityHook>('n1rwj-rbn', 'activity')
-      .loggingControls?.({ operation: {} }, ctx),
+    await restarted.hook<ActivityHook>('activity').loggingControls?.({ operation: {} }, ctx),
   ).toHaveLength(1)
   await edit(true)
   expect(await runtime.fetch()).toEqual(first)
@@ -286,12 +238,9 @@ it('defaults to merging without an activity and toggles cached spots across rest
 })
 
 it('opens RBN guidance separately from grouped controls without changing settings or requesting data', async () => {
-  const runtime = await harness(
-    {
-      'extension_n1rwj-rbn': { spotMinWpm: 12, additionalExportFormats: ['json'], unrelated: 42 },
-    },
-    [],
-  )
+  const runtime = await harness({
+    'extension_n1rwj-rbn': { spotMinWpm: 12, additionalExportFormats: ['json'], unrelated: 42 },
+  })
   const form = await runtime.settings.getDefinition({ panelKey: 'n1rwj-rbn' }, { online: false })
   expect(form.elements[form.elements.length - 1]).toMatchObject({
     type: 'action',
@@ -325,7 +274,7 @@ it('opens RBN guidance separately from grouped controls without changing setting
 })
 
 it('offers one bundled reception report by default and persists only opted-in companions', async () => {
-  const runtime = await harness({ 'extension_n1rwj-rbn': { unrelated: 42 } }, [])
+  const runtime = await harness({ 'extension_n1rwj-rbn': { unrelated: 42 } })
   const ctx = { online: false }
   const args: ExportOptionsRequest = {
     operation: { uuid: 'activation', stationCall: 'N1RWJ', grid: 'FN42' },
@@ -340,7 +289,7 @@ it('offers one bundled reception report by default and persists only opted-in co
       },
     ],
   }
-  const exporter = runtime.hook<ExportHook>('n1rwj-rbn', 'export')
+  const exporter = runtime.hook<ExportHook>('export')
   const options = () => exporter.suggestExportOptions?.(args, ctx)
   const edit = (value: JSONValue) =>
     runtime.settings.onChangeField(
@@ -364,11 +313,11 @@ it('offers one bundled reception report by default and persists only opted-in co
     unrelated: 42,
     additionalExportFormats: ['json'],
   })
-  const restarted = await harness(runtime.preferences, [])
+  const restarted = await harness(runtime.preferences)
   expect(
-    (
-      await restarted.hook<ExportHook>('n1rwj-rbn', 'export').suggestExportOptions?.(args, ctx)
-    )?.map((option) => option.format),
+    (await restarted.hook<ExportHook>('export').suggestExportOptions?.(args, ctx))?.map(
+      (option) => option.format,
+    ),
   ).toEqual(['html', 'json'])
   await runtime.action('resetAllSpotSettings')
   expect((await options())?.map((option) => option.format)).toEqual(['html', 'json'])
@@ -396,7 +345,7 @@ it('offers one bundled reception report by default and persists only opted-in co
 })
 
 it('rejects invalid companion-file preferences without changing bundled settings', async () => {
-  const runtime = await harness({ 'extension_n1rwj-rbn': { unrelated: 42 } }, [])
+  const runtime = await harness({ 'extension_n1rwj-rbn': { unrelated: 42 } })
   const ctx = { online: false }
   for (const value of ['json', ['zip'], ['html'], ['json', 42], null]) {
     const args = {
@@ -411,68 +360,42 @@ it('rejects invalid companion-file preferences without changing bundled settings
   expect(runtime.preferences['extension_n1rwj-rbn']).toEqual({ unrelated: 42 })
 })
 
-it('RBN defaults to all calls and respects explicit CWT filtering, removal and saved choices across restarts', async () => {
-  const runtime = await harness()
-  expect(runtime.spots.sourceName).toBe('RBN')
-  expect(await runtime.fetch()).toHaveLength(3)
-  expect(runtime.preferences['extension_n1rwj-rbn']).toBeUndefined()
-  const form = await runtime.settings.getDefinition({ panelKey: 'n1rwj-rbn' }, { online: true })
-  expect(JSON.stringify(form)).toContain('MST call-history file')
-  expect(JSON.stringify(form)).toContain('SST call-history file')
-  await runtime.choose('n1rwj-cwt')
-  expect(await runtime.fetch()).toEqual([]) // Explicit filtering needs the data file.
-  expect(runtime.preferences['extension_n1rwj-rbn']).toEqual({ spotCallFilter: 'n1rwj-cwt' })
-  runtime.load('cwt', '#CWOPS\n!!Order!!,Call,Name,Exch1\nK1ABC,Al,1234\n')
-  const [first, second] = await Promise.all([runtime.fetch(), runtime.fetch()])
-  expect(first).toEqual(second)
-  expect(first.map((spot) => spot.their.call)).toEqual(['K1ABC/P'])
-  expect(first[0]).toMatchObject({ freq: 14032, spot: { source: 'n1rwj-rbn' } })
-  expect(first[0].refs).toEqual([])
-  expect(runtime.requests).toHaveBeenCalledTimes(9)
-  const saved = await harness(runtime.preferences)
-  expect(saved.preferences['extension_n1rwj-rbn']).toEqual({ spotCallFilter: 'n1rwj-cwt' })
-  expect(await saved.fetch()).toEqual([]) // Keep the choice when its cached file is absent.
-  await runtime.hook<DataFileDefinition>('n1rwj-cwt', 'dataFile').onRemoveRawData?.()
-  expect(await runtime.fetch()).toEqual([])
-  const missing = await harness(runtime.preferences, [])
-  expect(await missing.fetch()).toEqual([])
-  expect(missing.requests).not.toHaveBeenCalled()
-  await runtime.choose('none')
-  expect(await runtime.fetch()).toHaveLength(3)
-  const restarted = await harness(runtime.preferences)
-  expect(await restarted.fetch()).toHaveLength(3)
-  expect(restarted.preferences['extension_n1rwj-rbn']).toEqual({ spotCallFilter: 'none' })
-})
-
-it('MST and SST select cached membership through the same bundled contract', async () => {
-  const runtime = await harness()
-  runtime.load('mst', '#ICWC-MST\n!!Order!!,Call,Name,Misc\nW9NEW,Pat,123\n')
-  runtime.load('sst', '#K1USNSST\n!!Order!!,Call,Name,Exch1\nN2SST,Jo,MA\n')
-  await runtime.choose('n1rwj-mst')
-  expect((await runtime.fetch()).map((spot) => spot.their.call)).toEqual(['W9NEW'])
-  await runtime.choose('n1rwj-sst')
-  expect((await runtime.fetch()).map((spot) => spot.their.call)).toEqual(['N2SST'])
-  expect(runtime.requests).toHaveBeenCalledTimes(9)
-  runtime.registered.delete('n1rwj-sst')
-  expect(await runtime.fetch()).toEqual([])
-})
-
-it('adding CWT or a legacy default hint never selects a call-history filter automatically', async () => {
-  const runtime = await harness({}, [])
-  expect(await runtime.fetch()).toHaveLength(3)
-  expect(runtime.preferences['extension_n1rwj-rbn']).toBeUndefined()
-  const added = await harness(runtime.preferences)
-  expect(await added.fetch()).toHaveLength(3)
-  expect(added.preferences['extension_n1rwj-rbn']).toBeUndefined()
-  for (const spotsHistoryOnly of [false, true]) {
-    const legacy = await harness({ 'extension_n1rwj-cwt': { spotsHistoryOnly } })
-    expect(await legacy.fetch()).toHaveLength(3)
-    expect(legacy.preferences['extension_n1rwj-rbn']).toBeUndefined()
+it('ignores a saved station filter while keeping the receiver filters and settings intact', async () => {
+  const saved = {
+    spotCallFilter: 'n1rwj-cwt',
+    spotMode: 'CW',
+    spotSkimmers: 'KM3T-5',
+    spotMinWpm: 25,
   }
+  const runtime = await harness({ 'extension_n1rwj-rbn': saved })
+  expect(runtime.spots.sourceName).toBe('RBN')
+  const [first, second] = await Promise.all([runtime.fetch(), runtime.fetch()])
+  expect(first.map((spot) => spot.their.call)).toEqual(['K1ABC/P', 'W9NEW', 'N2SST'])
+  expect(second).toEqual(first)
+  expect(runtime.requests).toHaveBeenCalledExactlyOnceWith(
+    expect.stringContaining('mode=CW&spotter=KM3T-5'),
+  )
+  const ctx = { online: true }
+  const form = await runtime.settings.getDefinition({ panelKey: 'n1rwj-rbn' }, ctx)
+  expect(form.elements).not.toContainEqual(expect.objectContaining({ key: 'spotCallFilter' }))
+  expect(form.elements).not.toContainEqual(
+    expect.objectContaining({ method: 'resetSpotCallFilter' }),
+  )
+  expect(form.elements).toContainEqual(
+    expect.objectContaining({ key: 'spotSkimmers', value: 'KM3T-5' }),
+  )
+  expect(runtime.preferences['extension_n1rwj-rbn']).toEqual(saved)
+  await runtime.settings.onChangeField(
+    { panelKey: 'n1rwj-rbn', fieldKey: 'spotMinWpm', value: 26, state: {} },
+    ctx,
+  )
+  const restarted = await harness(runtime.preferences)
+  expect(await restarted.fetch()).toEqual([])
+  expect(restarted.preferences['extension_n1rwj-rbn']).toEqual({ ...saved, spotMinWpm: 26 })
 })
 
 it('bundled RBN gives calls on one frequency distinct stable references when merging is disabled', async () => {
-  const runtime = await harness({ 'extension_n1rwj-rbn': { spotAllowMerging: false } }, [])
+  const runtime = await harness({ 'extension_n1rwj-rbn': { spotAllowMerging: false } })
   const first = await runtime.fetch()
   expect(first.map((spot) => spot.freq)).toEqual([14032, 14032, 14032])
   expect(first).toEqual(
@@ -490,7 +413,7 @@ it('bundled RBN gives calls on one frequency distinct stable references when mer
 })
 
 it('persists geography settings, needs directory continents, and rejects stale origin edits', async () => {
-  const runtime = await harness({}, [])
+  const runtime = await harness()
   const edit = (fieldKey: string, value: JSONValue) =>
     runtime.settings.onChangeField(
       { panelKey: 'n1rwj-rbn', fieldKey, value, state: {} },
@@ -506,9 +429,9 @@ it('persists geography settings, needs directory continents, and rejects stale o
     spotContinents: ['NA'],
     spotLastContinents: ['NA'],
   })
-  const restored = await harness(runtime.preferences, [])
+  const restored = await harness(runtime.preferences)
   expect(await restored.fetch()).toEqual([]) // Unknown continent is excluded.
-  restored.hook<DataFileDefinition>('n1rwj-rbn', 'dataFile').onLoadRawData?.({
+  restored.hook<DataFileDefinition>('dataFile').onLoadRawData?.({
     schema: 1,
     nodes: [{ call: 'KM3T-5', grid: 'FN42', country: 'United States', continent: 'NA' }],
   })
@@ -536,7 +459,7 @@ it('persists geography settings, needs directory continents, and rejects stale o
 })
 
 it('persists CW speed bounds across bundle restarts and rejects stale crossing edits', async () => {
-  const runtime = await harness({}, [])
+  const runtime = await harness()
   const edit = (fieldKey: string, value: JSONValue) =>
     runtime.settings.onChangeField(
       { panelKey: 'n1rwj-rbn', fieldKey, value, state: {} },
@@ -546,7 +469,7 @@ it('persists CW speed bounds across bundle restarts and rejects stale crossing e
   await edit('spotMaxWpm', '24')
   expect(runtime.preferences['extension_n1rwj-rbn']).toEqual({ spotMinWpm: 20, spotMaxWpm: 24 })
   expect(await runtime.fetch()).toEqual([])
-  expect(await (await harness(runtime.preferences, [])).fetch()).toEqual([])
+  expect(await (await harness(runtime.preferences)).fetch()).toEqual([])
   await expect(edit('spotMinWpm', 30)).rejects.toThrow('Minimum')
   await edit('spotMaxWpm', '')
   expect(await runtime.fetch()).toHaveLength(3)
@@ -557,7 +480,7 @@ it('persists CW speed bounds across bundle restarts and rejects stale crossing e
 it('resets all spot settings in the bundle while preserving reception caches and unrelated values', async () => {
   const runtime = await harness({
     'extension_n1rwj-rbn': {
-      spotCallFilter: 'none',
+      spotCallFilter: 'n1rwj-cwt',
       spotMode: 'CW',
       spotMinWpm: 30,
       spotMaxWpm: 20, // Reset repairs inconsistent saved pairs.
@@ -587,7 +510,7 @@ it('resets all spot settings in the bundle while preserving reception caches and
   )
   await runtime.action('resetAllSpotSettings')
   const expected = {
-    spotCallFilter: 'none',
+    spotCallFilter: 'n1rwj-cwt',
     spotAllowMerging: true,
     spotMode: 'all',
     spotMinWpm: '',
@@ -620,7 +543,6 @@ it('each bundled reset changes only its filter and displays the persisted defaul
     spotRadiusMiles: 100,
   }
   const cases: [ResetMethod, Record<string, JSONValue>][] = [
-    ['resetSpotCallFilter', { spotCallFilter: 'none' }],
     ['resetSpotMode', { spotMode: 'all' }],
     ['resetSpotSpeed', { spotMinWpm: '', spotMaxWpm: '' }],
     ['resetSpotSkimmers', { spotSkimmers: '' }],
@@ -630,7 +552,7 @@ it('each bundled reset changes only its filter and displays the persisted defaul
     ['resetSpotDistance', { spotRadiusGrid: '', spotRadiusMiles: '' }],
   ]
   for (const [method, patch] of cases) {
-    const runtime = await harness({ 'extension_n1rwj-rbn': saved }, [])
+    const runtime = await harness({ 'extension_n1rwj-rbn': saved })
     const form = await runtime.settings.getDefinition({ panelKey: 'n1rwj-rbn' }, { online: true })
     expect(form.elements).toContainEqual(expect.objectContaining({ type: 'action', method }))
     await runtime.action(method)
@@ -649,9 +571,9 @@ it('each bundled reset changes only its filter and displays the persisted defaul
 })
 
 it('clears and restores a legacy continent preference without reviving it after explicit clearing', async () => {
-  const runtime = await harness({ 'extension_n1rwj-rbn': { spotContinents: ['NA'] } }, [])
+  const runtime = await harness({ 'extension_n1rwj-rbn': { spotContinents: ['NA'] } })
   await runtime.action('clearSpotContinents')
-  const restarted = await harness(runtime.preferences, [])
+  const restarted = await harness(runtime.preferences)
   expect(restarted.preferences['extension_n1rwj-rbn']).toMatchObject({
     spotContinents: [],
     spotLastContinents: ['NA'],

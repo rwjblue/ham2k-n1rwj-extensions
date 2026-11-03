@@ -45,7 +45,7 @@ function harness(
       nodes: values.map((entry) => ({ ...entry, country: null })),
     })
   if (entries.length) loadDirectory(entries)
-  const preferences = { spotCallFilter: 'none', spotContinents: [], ...saved }
+  const preferences = { spotContinents: [], ...saved }
   const fetch = vi.fn(async (url: string) => reply(new URL(url)))
   const runtime = createRbnSpots({
     fetch,
@@ -56,7 +56,6 @@ function harness(
     setSettings: async (values) => {
       Object.assign(preferences, values)
     },
-    bridge: { invokeAll: async () => [], invokeOne: async () => [] },
   })
   return {
     fetch,

@@ -506,7 +506,6 @@ describe('RBN native panel integration', () => {
     preferences = {
       extensions: {
         'extension_n1rwj-rbn': {
-          spotCallFilter: 'unavailable-history-provider',
           spotMode: 'FT8',
           spotSkimmers: 'DL1AAA',
           spotGrids: 'JO',

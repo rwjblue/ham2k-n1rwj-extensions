@@ -1,10 +1,6 @@
-import type { JSONValue } from '@ham2k/extension-sdk'
 import { expect, it, vi } from 'vitest'
-import type { MatchRequest } from '../../../../../packages/spot-filters/src/index.ts'
-import { BigfootSpotFilter } from '../../../../activities/n1rwj-bigfoot/src/spot-filter.ts'
 import { createReceiverData } from '../../src/data/receivers.ts'
 import { createRbnTransport } from '../../src/data/transport.ts'
-import { discoverFilters, matchFilter } from '../../src/spots/filters.ts'
 import { createRbnSpots } from '../../src/spots/index.ts'
 import { maxAgeMs, parseReports, selectSpots } from '../../src/spots/model.ts'
 import { readPreferences, validation } from '../../src/spots/preferences.ts'
@@ -37,66 +33,17 @@ it('filters receiver IDs and directory grid regions before deduplicating; keeps 
     'rbn',
     now,
   )
-  const spots = selectSpots(
-    reports,
-    undefined,
-    { skimmers: [], grids: ['FN'] },
-    () => undefined,
-    now,
-  )
+  const spots = selectSpots(reports, { skimmers: [], grids: ['FN'] }, () => undefined, now)
   expect(spots.map((spot) => spot.freq)).toEqual([14032, 10120, 14074])
-  expect(
-    selectSpots(reports, new Set(['W9NEW']), { skimmers: [], grids: [] }, () => undefined, now),
-  ).toHaveLength(1)
-  expect(
-    selectSpots(reports, undefined, { skimmers: ['K1TTT-5'], grids: [] }, () => undefined, now),
-  ).toEqual([])
-  expect(
-    selectSpots(reports, undefined, { skimmers: [], grids: ['JO'] }, () => ({ grid: 'FN31' }), now),
-  ).toEqual([])
-  expect(
-    selectSpots(
-      reports,
-      undefined,
-      { skimmers: [], grids: [] },
-      () => undefined,
-      now + maxAgeMs + 1,
-    ),
-  ).toEqual([])
-})
-
-it('batches membership and rejects unknown calls, unavailable and failed providers', async () => {
-  const invokeOne = vi.fn(async (_cat, key, _method, args) => [
-    { key, ok: true, value: { version: 1, available: true, calls: args.calls.slice(0, 1) } },
-  ])
-  const bridge = { invokeOne, invokeAll: vi.fn(async () => []) }
-  expect(
-    (
-      await matchFilter(
-        'cwt',
-        Array.from({ length: 4001 }, (_, i) => `K${i}ABC`),
-        true,
-        bridge,
-      )
-    ).size,
-  ).toBe(3)
-  expect(invokeOne.mock.calls.map((call) => call[3].calls.length)).toEqual([2000, 2000, 1])
-  for (const replies of [
+  expect(selectSpots(reports, { skimmers: ['K1TTT-5'], grids: [] }, () => undefined, now)).toEqual(
     [],
-    [{ key: 'cwt', ok: false }],
-    [{ key: 'cwt', ok: true, value: { version: 1, available: true, calls: ['W9NEW'] } }],
-    [{ key: 'cwt', ok: true, value: { version: 1, available: false, calls: [] } }],
-  ]) {
-    await expect(
-      matchFilter('cwt', ['K1ABC'], true, { ...bridge, invokeOne: async () => replies }),
-    ).rejects.toThrow()
-  }
+  )
   expect(
-    await discoverFilters(true, {
-      ...bridge,
-      invokeAll: async () => [{ key: 'broken', ok: true, value: { version: 2 } }],
-    }),
-  ).toEqual({ providers: [], failed: true })
+    selectSpots(reports, { skimmers: [], grids: ['JO'] }, () => ({ grid: 'FN31' }), now),
+  ).toEqual([])
+  expect(
+    selectSpots(reports, { skimmers: [], grids: [] }, () => undefined, now + maxAgeMs + 1),
+  ).toEqual([])
 })
 
 it('validates saved and edited filters without silently treating bad settings as all receivers', () => {
@@ -122,13 +69,13 @@ it('keeps UNKNOWN reports and matches their receiver ID and cached directory gri
   const reports = parseReports([row({ spotter: ' unknown ', spotter_grid: '' })], 'rbn', now)
   expect(reports).toHaveLength(1)
   const preferences = readPreferences({ spotSkimmers: 'unknown', spotGrids: 'JO' })
-  expect(selectSpots(reports, undefined, preferences, directory.lookup, now)).toMatchObject([
+  expect(selectSpots(reports, preferences, directory.lookup, now)).toMatchObject([
     { spot: { sourceInfo: { spotter: 'UNKNOWN', spotterGrid: 'JO21BX' } } },
   ])
 })
 
 it('persists All mode, returns distinct modes for the same station, and switches back to RTTY', async () => {
-  let preferences = { spotCallFilter: 'none', spotMode: 'CW' }
+  let preferences = { spotMode: 'CW' }
   const createRuntime = () =>
     createRbnSpots({
       now: () => now,
@@ -137,7 +84,6 @@ it('persists All mode, returns distinct modes for the same station, and switches
       setSettings: async (values) => {
         preferences = { ...preferences, ...values }
       },
-      bridge: { invokeAll: async () => [], invokeOne: async () => [] },
       fetch: async () => ({
         status: 200,
         body: JSON.stringify({ spots: ['CW', 'RTTY', 'FT8', 'FT4'].map((mode) => row({ mode })) }),
@@ -181,10 +127,9 @@ it('defaults the settings field and spot feed to All when no mode was saved', as
     now: () => now,
     lookup: () => undefined,
     getSettings: async () => ({
-      extensions: { 'extension_n1rwj-rbn': { spotCallFilter: 'none' } },
+      extensions: { 'extension_n1rwj-rbn': {} },
     }),
     setSettings: async () => {},
-    bridge: { invokeAll: async () => [], invokeOne: async () => [] },
     fetch: async (url) => {
       expect(new URL(url).searchParams.has('mode')).toBe(false)
       return {
@@ -232,7 +177,7 @@ it('shares rate limits and simultaneous requests between panel and spot callers'
 
 it('invalidates results when preferences change during fetch and ages cached reports offline', async () => {
   let clock = now
-  let preferences = { spotCallFilter: 'none' }
+  let preferences = {}
   let release: (() => void) | undefined
   const waiting = new Promise<void>((resolve) => {
     release = resolve
@@ -245,7 +190,6 @@ it('invalidates results when preferences change during fetch and ages cached rep
     fetch,
     lookup: () => undefined,
     now: () => clock,
-    bridge: { invokeAll: async () => [], invokeOne: async () => [] },
     getSettings: async () => ({ extensions: { 'extension_n1rwj-rbn': preferences } }),
     setSettings: async (values) => {
       preferences = { ...preferences, ...values }
@@ -265,200 +209,8 @@ it('invalidates results when preferences change during fetch and ages cached rep
   expect(fetch).toHaveBeenCalledTimes(9)
 })
 
-it('rechecks the selected provider after the network and does not leak removed file matches', async () => {
-  let available = true
-  const runtime = createRbnSpots({
-    now: () => now,
-    lookup: () => undefined,
-    getSettings: async () => ({ extensions: { 'extension_n1rwj-rbn': { spotCallFilter: 'cwt' } } }),
-    setSettings: async () => {},
-    bridge: {
-      invokeAll: async () => [
-        {
-          key: 'cwt',
-          ok: true,
-          value: { version: 1, label: 'CWT', available, defaultSelected: true },
-        },
-      ],
-      invokeOne: async () => [
-        { key: 'cwt', ok: true, value: { version: 1, available, calls: [] } },
-      ],
-    },
-    fetch: async () => {
-      available = false
-      return { status: 200, body: JSON.stringify({ spots: [row()] }) }
-    },
-  })
-  expect(await runtime.spots.fetchSpots({}, { online: true })).toEqual([])
-})
-
-it('ignores default hints from older providers and resets history to all calls', async () => {
-  let preferences = {}
-  const invokeOne = vi.fn(async () => [])
-  const runtime = createRbnSpots({
-    now: () => now,
-    lookup: () => undefined,
-    getSettings: async () => ({ extensions: { 'extension_n1rwj-rbn': preferences } }),
-    setSettings: async (values) => {
-      preferences = { ...preferences, ...values }
-    },
-    bridge: {
-      invokeAll: async () => [
-        {
-          key: 'cwt',
-          ok: true,
-          value: { version: 1, label: 'CWT', available: false, defaultSelected: true },
-        },
-      ],
-      invokeOne,
-    },
-    fetch: async () => ({ status: 200, body: JSON.stringify({ spots: [row()] }) }),
-  })
-  expect(await runtime.spots.fetchSpots({}, { online: true })).toHaveLength(1)
-  expect(preferences).toEqual({})
-  expect(invokeOne).not.toHaveBeenCalled()
-  const form = await runtime.settings.getDefinition({ panelKey: 'n1rwj-rbn' }, { online: true })
-  expect(form.elements).toContainEqual(
-    expect.objectContaining({
-      key: 'spotCallFilter',
-      label: 'Station filter',
-      value: 'none',
-      description: expect.stringContaining('Default: All calls.'),
-    }),
-  )
-  await runtime.settings.resetSpotCallFilter({}, { online: true })
-  expect(preferences).toEqual({ spotCallFilter: 'none' })
-})
-
-it('offers a fixed event roster explicitly and preserves its selection across restarts or removal', async () => {
-  let installed = true
-  let preferences: Record<string, JSONValue> = {}
-  const ctx = { online: false }
-  const invokeOne = vi.fn(async (_category, key, _method, args) =>
-    installed && key === 'n1rwj-bigfoot'
-      ? [
-          {
-            key,
-            ok: true,
-            value: await BigfootSpotFilter.matchCalls(args as MatchRequest, ctx),
-          },
-        ]
-      : [],
-  )
-  const runtime = () =>
-    createRbnSpots({
-      // The roster remains available before the supported event window.
-      now: () => now,
-      lookup: () => undefined,
-      getSettings: async () => ({ extensions: { 'extension_n1rwj-rbn': preferences } }),
-      setSettings: async (values) => {
-        preferences = { ...preferences, ...values }
-      },
-      bridge: {
-        invokeAll: async () =>
-          installed
-            ? [
-                {
-                  key: 'n1rwj-bigfoot',
-                  ok: true,
-                  value: await BigfootSpotFilter.describe({}, ctx),
-                },
-              ]
-            : [],
-        invokeOne,
-      },
-      fetch: async () => ({
-        status: 200,
-        body: JSON.stringify({
-          spots: ['K1ABC', 'W7B', 'W7O', 'W4S', 'W3S', 'W7T/P'].map((callsign) =>
-            row({ callsign }),
-          ),
-        }),
-      }),
-    })
-  const first = runtime()
-  const form = await first.settings.getDefinition({ panelKey: 'n1rwj-rbn' }, ctx)
-  expect(form.elements).toContainEqual(
-    expect.objectContaining({
-      key: 'spotCallFilter',
-      label: 'Station filter',
-      value: 'none',
-      description: expect.stringContaining('fixed event roster'),
-      options: [
-        { label: 'All calls', value: 'none' },
-        { label: 'BIGFOOT 2026', value: 'n1rwj-bigfoot' },
-      ],
-    }),
-  )
-  expect(await first.spots.fetchSpots({}, { online: true })).toHaveLength(6)
-  expect(preferences).toEqual({})
-  expect(invokeOne).not.toHaveBeenCalled()
-  await first.settings.onChangeField(
-    {
-      panelKey: 'n1rwj-rbn',
-      fieldKey: 'spotCallFilter',
-      value: 'n1rwj-bigfoot',
-      state: {},
-    },
-    ctx,
-  )
-  expect(preferences).toEqual({ spotCallFilter: 'n1rwj-bigfoot' })
-  for (const instance of [first, runtime()]) {
-    expect(
-      (await instance.spots.fetchSpots({}, { online: true })).map((spot) => spot.their.call),
-    ).toEqual(['W7B', 'W7O', 'W4S'])
-  }
-  installed = false
-  const missing = runtime()
-  expect(await missing.spots.fetchSpots({}, { online: true })).toEqual([])
-  const unavailable = await missing.settings.getDefinition({ panelKey: 'n1rwj-rbn' }, ctx)
-  expect(unavailable.elements).toContainEqual(
-    expect.objectContaining({ key: 'spotCallFilter', value: 'n1rwj-bigfoot' }),
-  )
-  expect(JSON.stringify(unavailable)).toContain('selected station-filter extension is unavailable')
-  expect(preferences).toEqual({ spotCallFilter: 'n1rwj-bigfoot' })
-  await missing.settings.resetSpotCallFilter({}, ctx)
-  expect(preferences).toEqual({ spotCallFilter: 'none' })
-  expect(await missing.spots.fetchSpots({}, { online: true })).toHaveLength(6)
-})
-
-it('defaults to all calls and keeps resets usable when call-history discovery fails', async () => {
-  let preferences = {}
-  const runtime = createRbnSpots({
-    now: () => now,
-    lookup: () => undefined,
-    getSettings: async () => ({ extensions: { 'extension_n1rwj-rbn': preferences } }),
-    setSettings: async (values) => {
-      preferences = { ...preferences, ...values }
-    },
-    bridge: {
-      invokeAll: async () => {
-        throw new Error('Unavailable bridge')
-      },
-      invokeOne: async () => [],
-    },
-    fetch: async () => ({ status: 200, body: JSON.stringify({ spots: [row()] }) }),
-  })
-  expect(await runtime.spots.fetchSpots({}, { online: true })).toHaveLength(1)
-  expect(
-    (await runtime.settings.getDefinition({ panelKey: 'n1rwj-rbn' }, { online: true })).elements
-      .length,
-  ).toBeGreaterThan(0)
-  await runtime.settings.resetAllSpotSettings({}, { online: true })
-  expect(preferences).toMatchObject({ spotCallFilter: 'none' })
-  const reset = { ...preferences }
-  await runtime.settings.resetSpotSpeed({}, { online: true })
-  expect(preferences).toEqual(reset)
-  await runtime.settings.onChangeField(
-    { panelKey: 'n1rwj-rbn', fieldKey: 'spotCallFilter', value: 'none', state: {} },
-    { online: true },
-  )
-  expect(await runtime.spots.fetchSpots({}, { online: true })).toHaveLength(1)
-})
-
 it('invalidates an in-flight fetch on reset and serializes later edits against reset defaults', async () => {
   let preferences = {
-    spotCallFilter: 'none',
     spotMinWpm: 30,
     spotRadiusGrid: 'FN42',
     spotRadiusMiles: 100,
@@ -479,7 +231,6 @@ it('invalidates an in-flight fetch on reset and serializes later edits against r
     setSettings: async (values) => {
       preferences = { ...preferences, ...values }
     },
-    bridge: { invokeAll: async () => [], invokeOne: async () => [] },
   })
   const fetching = runtime.spots.fetchSpots({}, { online: true })
   await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(9))

@@ -50,15 +50,6 @@ Open **Settings → Spotting → RBN → Spots — Who I might hear** to choose:
   Turn it off when hunting individual stations, for example during CWT, to keep
   spots separately selectable and enable the RBN logging control. The choice
   survives restarts and applies on the next Spots refresh, including cached reports.
-- **Station filter:** **All calls** is the default. Choose CWT, MST, or SST for
-  its downloaded call-history file, or **BIGFOOT 2026** for the station roster
-  bundled with BIGFOOT Hunt. These choices appear when their extensions are
-  enabled. A selected missing extension or unavailable data
-  produces no spots, with an explanation in RBN settings. An explicit choice
-  survives restarts; filters do not switch automatically with the operation.
-  A roster's availability does not mean its stations are active or still needed.
-  BIGFOOT includes worked and unworked targets and remains selectable outside
-  its event dates. Choose **All calls** to stop filtering reused event calls.
 - **Spot mode:** All (default), CW, RTTY, FT8, or FT4. Choose **All** to
   receive all four supported modes and use the native Spots page's mode filter.
   The host currently groups RTTY, FT8, and FT4 under **Digital**; choose RTTY
@@ -92,12 +83,13 @@ Open **Settings → Spotting → RBN → Spots — Who I might hear** to choose:
   Leave blank for no limit. Set the origin first; clear the limit before
   clearing its origin. Distances use the great-circle path between grid centers.
 
-**Reset all spot settings**, at the top of that section, restores **All calls**,
-allow merging, All modes, no CW speed limits, all skimmers and grid regions, the local/last
-receiver-continent selection, and no distance limit or origin. The defaults are
-listed beside the reset control. Resets remain available even when station-filter
-extensions have not loaded. Previously saved station-filter choices are preserved
-until you change or reset them.
+**Reset all spot settings**, at the top of that section, turns merging back on,
+restores **All** modes, clears the speed, skimmer, grid and distance limits, and
+restores the local or last nonempty receiver-continent selection. It also clears
+the distance origin. The defaults are listed beside the reset control.
+
+RBN ignores **Station filter** selections saved by earlier versions. Filtering
+by the current operation's contest or roster awaits native HaLo support.
 
 Each filter also has a reset button naming its default. **Reset CW speed range**
 clears both bounds; **Reset distance** clears both origin and limit, including
@@ -125,9 +117,8 @@ before reports are collapsed to the newest station/band/mode observation.
 Regions use the cached RBN directory grid first, then the report grid; unknown
 locations are excluded when a region or distance limit is selected. Locations are approximate,
 and reception by a nearby skimmer does not guarantee reception at your station.
-These receiver filters remain RBN responsibilities when native contest-relevance
-filtering replaces the temporary station-filter bridge. The logger's native
-continent filter applies to the spotted station, independently of these controls.
+The logger's native continent filter applies to the spotted station,
+independently of these receiver controls.
 
 Reports cover ten minutes on 160, 80, 40, 30, 20, 17, 15, 12, and 10 meters.
 Selections of up to 32 skimmers fetch reports separately for each receiver,
@@ -162,10 +153,9 @@ result. Requests allow four seconds per page and retry on a later Spots refresh,
 after at least a minute or the service's longer rate-limit delay. Restarting the
 app clears the in-memory Spots cache and cannot resolve an unavailable service.
 
-When comparing with the RBN website, choose **All calls** to remove the
-selected history-file or event-roster restriction and compare the same ten-minute window,
-band, and mode. A six-hour website view includes older reports; repeated
-reports for the same station, band, and mode collapse to one spot here.
+When comparing with the RBN website, use the same ten-minute window, band,
+mode, and receiver selection. A six-hour website view includes older reports.
+Repeated reports for the same station, band, and mode collapse to one spot here.
 
 When **Allow merging of RBN spots** is off, the workaround for
 [HALO-741](https://cabo.ham2k.com/halo/c/741) attaches an `rbn` reference
@@ -185,16 +175,8 @@ There is no ADIF program-field or export handler for RBN. Export behavior
 is unchanged: a custom template that explicitly displays all contact
 references can still show the callsign, and QSON retains the references.
 
-CWT, MST, and SST provide membership from their cached call-history files via
-[the shared filter contract](../../../packages/spot-filters/README.md).
-They do not fetch reception reports or expose exchange data. File membership
-does not prove participation in the current contest. BIGFOOT Hunt uses that
-same contract for its fixed 2026 roster without a history download or operation
-log lookup. RBN owns no event target lists or award rules. Neither provider
-kind automatically selects a filter or hides already-worked targets. Band,
-age, mode, and source controls in the native Spots panel further narrow these
-results. RBN supplies CW, RTTY, FT8, and FT4 reports; use the organizer's
-spotting page when looking for BIGFOOT SSB stations.
+Band, age, mode, and source controls in the native Spots panel further narrow
+these results.
 
 ## Install and open the panel
 
@@ -508,5 +490,5 @@ restarts using a simulated persistent host. Full app restart, offline resume and
 background/foreground behavior still need a native Ham2K runtime check.
 
 Settings use native collapsible sections with stable fold identities. Export
-options and My Signal guidance start folded; spot filters stay open. RBN health
-diagnostics remain outside folded groups, and saved filter keys are unchanged.
+options and My Signal guidance start folded. Spot filters start open, with RBN
+health diagnostics outside the folded groups.

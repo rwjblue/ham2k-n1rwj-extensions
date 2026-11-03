@@ -56,14 +56,13 @@ test('keeps the newest frequency for each full callsign and band, preserving oth
     'n1rwj-rbn',
     at,
   )
-  const spots = selectSpots(reports, undefined, { skimmers: [], grids: [] }, () => undefined, at)
+  const spots = selectSpots(reports, { skimmers: [], grids: [] }, () => undefined, at)
   assert.equal(spots.length, 3)
   assert.equal(spots[0]?.freq, 14034)
   assert.ok(spots.some((s) => s.band === '40m'))
   assert.ok(spots.some((s) => s.their.call === 'K1ABC/P'))
   assert.equal(
-    selectSpots(reports, undefined, { skimmers: [], grids: [] }, () => undefined, at + maxAgeMs + 1)
-      .length,
+    selectSpots(reports, { skimmers: [], grids: [] }, () => undefined, at + maxAgeMs + 1).length,
     0,
   )
 })

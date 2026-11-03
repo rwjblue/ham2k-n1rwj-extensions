@@ -150,9 +150,7 @@ spot and log changes refresh the view without reading the log every tick.
 No matching reports means the cache has no fresh lead, not that a station is
 off air. Missing host support or temporary spot failures preserve progress.
 
-Station annotations and the BIGFOOT-only RBN filter are available starting
-with v0.11.1. Install or update both **BIGFOOT Hunt** and **N1RWJ RBN** to
-use the filter.
+Station annotations are available starting with v0.11.1.
 
 In a **BIGFOOT Hunt 2026** operation during the event, letter stations receive
 a paw marker and W4S receives a skunk marker. Station details identify the
@@ -190,18 +188,12 @@ logging. This extension tracks your contacts, provides those links, and can
 display the logger’s cached reports in the forest and request radio tuning
 when you select a lead. It does not retrieve a live station schedule.
 
-With **N1RWJ RBN** enabled, choose **Settings → Spotting → RBN → Station filter → BIGFOOT
-2026** to see only spots for the BIGFOOT 2026 station roster: W7B, W7I, W7G,
-W7F, W7O, W7T, and W4S. **All calls** remains RBN's default. Choose **CW**
-under **Spot mode** for a CW hunt, or keep **All** for RBN's supported modes.
-RBN does not supply SSB reports; use the organizer's spotting page for those.
+If you use **N1RWJ RBN** during a CW hunt, choose **CW** under **Spot mode**.
+Use the organizer's spotting page for SSB reports.
 
-The BIGFOOT 2026 station roster is bundled, so the filter needs no history
-download. Its availability means the roster is installed, not that its stations
-are currently active. It includes worked and unworked targets. Your selection
-persists across operations and remains available outside the event dates; it
-does not automatically follow the active operation or select itself. Disable
-the filter when you want other calls, because short event calls can be reused.
+Older RBN bundles on compatible Regular builds can still use the **BIGFOOT
+2026** provider. For current builds, use the forest panel and native Spots
+highlights to find event targets.
 
 ## Export and certificate
 

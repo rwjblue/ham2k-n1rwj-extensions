@@ -16,7 +16,7 @@ const row = (changes: Record<string, unknown> = {}) => ({
 })
 const reference = (call: string): NonNullable<Spot['refs']> => [{ type: 'rbn', ref: call }]
 const select = (reports: Spot[], skimmers: string[] = []) =>
-  selectSpots(reports, undefined, { skimmers, grids: [] }, () => undefined, now)
+  selectSpots(reports, { skimmers, grids: [] }, () => undefined, now)
 
 describe('RBN station references', () => {
   it.each(['CW', 'RTTY', 'FT8', 'FT4'])(

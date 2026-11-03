@@ -13,7 +13,7 @@ const row = (wpm: unknown, overrides = {}) => ({
   ...overrides,
 })
 const select = (rows: unknown[], raw: Record<string, unknown>) =>
-  selectSpots(parseReports(rows, 'rbn', now), undefined, readPreferences(raw), () => undefined, now)
+  selectSpots(parseReports(rows, 'rbn', now), readPreferences(raw), () => undefined, now)
 
 it('filters CW speeds inclusively before deduplication and leaves digital modes alone', () => {
   const rows = [

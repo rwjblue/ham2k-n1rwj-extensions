@@ -265,7 +265,7 @@ export function createPanel(
         const rows = opportunities(board ?? [], roster, p, now, report, history)
         lines.push(
           '',
-          '**Members heard on CW** — reported transmissions, not confirmed qualifying exchanges. Select calls through the native spots board; enable the SKCC members filter in RBN.',
+          '**Members heard on CW.** Confirm the exchange before counting a contact. Select stations through the native Spots page.',
         )
         if (rows.length) {
           lines.push(

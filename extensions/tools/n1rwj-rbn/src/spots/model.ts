@@ -86,7 +86,6 @@ export type ReceiverLookup = (
 /** Filter receivers before collapsing duplicate station reports. */
 export function selectSpots(
   reports: readonly Spot[],
-  allowedCalls: ReadonlySet<string> | undefined,
   receivers: ReceiverSelection,
   lookup: ReceiverLookup,
   now: number,
@@ -94,8 +93,6 @@ export function selectSpots(
   const latest = new Map<string, Spot>()
   for (const report of reports) {
     if (report.spot.timeInMillis < now - maxAgeMs || report.spot.timeInMillis > now) continue
-    // Temporary history gate; retire with the bridge in spots/index.ts.
-    if (allowedCalls && !allowedCalls.has(report.their.call)) continue
     const info = report.spot.sourceInfo ?? {}
     if (report.mode === 'CW' && receivers.cwSpeed) {
       const speed = info.wpm

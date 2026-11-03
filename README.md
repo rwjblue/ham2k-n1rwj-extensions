@@ -62,9 +62,9 @@ versions; use the latest release linked above when installing.
 
 Install `n1rwj-skcc` on an API-12-capable host, download its member roster,
 then configure your exchange under **Activities → SKCC Companion**. Add an
-SKCC activity to an operation and the companion panel to its layout. RBN
-can filter to SKCC members; experimental native Chasing and complete-history
-ADIF audits support longer-term goals. Follow the
+SKCC activity to an operation and the companion panel to its layout. The panel
+shows SKCC members heard in cached CW spots. Experimental native
+Chasing and complete-history ADIF audits support longer-term goals. Follow the
 [operator guide](extensions/activities/n1rwj-skcc/README.md) for evidence,
 scoring reviews, imports and native rescan instructions.
 
@@ -122,11 +122,11 @@ See the [calendar guide](extensions/tools/n1rwj-contest-calendar/README.md).
 
 ### RBN and My Signal
 
-RBN also supplies native Spots, with optional CWT/MST/SST call-history filters
-and a BIGFOOT 2026 station filter,
-skimmer selection, receiver continents/grid regions, and a distance limit in
-miles from your chosen grid in **Settings → Spotting → RBN**. **All calls** is the default;
-choose a **Station filter** explicitly when you want it.
+RBN also supplies native Spots. In **Settings → Spotting → RBN**, choose the
+spot mode, CW speed range, skimmers, receiver continents or grid regions, and a
+distance limit in miles from your chosen grid. RBN ignores **Station filter**
+selections saved by earlier versions. Filtering by the current operation's
+contest or roster awaits native HaLo support.
 
 The My Signal panel requires a Ham2K version with native SVG panel support.
 If it shows **App update needed**, update Ham2K before using the panel.

@@ -15,7 +15,6 @@ import manifest from '../../manifest.json'
 import type { Continent } from '../data/continents.ts'
 import { rbnAboutDefinition } from './about.ts'
 import { createSpotFeed } from './feed.ts'
-import { allCalls, discoverFilters, type FilterBridge, matchFilter } from './filters.ts'
 import { createHealthCheck } from './health.ts'
 import { type ReceiverLookup, selectSpots } from './model.ts'
 import {
@@ -38,7 +37,6 @@ interface Options {
   receiverEntries?: () => readonly ReceiverQueryEntry[]
   now?: () => number
   healthTimers?: TimerDriver
-  bridge?: FilterBridge
   getSettings?: typeof host.getSettings
   setSettings?: typeof host.setSettings
   getLocation?: typeof host.getLocation
@@ -73,8 +71,8 @@ export function createRbnSpots(options: Options) {
   let location: DeviceLocation | null = null
   let locationStarted = false
   let locating = false
-  // Serialize geographic defaults and explicit edits so a slow discovery cannot
-  // overwrite an operator's choice. Keep saved history selections even if absent.
+  // Serialize geographic defaults and edits so a slow location fix cannot
+  // overwrite an operator's choice.
   let queue: Promise<unknown> = Promise.resolve()
   function serialized<T>(fn: () => Promise<T>): Promise<T> {
     const result = queue.then(fn)
@@ -120,53 +118,27 @@ export function createRbnSpots(options: Options) {
         locating = false
       })
   }
-  // Temporary source-side preference/discovery. Native relevance will instead
-  // follow the operation in the logger; migrate explicit choices before removal.
-  async function selection(online: boolean, forSettings = false) {
+  function spotSettings() {
     return serialized(async () => {
       const raw = ownSettings(await getSettings())
       if (raw.spotContinents === undefined) {
         locateOnce()
         await initializeContinents(raw)
       }
-      const key = typeof raw.spotCallFilter === 'string' ? raw.spotCallFilter : allCalls
-      const discovered = await discoverFilters(online, options.bridge).catch((error: unknown) => {
-        if (!forSettings && key !== allCalls) throw error
-        status = 'Station filters could not be loaded. Retry after enabling the extension.'
-        return { providers: [], failed: true }
-      })
-      const provider = discovered.providers.find((entry) => entry.key === key)
-      const unavailable =
-        key !== allCalls && !provider?.available
-          ? provider?.reason ||
-            'The selected station-filter extension is unavailable. Enable it or choose another filter.'
-          : ''
-      return {
-        raw,
-        key,
-        provider,
-        unavailable,
-        providers: discovered.providers,
-        discoveryFailed: discovered.failed,
-        generation,
-      }
+      return { raw, generation }
     })
   }
   const spots: SpotsHook = {
     sourceName: 'RBN',
     async fetchSpots(_args, ctx) {
       try {
-        const selected = await selection(ctx.online)
-        if (selected.raw.spotContinents === undefined && locating) {
+        const { raw, generation: settingsGeneration } = await spotSettings()
+        if (raw.spotContinents === undefined && locating) {
           status =
             'Finding a local receiver continent. Refresh Spots after location is available, or choose a continent in RBN settings.'
           return []
         }
-        if (selected.unavailable) {
-          status = selected.unavailable
-          return []
-        }
-        const prefs = readPreferences(selected.raw)
+        const prefs = readPreferences(raw)
         let reports: Spot[]
         if (ctx.online) {
           const queries = planSpotQueries(prefs, options.receiverEntries?.())
@@ -193,28 +165,15 @@ export function createRbnSpots(options: Options) {
           reports = cachedReports(prefs.mode)
           status = 'Offline: showing unexpired cached reports only.'
         }
-        // Compatibility bridge only: the feed cache above retains every report.
-        // Once native relevance can preserve our history-based preference, remove
-        // this match call and selectSpots' allowedCalls gate, keeping receiver filters.
-        const allowed =
-          selected.key === allCalls
-            ? undefined
-            : await matchFilter(
-                selected.key,
-                reports.map((spot) => spot.their.call),
-                ctx.online,
-                options.bridge,
-              )
         // A settings edit while the network was pending invalidates this answer.
-        if (selected.generation !== generation) return []
-        return selectSpots(reports, allowed, prefs, options.lookup, now()).map((spot) =>
-          allowSpotMerging(selected.raw)
+        if (settingsGeneration !== generation) return []
+        return selectSpots(reports, prefs, options.lookup, now()).map((spot) =>
+          allowSpotMerging(raw)
             ? { ...spot, refs: spot.refs?.filter((ref) => ref.type !== 'rbn') }
             : spot,
         )
       } catch (error) {
-        status =
-          error instanceof Error ? error.message : 'Spot filters unavailable. No spots shown.'
+        status = error instanceof Error ? error.message : 'RBN spots unavailable.'
         return []
       }
     },
@@ -228,7 +187,7 @@ export function createRbnSpots(options: Options) {
     distance: { spotRadiusGrid: '', spotRadiusMiles: '' },
     allContinents: { spotContinents: [] },
   } satisfies Record<string, Record<string, JSONValue>>
-  async function reset(group: keyof typeof resetGroups | 'all' | 'history' | 'continents') {
+  async function reset(group: keyof typeof resetGroups | 'all' | 'continents') {
     return serialized(async () => {
       const raw = ownSettings(await getSettings())
       const values: Record<string, JSONValue> = {}
@@ -245,9 +204,6 @@ export function createRbnSpots(options: Options) {
         (raw.spotContinents as string[]).length
       ) {
         values.spotLastContinents = raw.spotContinents as Continent[]
-      }
-      if (group === 'all' || group === 'history') {
-        values.spotCallFilter = allCalls
       }
       if (group === 'all' || group === 'continents') {
         const defaults = defaultContinents(raw)
@@ -270,7 +226,6 @@ export function createRbnSpots(options: Options) {
       return null
     },
     resetAllSpotSettings: (_args: unknown, _ctx: HookContext) => reset('all'),
-    resetSpotCallFilter: (_args: unknown, _ctx: HookContext) => reset('history'),
     resetSpotMode: (_args: unknown, _ctx: HookContext) => reset('mode'),
     resetSpotSpeed: (_args: unknown, _ctx: HookContext) => reset('speed'),
     resetSpotSkimmers: (_args: unknown, _ctx: HookContext) => reset('skimmers'),
@@ -288,11 +243,8 @@ export function createRbnSpots(options: Options) {
       ]
     },
     async getDefinition(_args, ctx) {
-      const [selected, health] = await Promise.all([
-        selection(ctx.online, true),
-        checkHealth(ctx.online),
-      ])
-      return settingsDefinition(selected, defaultContinents(selected.raw), status, health)
+      const [{ raw }, health] = await Promise.all([spotSettings(), checkHealth(ctx.online)])
+      return settingsDefinition(raw, defaultContinents(raw), status, health)
     },
     async validateField({ fieldKey, value, state }) {
       return validateEdit(fieldKey, value, state)

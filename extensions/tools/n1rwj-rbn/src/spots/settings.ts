@@ -1,45 +1,25 @@
 import type { FormActionElement, FormDefinition } from '@ham2k/extension-sdk'
 import { type Continent, continents } from '../data/continents.ts'
 import { additionalExportChoices, additionalExportFormats } from '../export/preferences.ts'
-import { allCalls, type Provider } from './filters.ts'
 import type { HealthNotice } from './health.ts'
 import { allowSpotMerging, radiusIssue, speedIssue, spotModes, tokens } from './preferences.ts'
-
-interface Selection {
-  raw: Record<string, unknown>
-  key: string
-  providers: Provider[]
-  unavailable: string
-  discoveryFailed: boolean
-}
 
 function reset(method: string, label: string): FormActionElement {
   return { type: 'action', key: method, method, label, icon: 'restore' }
 }
 
 export function settingsDefinition(
-  selected: Selection,
+  raw: Record<string, unknown>,
   defaultContinents: Continent[],
   status: string,
   health: HealthNotice | null = null,
 ): FormDefinition {
-  const stationLabel = 'All calls'
   const continentLabel =
     defaultContinents.map((code) => continents[code]).join(', ') || 'All continents'
-  const choices = [
-    { label: 'All calls', value: allCalls },
-    ...selected.providers.map((provider) => ({
-      label: provider.label + (provider.available ? '' : ' (unavailable)'),
-      value: provider.key,
-    })),
-  ]
-  const suffixed = tokens(
-    typeof selected.raw.spotSkimmers === 'string' ? selected.raw.spotSkimmers : '',
-  ).filter((call) => /-\d+$/.test(call))
-  if (!choices.some((entry) => entry.value === selected.key))
-    choices.push({ label: `Unavailable: ${selected.key}`, value: selected.key })
-  const notice =
-    selected.unavailable || radiusIssue(selected.raw) || speedIssue(selected.raw) || status
+  const suffixed = tokens(typeof raw.spotSkimmers === 'string' ? raw.spotSkimmers : '').filter(
+    (call) => /-\d+$/.test(call),
+  )
+  const notice = radiusIssue(raw) || speedIssue(raw) || status
   return {
     elements: [
       ...(health
@@ -59,7 +39,7 @@ export function settingsDefinition(
         label: 'Additional export files',
         description:
           'Optional companion files for the HTML report. Reopen the operation’s Exports view after changing this selection.',
-        value: additionalExportFormats(selected.raw),
+        value: additionalExportFormats(raw),
         options: additionalExportChoices,
         defaultValue: [],
       },
@@ -77,25 +57,15 @@ export function settingsDefinition(
         label: 'Allow merging of RBN spots',
         description:
           'On by default: nearby spots can merge and no RBN activity control is added. Turn off to keep stations separately selectable, for example during CWT; this adds RBN references and an RBN logging control. Changes apply on the next Spots refresh.',
-        value: allowSpotMerging(selected.raw),
+        value: allowSpotMerging(raw),
       },
-      {
-        type: 'field',
-        fieldType: 'select',
-        key: 'spotCallFilter',
-        label: 'Station filter',
-        description: `Default: ${stationLabel}. Choose a provider explicitly to match its history file or fixed event roster. The selection applies across operations; availability does not mean a station is active or still needed.`,
-        options: choices,
-        value: selected.key,
-      },
-      reset('resetSpotCallFilter', `Reset station filter — ${stationLabel}`),
       {
         type: 'field',
         fieldType: 'select',
         key: 'spotMode',
         label: 'Spot mode',
         description: 'Default: All. Choose All to filter modes on the Spots page.',
-        value: selected.raw.spotMode ?? 'all',
+        value: raw.spotMode ?? 'all',
         options: spotModes.map((value) => ({ label: value === 'all' ? 'All' : value, value })),
       },
       reset('resetSpotMode', 'Reset mode — All'),
@@ -107,7 +77,7 @@ export function settingsDefinition(
         label: 'Minimum CW speed (WPM)',
         description: 'Blank means no minimum. Applies only to CW.',
         placeholder: 'No minimum',
-        value: selected.raw.spotMinWpm ?? '',
+        value: raw.spotMinWpm ?? '',
       },
       {
         type: 'field',
@@ -116,7 +86,7 @@ export function settingsDefinition(
         label: 'Maximum CW speed (WPM)',
         description: 'Blank means no maximum. Applies only to CW.',
         placeholder: 'No maximum',
-        value: selected.raw.spotMaxWpm ?? '',
+        value: raw.spotMaxWpm ?? '',
       },
       reset('resetSpotSpeed', 'Reset CW speed range — No limits'),
       { type: 'header', style: 'section', key: 'rbn-receivers', title: 'Receivers' },
@@ -127,7 +97,7 @@ export function settingsDefinition(
         label: 'Only these skimmers',
         description:
           'Default: blank, allowing all skimmers. Separate reported IDs with spaces or commas, e.g. KM3T. Vail currently omits numeric node suffixes; a bare ID includes that receiver family.',
-        value: selected.raw.spotSkimmers ?? '',
+        value: raw.spotSkimmers ?? '',
         uppercase: true,
       },
       reset('resetSpotSkimmers', 'Reset skimmers — All'),
@@ -146,7 +116,7 @@ export function settingsDefinition(
         label: 'Receiver grid regions',
         description:
           'Default: blank, allowing all regions. Separate Maidenhead prefixes with spaces or commas, e.g. FN, EM, JO, FN42.',
-        value: selected.raw.spotGrids ?? '',
+        value: raw.spotGrids ?? '',
         uppercase: true,
       },
       reset('resetSpotGrids', 'Reset grid regions — All'),
@@ -156,7 +126,7 @@ export function settingsDefinition(
         key: 'spotContinents',
         label: 'Receiver continents',
         description: `Reset default: ${continentLabel}. Initially suggests your local continent using nearby receivers when device location is available; otherwise remembers your last selection. No selection explicitly allows all continents. Uses the skimmer location, not the spotted station.`,
-        value: selected.raw.spotContinents ?? [],
+        value: raw.spotContinents ?? [],
         options: Object.entries(continents).map(([value, label]) => ({ value, label })),
       },
       reset('resetSpotContinents', `Reset continents — ${continentLabel}`),
@@ -170,7 +140,7 @@ export function settingsDefinition(
         description:
           'Default: blank. Your grid for distance filtering, shared across operations. Update it when you move. Reset distance clears both the origin and the limit.',
         placeholder: 'e.g. FN42FK',
-        value: selected.raw.spotRadiusGrid ?? '',
+        value: raw.spotRadiusGrid ?? '',
         uppercase: true,
       },
       {
@@ -179,7 +149,7 @@ export function settingsDefinition(
         key: 'spotRadiusMiles',
         label: 'Maximum receiver distance (miles)',
         description: 'Default: blank, with no distance limit. Set the origin grid first.',
-        value: selected.raw.spotRadiusMiles ?? '',
+        value: raw.spotRadiusMiles ?? '',
       },
       reset('resetSpotDistance', 'Reset distance — No limit or origin'),
       { type: 'sectionEnd' },

@@ -6,7 +6,6 @@ import { type ReceiverSelection, record } from './model.ts'
 
 export const spotModes = ['all', 'CW', 'RTTY', 'FT8', 'FT4']
 export interface SpotPreferences extends ReceiverSelection {
-  callFilter?: string
   mode: string
 }
 export function tokens(value: string): string[] {
@@ -58,10 +57,6 @@ export function validation(key: string, value: unknown): string | null {
       ? null
       : 'Enter a distance greater than 0 and up to 25,000 miles, or leave blank for no limit.'
   }
-  if (key === 'spotCallFilter')
-    return typeof value === 'string' && value.length > 0 && value.length <= 200
-      ? null
-      : 'Choose a call filter.'
   if (key === 'spotMode')
     return spotModes.includes(String(value)) ? null : 'Choose a supported RBN mode.'
   if (key !== 'spotSkimmers' && key !== 'spotGrids') return 'Unknown spot setting.'
@@ -123,7 +118,6 @@ export function validateEdit(
 export function readPreferences(raw: Record<string, unknown>): SpotPreferences {
   for (const key of [
     'spotAllowMerging',
-    'spotCallFilter',
     'spotMode',
     'spotSkimmers',
     'spotGrids',
@@ -142,7 +136,6 @@ export function readPreferences(raw: Record<string, unknown>): SpotPreferences {
   const min = speedBound(raw.spotMinWpm)
   const max = speedBound(raw.spotMaxWpm)
   return {
-    callFilter: typeof raw.spotCallFilter === 'string' ? raw.spotCallFilter : undefined,
     mode: String(raw.spotMode ?? 'all'),
     skimmers: tokens(String(raw.spotSkimmers ?? '')),
     grids: tokens(String(raw.spotGrids ?? '')),

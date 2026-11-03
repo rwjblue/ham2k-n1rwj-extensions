@@ -23,7 +23,6 @@ function harness(saved: Record<string, JSONValue> = {}) {
     setSettings: async (values: Record<string, JSONValue>) => {
       Object.assign(preferences, values)
     },
-    bridge: { invokeAll: async () => [], invokeOne: async () => [] },
   }
   const runtime = createRbnSpots(options)
   return {

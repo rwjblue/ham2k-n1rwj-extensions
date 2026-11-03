@@ -17,11 +17,11 @@ export function rbnAboutDefinition(): FormDefinition {
       { type: 'divider', title: 'Spots — Who I might hear' },
       {
         type: 'markdown',
-        text: 'All Spots settings apply across operations. Changes apply on the next Spots refresh. Reports cover the last ten minutes on 160–10m, including WARC bands. Choose All calls to compare with an unfiltered RBN website view. Busy receivers or bands may exceed the bounded snapshot.',
+        text: 'All RBN Spots settings apply across operations. Changes apply on the next Spots refresh. Reports cover the last ten minutes on 160–10m, including WARC bands. Use the Spots page filters to narrow the display by band, mode, age, or source. Busy receivers or bands may exceed the bounded snapshot.',
       },
       {
         type: 'markdown',
-        text: 'Reset defaults: allow merging; All calls; All modes; no CW speed limits; all skimmers and grid regions; no distance limit or origin grid. Receiver-continent defaults use the local suggestion, then your last nonempty selection. Resetting Spots preserves export-file preferences and My Signal settings.',
+        text: 'Resetting Spots allows merging and restores all modes, CW speeds, skimmers, and grid regions. It clears the distance limit and origin grid. Receiver-continent defaults use the local suggestion, then your last nonempty selection. Resetting Spots preserves export-file preferences and My Signal settings.',
       },
       { type: 'divider', title: 'CW speed range' },
       {

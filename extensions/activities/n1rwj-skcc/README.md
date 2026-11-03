@@ -57,11 +57,15 @@ The directory is fetched as reference data, not bundled into a release.
 
 ## Spots and finding contacts
 
-Install/enable RBN and choose its **SKCC members** station filter. The companion
-panel can also show members from any enabled CW spot source, newest per call and
-band, prioritizing possible C/T/S needs. Its optional WPM limit excludes unknown
-speeds. A detection means the station was heard; it does not prove approved key
-use, availability, participation in an event, or eligibility for your award.
+The companion panel shows members from cached CW spots, including RBN reports,
+newest per call and band, prioritizing possible C/T/S needs. Its optional WPM
+limit excludes unknown speeds. A detection means the station was heard. It does
+not prove approved key use, availability, participation in an event, or
+eligibility for your award.
+
+Older RBN bundles on compatible Regular builds can still use the **SKCC
+members** provider. Use the companion panel for member-only leads with current
+RBN bundles.
 
 The native spots board supplies call selection and radio integration. The
 companion list is read-only. Potential needs use either selected-operation

@@ -112,13 +112,12 @@ it('puts a failing health notice before the editable form, checks concurrently, 
   const runtime = createRbnSpots({
     fetch,
     lookup: () => undefined,
-    bridge: { invokeAll: async () => [], invokeOne: async () => [] },
     getSettings: async () => {
       if (readingSettings)
         await new Promise<FetchResponse>((resolve) => {
           finish = resolve
         })
-      return { extensions: { 'extension_n1rwj-rbn': { spotCallFilter: 'none' } } }
+      return { extensions: { 'extension_n1rwj-rbn': {} } }
     },
     setSettings: async () => {},
   })
@@ -134,7 +133,5 @@ it('puts a failing health notice before the editable form, checks concurrently, 
     type: 'markdown',
     text: expect.stringContaining('HTTP 503'),
   })
-  expect(form.elements).toContainEqual(
-    expect.objectContaining({ key: 'spotCallFilter', value: 'none' }),
-  )
+  expect(form.elements).toContainEqual(expect.objectContaining({ key: 'spotMode', value: 'all' }))
 })

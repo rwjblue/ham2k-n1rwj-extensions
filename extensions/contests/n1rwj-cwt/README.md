@@ -95,32 +95,18 @@ remain available without a new download. See the
 [verification record](../../../docs/VERIFICATION.md) for tested offline/cache
 behavior and its limits.
 
-## Call-history spot filter
+## CWT in Spots
 
-Enable the RBN extension to supply reports to Ham2K's native Spots panel.
-CWT contributes the optional **CWT call-history file** filter; it does not
-select that filter automatically. To opt in:
+Enable RBN to supply reports to Ham2K's native Spots panel. Use the native
+source, band, and mode filters to browse those reports. The CWT call-history
+selector was removed from RBN because newer hosts reject its cross-extension
+hook. HaLo does not yet offer a native call-history filter.
 
-1. Download **CWops CWT call history** under
-   **Settings → Accounts, Services & Data Sources** (called **Data Files**
-   in earlier app builds).
-2. Open **Settings → Spotting → RBN → Spots — Who I might hear → Call-history filter**
-   and select **CWT call-history file**.
-3. Select **All calls** in the same selector to disable call-history filtering.
-
-Existing saved filter choices are preserved. A selected filter with no data
-file yields no spots. Failed updates retain the last good file.
-
-The filter includes all file entries, including nonmembers and calls with
-no exchange. Exact calls and unambiguous base-call matches are accepted:
-`K1ABC/P` can match `K1ABC`. It uses no prior logged contacts and does not
-prove current CWT participation or CWops membership.
-
-CWT fetches no RBN reports. Its versioned `spotCallFilter:v1` hook answers
-bounded callsign batches from cached history; the shared
-`packages/spot-filters` contract also supports MST and SST providers.
-The filter has no active-operation context and does not switch contests
-automatically. Choose the desired filter in the supplying extension.
+CWT still supplies `spotCallFilter:v1` for older RBN bundles on hosts that
+support it. The legacy filter includes all entries in the cached file,
+including nonmembers and calls with no exchange. An unambiguous base call
+can match a portable call, such as `K1ABC` matching `K1ABC/P`. File presence
+alone cannot establish current CWT participation or CWops membership.
 
 ## How exchange suggestions work
 

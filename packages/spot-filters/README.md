@@ -1,85 +1,49 @@
-# Temporary spot call filters, protocol v1
+# Legacy RBN station filter protocol
 
-This is a compatibility bridge for today's host, not a proposed native API.
+Older RBN bundles use this private protocol for the **Station filter** on
+Regular builds that support cross-extension calls to `spotCallFilter:v1`.
+CWT, MST, SST, SKCC Companion, and BIGFOOT Hunt keep their providers for
+those installations. Current RBN bundles omit the selector and ignore saved
+station selections. HaLo's newer runtime limits cross-extension calls to
+[documented data hooks](https://github.com/ham2k/halo/commit/8556fedde08b11917a17f25a833fb2e30f2af855).
+
+## Contract for older consumers
+
+Providers register `spotCallFilter:v1` under their extension key. Older RBN
+bundles discover providers with `hooks.invokeAll(category, 'describe', {}, online)`
+and match against the selected provider with
+`hooks.invokeOne(category, key, 'matchCalls', { version: 1, calls }, online)`.
+The shared package is bundled into each extension that uses it.
+
+`describe` returns a label, availability and a default-selection hint.
+`matchCalls` accepts up to 2,000 normalized full callsigns and returns the
+matching subset, preserving portable calls. Responses carry callsigns without
+exchange or log data. The older consumer validates the response and splits
+larger batches. An unavailable provider with an active selection yields no
+spots. The consumer defaults to **All calls** and saves explicit selections
+by provider key across operations.
+
+The history adapter accepts a cached records getter and callsign lookup
+function. CWT, MST, and SST use the same matching code with their own exchange
+semantics. Providers use cached data and avoid calls back to spot sources.
+File membership is evidence for a display preference. An absent callsign
+cannot invalidate a QSO or establish that someone is a nonmember.
+
+## Native migration
+
 The [maintainer's direction](https://gist.github.com/rwjblue/3a7304de0c56f8fcdf7374da5951417f)
-is for sources to supply spots, contest/activity extensions to assess relevance,
-and the logger to highlight or hide spots according to the operator's preference.
-RBN should ultimately have no contest-filter discovery or selection.
+is for sources to supply spots, for contests and activities to assess
+relevance in the active operation, and for the logger to highlight or hide
+spots according to the operator's preference. RBN applies its receiver, mode,
+and speed filters before passing reports to HaLo. An operation-scoped native
+filter that distinguishes history relevance from scoring eligibility is still
+needed for the former roster-based view.
 
-This MIT-licensed package is bundled into consumers and providers. It is not
-a host shared library and introduces no install dependency between extensions.
-
-Providers register `spotCallFilter:v1` under their extension key. Consumers use
-the SDK's `hooks.invokeAll(category, 'describe', {}, online)` for discovery and
-`hooks.invokeOne(category, key, 'matchCalls', { version: 1, calls }, online)`
-to evaluate only the selected provider. These are extension-to-extension
-methods, not native Spots filter controls.
-
-`describe` returns a label, availability/reason, and a default-selection hint.
-`matchCalls` accepts at most 2,000 normalized full callsigns and returns the
-matching subset, preserving portable calls. Responses are JSON data, never
-functions or full history files. Consumers validate versions and subsets,
-split larger batches, and distinguish an unavailable file from zero matches.
-Unavailable or failed selected filters must never silently become unfiltered.
-
-The history adapter accepts a records getter and callsign lookup function.
-It has no knowledge of CWops membership, serials, locations, or contest rules,
-so CWT, MST, and SST use the same contract without sharing exchange semantics.
-Use the current downloaded file, not prior QSOs or network lookups. Providers
-must not call spot sources: discovery/evaluation must not recurse into fetching.
-
-Selection belongs to the consumer. RBN defaults to **All calls** and ignores
-default-selection hints; choose a history provider explicitly in RBN settings.
-The hint remains in protocol v1 for compatibility. Persist an explicitly chosen
-provider's hook key so uninstalling it does not silently broaden the feed.
-Previously saved selections remain unchanged. The host supplies no active
-operation to the spots hook, so this contract cannot automatically follow
-the current contest.
-
-## What remains and what goes away
-
-`src/history.ts` contains the reusable, pure `matchHistoryCalls` function.
-It uses cached records and the caller's callsign lookup policy, without hooks,
-settings, operation state, network access, or scoring. Keep this matching and
-each contest's history cache when replacing the transport in `src/index.ts`.
-File presence is evidence for a display preference, not proof of participation
-or club membership. Absence must never invalidate an otherwise valid QSO.
-
-The current SDK's `scoreCandidates` already receives operation context and
-returns notices, alerts, and duplicate status. Our contest scorers already
-participate through `contestScorer`. We do not add speculative relevance fields,
-overload scoring notices, fabricate activity refs, or alter QSO points to express
-history membership. Use the eventual documented host contract once it exists.
-
-The current compromise filters the returned RBN list before the logger sees it.
-Consequently, the native UI cannot display rejected calls as band activity.
-The underlying RBN feed cache remains unfiltered by contest; receiver selection,
-expiration, paging, and deduplication remain source responsibilities.
-
-Retire the bridge only when a supported host can represent history-based
-relevance separately from scoring eligibility and apply the native display
-preference. A generic "hide irrelevant" checkbox alone is insufficient if it
-cannot preserve that distinction. At that point:
-
-1. Use cached history matching from the contest's supported relevance path.
-   Let the host provide operation context and combine activity judgments;
-   keep CWT, MST, and SST exchange/scoring rules independent.
-2. Remove RBN's `spots/filters.ts`, provider discovery/selection,
-   `matchFilter` invocation, `selectSpots`'s `allowedCalls` gate, and the
-   call-history selector/status UI. Keep the reception feed, mode/skimmer/grid
-   preferences, and My Signal panel.
-3. Remove `spotCallFilter:v1` registrations and manifest entries from CWT,
-   MST, and SST, plus their transport adapters and the protocol types/validators
-   in this package. Preserve the pure matcher and history caches.
-4. Migrate stored `spotCallFilter` choices and the legacy CWT
-   `spotsHistoryOnly` hint deliberately. Preserve All calls and saved
-   history-based selections where the native contract allows;
-   a global provider selection may not map directly to operation-based settings.
-   Do not silently broaden a selected unavailable filter. Decide older-host
-   compatibility and manifest minimum versions before removing the fallback.
-5. Verify native highlighting/hiding, operation changes, already-worked spots,
-   missing histories, explicit opt-outs, and unchanged QSO scores. Replace the
-   bridge tests with native-contract integration tests; retain matcher tests.
-
-This checklist describes a future migration, not behavior implemented today.
-No host capability detection or guessed fallback API is introduced here.
+Reuse the pure `matchHistoryCalls` function in `src/history.ts` and each
+activity's cache once a documented operation-scoped relevance path exists.
+Keep exchange precedence, score and dupe decisions independent of matches.
+Use a native preference for highlighting or hiding and consider how to map an
+old global provider choice into an operation preference before retiring the
+providers. Verify operation changes, already-worked spots, missing histories,
+explicit opt-outs, and scores. Retain the providers until older RBN consumers
+on supported hosts have a migration path.

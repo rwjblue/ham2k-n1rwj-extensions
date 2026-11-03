@@ -163,8 +163,5 @@ N1RWJ extensions. See the [installation and development guide](../../../README.m
 [provenance](../../../docs/PROVENANCE.md), and [notices](../../../NOTICE.md).
 To build just MST, run `mise run pack n1rwj-mst` from the repository root.
 
-## Call-history spot filter
-
-With RBN enabled, choose **MST call-history file** in RBN settings to
-limit native spots to this extension’s cached file. Missing files produce no
-spots while selected. Matching uses callsigns only, never exchange values.
+Older RBN bundles on compatible Regular builds can still use the **MST
+call-history file** provider.
