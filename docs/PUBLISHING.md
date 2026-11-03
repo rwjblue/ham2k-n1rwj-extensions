@@ -19,6 +19,30 @@ remain historical; no new release or catalog submission accompanies removal.
 
 ## Current release status
 
+[v0.18.4](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.18.4)
+was published from signed main commit `8c0346ef64b1fff64d05efe83cd9c295c8ee1ed6`
+on **November 2, 2026 at 20:23:34 US Pacific (November 3 at 04:23:34 UTC)**,
+after [CI](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/41577721333)
+passed for that exact commit. Both jobs of the
+[release workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/41577858400)
+passed. All thirteen bundles and thirteen checksum files are available, and
+downloaded assets passed `mise run release:catalog v0.18.4 --dry-run`.
+The GitHub body and SKCC catalog notes match `docs/releases/v0.18.4.md`.
+
+**SKCC Companion is approved and current at 0.18.4 on `stable`.** Its public
+bundle bytes, size and SHA-256 match GitHub. The other twelve catalog entries
+were skipped. This patch restores official roster downloads containing Unicode
+locations such as `TÜR`, while preserving inactive status and offline caching.
+
+Local and CI checks pass **1,959 tests in 150 files**, strict types, lint,
+thirteen builds and official packages. CWT behavior is unchanged; the SKCC-only
+fix and synchronized personal release packaging do not require upstream CWT
+synchronization. Native Ham2K runtime acceptance remains separate. See the
+[release notes](releases/v0.18.4.md) and
+[verification record](VERIFICATION.md#release-0184-publication--2026-11-02).
+
+### Previous releases
+
 [v0.18.3](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.18.3)
 was published from signed main commit `ab7c9b042b73642e160ece4cbc632a8bc8396b5c`
 on **October 30, 2026 at 12:28:27 US Eastern (16:28:27 UTC)**, after
@@ -29,10 +53,10 @@ passed. All thirteen bundles and thirteen checksum files are available, and
 downloaded assets passed `mise run release:catalog v0.18.3 --dry-run`.
 The GitHub body and three catalog note sections match `docs/releases/v0.18.3.md`.
 
-**RBN, SKCC Companion and Zombie Shuffle are approved and current at 0.18.3
-on `stable`.** Their published bundle bytes, sizes and SHA-256 hashes match
-GitHub. The archives declare `spotting` for RBN and `activities` for SKCC and
-Zombie. They keep grouped controls and separate About dialogs without new
+**At publication, RBN, SKCC Companion and Zombie Shuffle were approved and
+current at 0.18.3 on `stable`.** Their published bundle bytes, sizes and
+SHA-256 hashes match GitHub. The archives declare `spotting` for RBN and
+`activities` for SKCC and Zombie. They keep grouped controls and separate About dialogs without new
 categories, sidebar entries or Common Preferences fields. The other ten
 catalog entries were skipped.
 
@@ -46,8 +70,6 @@ settings corrections and synchronized personal packaging are exempt from
 upstream CWT synchronization. Native Ham2K UI acceptance remains separate.
 See the [release notes](releases/v0.18.3.md) and
 [verification record](VERIFICATION.md#release-0183-publication--2026-10-30).
-
-### Previous releases
 
 [v0.18.2](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.18.2)
 was published from signed main commit `a30d8ab2b0101c82c5b7cabc155bb5cce45d50b1`

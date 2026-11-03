@@ -1,5 +1,42 @@
 # Verification and compatibility
 
+## Release 0.18.4 publication — 2026-11-02
+
+Published [v0.18.4](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.18.4)
+from signed main commit `8c0346ef64b1fff64d05efe83cd9c295c8ee1ed6` at
+**20:23:34 US Pacific on November 2 (04:23:34 UTC on November 3)**, after
+[CI](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/41577721333)
+passed for that exact commit. GitHub verifies both the release commit and
+SKCC fix commit `891b9417442d9cfac2eb402eb1c0943804f62d33`. The tag resolves
+to the tested release commit. Both jobs of the
+[release workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/41577858400)
+passed. The GitHub release body exactly matches `docs/releases/v0.18.4.md`.
+
+- Local `mise run release v0.18.4 --dry-run` and CI pass **1,959 tests in
+  150 files**, strict types, lint, thirteen official ES2020 builds/packages
+  and all 26 synchronized release assets.
+- `mise run release:catalog v0.18.4 --dry-run` downloads and validates all
+  thirteen archives/checksums, selecting only SKCC Companion and skipping
+  twelve unchanged catalog entries.
+- SKCC Companion is **approved** and current at **0.18.4** on `stable`,
+  released at **04:24:36.138 UTC on November 3**. Its public **84,132-byte**
+  bundle exactly matches the GitHub archive and catalog SHA-256
+  `77d503cb526cca4ec38120c81f7ef5d0c9ef955b2127d49ad9eda4c128b94734`.
+  Scoped catalog notes exactly match the authored SKCC section.
+- Both complete official SKCC roster layouts parse successfully with
+  **31,556 records** each. Deterministic regression tests reproduce the
+  published `TÜR` row, cover precomposed and combining accents, preserve
+  malformed-field rejection, and exercise built-bundle offline replay and
+  inactive `/EX` spot exclusion.
+
+Publication verification metadata is in `/tmp/ham2k-v0.18.4-verified.json`.
+These source, bundle and publication checks do not establish actual Ham2K
+runtime acceptance. Dependencies, shared runtime code and CWT behavior are
+unchanged; the SKCC-only fix and synchronized personal release packaging do
+not require upstream CWT synchronization. Previously published catalog
+galleries stay outside the bundles. The pre-existing video brief remains
+untouched and uncommitted.
+
 ## Release 0.18.3 publication — 2026-10-30
 
 Published [v0.18.3](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.18.3)
