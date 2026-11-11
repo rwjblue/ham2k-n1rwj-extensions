@@ -7,7 +7,12 @@
   },
   "files": {
     "ignoreUnknown": true,
-    "includes": ["**", "!**/package-lock.json", "!**/tests/fixtures"]
+    "includes": [
+      "**",
+      "!**/package-lock.json",
+      "!**/tests/fixtures",
+      "!extensions/tools/n1rwj-rbn/src/vendor/cluster-spots.mjs"
+    ]
   },
   "formatter": {
     "enabled": true,

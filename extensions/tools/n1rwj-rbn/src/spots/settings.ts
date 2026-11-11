@@ -1,4 +1,5 @@
 import type { FormActionElement, FormDefinition } from '@ham2k/extension-sdk'
+import { liveClusterEnabled, liveClusterSettingKey } from '../cluster-settings.ts'
 import { type Continent, continents } from '../data/continents.ts'
 import { additionalExportChoices, additionalExportFormats } from '../export/preferences.ts'
 import type { HealthNotice } from './health.ts'
@@ -25,6 +26,15 @@ export function settingsDefinition(
       ...(health
         ? [{ type: 'markdown' as const, text: `> **${health.title}**\n>\n> ${health.message}` }]
         : []),
+      {
+        type: 'field',
+        fieldType: 'checkbox',
+        key: liveClusterSettingKey,
+        label: 'Live updates from DX cluster',
+        description:
+          'Resets saved spot filters for your callsign on supported DX cluster nodes to receive live skimmer spots. Turn off to use Vail ReRBN alone.',
+        value: liveClusterEnabled(raw),
+      },
       {
         type: 'header',
         style: 'section',
@@ -75,7 +85,8 @@ export function settingsDefinition(
         fieldType: 'number',
         key: 'spotMinWpm',
         label: 'Minimum CW speed (WPM)',
-        description: 'Blank means no minimum. Applies only to CW.',
+        description:
+          'Blank means no minimum. Live cluster spots with unknown WPM can still appear.',
         placeholder: 'No minimum',
         value: raw.spotMinWpm ?? '',
       },
@@ -96,7 +107,7 @@ export function settingsDefinition(
         key: 'spotSkimmers',
         label: 'Only these skimmers',
         description:
-          'Default: blank, allowing all skimmers. Separate reported IDs with spaces or commas, e.g. KM3T. Vail currently omits numeric node suffixes; a bare ID includes that receiver family.',
+          'Default: blank, allowing all skimmers. Separate reported IDs with spaces or commas, e.g. KM3T or KM3T-2. Some nodes and Vail omit numeric suffixes.',
         value: raw.spotSkimmers ?? '',
         uppercase: true,
       },
@@ -105,7 +116,7 @@ export function settingsDefinition(
         ? [
             {
               type: 'markdown' as const,
-              text: `Vail currently reports bare receiver IDs, so ${suffixed.join(', ')} may return no spots. Enter the bare callsign (for example KM3T) to include that receiver family. Individual suffixed nodes cannot be isolated when the feed omits their IDs. Your saved selection has been preserved.`,
+              text: `Vail currently reports bare receiver IDs, so ${suffixed.join(', ')} may return no Vail spots. Enter the bare callsign (for example KM3T) to match that receiver family in Vail. Individual suffixed nodes cannot be isolated when the feed omits their IDs.`,
             },
           ]
         : []),

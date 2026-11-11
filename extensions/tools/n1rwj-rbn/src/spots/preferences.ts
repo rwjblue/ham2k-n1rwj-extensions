@@ -1,4 +1,5 @@
 import type { JSONValue } from '@ham2k/extension-sdk'
+import { liveClusterSettingKey } from '../cluster-settings.ts'
 import { continentCode } from '../data/continents.ts'
 import { isValidReceiver, receiverLocation } from '../data/parser.ts'
 import { validAdditionalExportFormats } from '../export/preferences.ts'
@@ -24,6 +25,8 @@ export function allowSpotMerging(raw: Record<string, unknown>): boolean {
   return raw.spotAllowMerging !== false
 }
 export function validation(key: string, value: unknown): string | null {
+  if (key === liveClusterSettingKey)
+    return typeof value === 'boolean' ? null : 'Choose whether to use live DX cluster updates.'
   if (key === 'additionalExportFormats')
     return validAdditionalExportFormats(value)
       ? null

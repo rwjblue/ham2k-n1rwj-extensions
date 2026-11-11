@@ -9,13 +9,26 @@ import {
 import { ageLabel, receptionView, utcLabel } from '../../../../packages/reception/src/reports.ts'
 import { renderReceptionScene } from '../../../../packages/reception/src/ui/scene.ts'
 import type { UiModel } from '../../../../packages/reception/src/ui/types.ts'
+import type { RbnCluster } from './cluster/index.ts'
+import { liveClusterEnabled } from './cluster-settings.ts'
 import { configFields, operationOrigin, rbnBands, readConfig, watchedCall } from './config.ts'
 import type { RbnClient } from './data/client.ts'
 import { rbnClient } from './data/host-client.ts'
+import { receiverFamily } from './data/identity.ts'
 import type { RbnReport, RbnSnapshot } from './model.ts'
-import { latestReports, receiverCoordinates } from './model.ts'
+import { isValidCall, latestReports, receiverCoordinates } from './model.ts'
 import { rbnDetailsSections, rbnPresentation } from './presentation.ts'
 import { toReceptionReport } from './reception.ts'
+import { ownSettings } from './spots/preferences.ts'
+
+const liveTickSeconds = 5
+const liveLeaseMs = 20_000
+const slowLeaseMs = 75_000
+
+interface ClusterDisplay {
+  status: 'Off' | 'Offline' | 'Connecting' | 'Connected' | 'Reconnecting' | 'Unavailable'
+  hasReports: boolean
+}
 
 const mapTheme: MapTheme = {
   surface: '#ffffff',
@@ -58,11 +71,78 @@ function refreshDetails(snapshot: RbnSnapshot): string[] {
   ].filter(Boolean)
 }
 
+function reportMinuteKey(report: RbnReport): string {
+  return [
+    report.call,
+    receiverFamily(report.receiver),
+    report.band,
+    report.mode,
+    Math.round(report.frequencyKhz * 10),
+    Math.floor(report.timeMs / 60_000),
+  ].join('|')
+}
+
+/** Reconcile display rows while preserving the original Vail observations for exports. */
+function mergeDisplayReports(vail: RbnReport[], live: readonly RbnReport[]): RbnReport[] {
+  if (!live.length) return vail
+  const byMinute = new Map<string, RbnReport[]>()
+  for (const report of live) {
+    const key = reportMinuteKey(report)
+    const group = byMinute.get(key)
+    if (group) group.push(report)
+    else byMinute.set(key, [report])
+  }
+  const matched = new Set<RbnReport>()
+  const reconciled = vail.map((report) => {
+    const candidates = byMinute.get(reportMinuteKey(report)) ?? []
+    const exact = candidates.find((candidate) => candidate.receiver === report.receiver)
+    // A bare Vail call can cover several physical receivers. Reuse its finer
+    // timestamp and measurements only when one observed suffix fits the spot.
+    const aliases =
+      exact || receiverFamily(report.receiver) !== report.receiver
+        ? []
+        : candidates.filter(
+            (candidate) =>
+              candidate.snrDb !== null &&
+              candidate.snrDb === report.snrDb &&
+              (candidate.wpm === null || report.wpm === null || candidate.wpm === report.wpm),
+          )
+    const received = exact ?? (aliases.length === 1 ? aliases[0] : undefined)
+    if (!received) return report
+    matched.add(received)
+    return {
+      ...report,
+      receiver: received.receiver,
+      snrDb: report.snrDb ?? received.snrDb,
+      wpm: report.wpm ?? received.wpm,
+      receiverLatitude: (exact ? report.receiverLatitude : null) ?? received.receiverLatitude,
+      receiverLongitude: (exact ? report.receiverLongitude : null) ?? received.receiverLongitude,
+      country: (exact ? report.country : null) ?? received.country,
+    }
+  })
+  return [...reconciled, ...live.filter((report) => !matched.has(report))]
+}
+
+function clusterDisplayStatus(
+  live: ReturnType<RbnCluster['getSnapshot']>,
+  enabled: boolean,
+  online: boolean,
+  available: boolean,
+): ClusterDisplay['status'] {
+  if (!available) return 'Unavailable'
+  if (!enabled || live.error === 'off') return 'Off'
+  if (!online) return 'Offline'
+  if (live.error === 'disconnected') return 'Reconnecting'
+  if (live.state === 'unavailable') return 'Unavailable'
+  return live.state === 'connected' ? 'Connected' : 'Connecting'
+}
+
 export function panelModel(
   args: PanelRenderArgs,
   snapshot: RbnSnapshot,
   now: number,
   settings: Record<string, JSONValue> = {},
+  cluster?: ClusterDisplay,
 ): UiModel {
   const config = readConfig(args.config)
   const pending = snapshot.refresh?.state === 'pending'
@@ -115,8 +195,41 @@ export function panelModel(
   const brightness =
     args.environment?.brightness ??
     (themeMode === 'light' || themeMode === 'dark' ? themeMode : undefined)
+  const vailStatus = pending
+    ? snapshot.lastSuccessMs === null
+      ? 'Checking Vail ReRBN…'
+      : 'Cached · refreshing'
+    : snapshot.status === 'ready'
+      ? 'Recent reports'
+      : snapshot.status === 'empty'
+        ? 'No recent reports'
+        : snapshot.status === 'stale'
+          ? `Cached · ${failureLabel}`
+          : snapshot.failureKind
+            ? `Vail ReRBN · ${failureLabel}`
+            : 'Vail ReRBN unavailable'
+  const vailStatusKind = pending
+    ? snapshot.lastSuccessMs === null
+      ? 'empty'
+      : 'cached'
+    : snapshot.status === 'ready'
+      ? 'live'
+      : snapshot.status === 'stale'
+        ? 'cached'
+        : snapshot.status
+  const showingCluster = cluster?.hasReports && reports.length > 0
+  const connected = cluster?.status === 'Connected'
+  const status = showingCluster
+    ? connected
+      ? 'Live cluster reports'
+      : 'Recent cluster reports'
+    : vailStatus
   return {
-    presentation: { ...rbnPresentation, viewCycle: true },
+    presentation: {
+      ...rbnPresentation,
+      ...(cluster?.hasReports ? { source: 'RBN · DX cluster and Vail' } : {}),
+      viewCycle: true,
+    },
     title: test ? 'My Signal · TEST observation' : 'My Signal',
     watchCall: snapshot.call,
     fetchedAt: snapshot.lastSuccessMs === null ? undefined : utcLabel(snapshot.lastSuccessMs),
@@ -124,30 +237,8 @@ export function panelModel(
     lastReport: reports.length
       ? ageLabel(Math.max(...reports.map((report) => report.timeMs)), now)
       : undefined,
-    status:
-      (pending
-        ? snapshot.lastSuccessMs === null
-          ? 'Checking Vail ReRBN…'
-          : 'Cached · refreshing'
-        : snapshot.status === 'ready'
-          ? 'Recent reports'
-          : snapshot.status === 'empty'
-            ? 'No recent reports'
-            : snapshot.status === 'stale'
-              ? `Cached · ${failureLabel}`
-              : snapshot.failureKind
-                ? `Vail ReRBN · ${failureLabel}`
-                : 'Vail ReRBN unavailable') +
-      (config.minSnrDb === null ? '' : ` · ≥ ${config.minSnrDb} dB`),
-    statusKind: pending
-      ? snapshot.lastSuccessMs === null
-        ? 'empty'
-        : 'cached'
-      : snapshot.status === 'ready'
-        ? 'live'
-        : snapshot.status === 'stale'
-          ? 'cached'
-          : snapshot.status,
+    status: status + (config.minSnrDb === null ? '' : ` · ≥ ${config.minSnrDb} dB`),
+    statusKind: showingCluster ? (connected ? 'live' : 'cached') : vailStatusKind,
     locationLabel: origin
       ? `Map origin ${origin.label} · ${origin.latitude.toFixed(3)}°, ${origin.longitude.toFixed(3)}°`
       : 'Set an operation location or a map origin grid in panel settings.',
@@ -163,10 +254,14 @@ export function panelModel(
           ? []
           : [{ label: 'Minimum SNR', value: `${config.minSnrDb} dB (inclusive)` }]),
         {
-          label: 'Last successful check',
+          label: cluster ? 'Last successful Vail check' : 'Last successful check',
           value: snapshot.lastSuccessMs === null ? 'None yet' : utcLabel(snapshot.lastSuccessMs),
         },
-        { label: 'Source', value: 'RBN via Vail ReRBN' },
+        ...(cluster ? [{ label: 'DX cluster', value: cluster.status }] : []),
+        {
+          label: 'Source',
+          value: cluster?.hasReports ? 'RBN via DX cluster and Vail ReRBN' : 'RBN via Vail ReRBN',
+        },
       ],
       activity: refreshDetails(snapshot),
       sections: rbnDetailsSections,
@@ -191,12 +286,14 @@ export function createRbnPanel(
     settings?: () => Promise<Record<string, JSONValue>>
     enrichReports?: (reports: readonly RbnReport[]) => RbnReport[]
     observeCollection?: (args: PanelRenderArgs, time: number) => void
+    cluster?: Pick<RbnCluster, 'getSnapshot' | 'renew' | 'release'>
   } = {},
 ): PanelHook {
   const client = dependencies.client ?? rbnClient
   const now = dependencies.now ?? Date.now
   const settings = dependencies.settings ?? (() => host.getSettings())
   const stateFor = createPanelStateStore()
+  const cluster = dependencies.cluster
   return {
     async getPanels() {
       return [
@@ -205,7 +302,7 @@ export function createRbnPanel(
           title: 'My Signal',
           icon: 'radar',
           description:
-            'Where your CW, RTTY, FT8, and FT4 signals are heard, with a map and RBN receiver reports provided by Vail ReRBN.',
+            'Where your CW, RTTY, FT8, and FT4 signals are heard, with a map and RBN receiver reports.',
           // The host withholds renders behind a tab or while the app is hidden.
           // This cadence also renews the client's bounded visibility lease.
           on: ['operation', 'tick:60'],
@@ -216,6 +313,7 @@ export function createRbnPanel(
     },
     async render(args, ctx) {
       if (!args.environment || !args.instanceId) {
+        if (args.instanceId) cluster?.release(`panel:${args.instanceId}`)
         return {
           kind: 'markdown',
           title: 'RBN · App update needed',
@@ -244,26 +342,53 @@ export function createRbnPanel(
             ...(realTime === undefined ? {} : { realNowMillis: realTime }),
           },
         ),
-        settings().catch(() => ({})),
+        settings().catch(() => undefined),
       ])
       if (!state.active || state.epoch !== epoch || state.renderVersion !== renderVersion)
         return { kind: 'markdown', content: '' }
-      // Successful snapshots share their fetch-time age reference; unavailable
-      // snapshots still age once a minute so old reports never appear fresh.
-      const ageReference =
-        snapshot.status === 'ready' || snapshot.status === 'empty'
-          ? (snapshot.lastSuccessMs ?? realTime ?? now())
-          : Math.max(snapshot.lastSuccessMs ?? 0, Math.floor((realTime ?? now()) / 60_000) * 60_000)
+      const time = realTime ?? now()
+      const enabled = preferences !== undefined && liveClusterEnabled(ownSettings(preferences))
+      const hasCall = isValidCall(call)
+      const wantsLive = Boolean(cluster && enabled && hasCall && ctx.online)
+      const live = cluster?.getSnapshot(call)
+      const fastTick = wantsLive && live?.error !== 'unsupported' && live?.error !== 'off'
+      const lease = `panel:${args.instanceId}`
+      if (wantsLive) cluster?.renew(lease, fastTick ? liveLeaseMs : slowLeaseMs, call)
+      else cluster?.release(lease)
+      const cutoff = time - windowMinutes * 60_000
+      const liveReports = enabled
+        ? (live?.reports.filter(
+            (report) => report.call === call && report.timeMs >= cutoff && report.timeMs <= time,
+          ) ?? [])
+        : []
+      const clusterDisplay: ClusterDisplay | undefined = live && {
+        status: clusterDisplayStatus(
+          live,
+          enabled,
+          ctx.online,
+          preferences !== undefined && hasCall,
+        ),
+        hasReports: liveReports.length > 0,
+      }
+      const reports = mergeDisplayReports(snapshot.reports, liveReports)
+      // Live reports can arrive after Vail's snapshot. Age those rows against
+      // the current clock while retaining the HTTP-only panel's age reference.
+      const ageReference = liveReports.length
+        ? time
+        : snapshot.status === 'ready' || snapshot.status === 'empty'
+          ? (snapshot.lastSuccessMs ?? time)
+          : Math.max(snapshot.lastSuccessMs ?? 0, Math.floor(time / 60_000) * 60_000)
       const rendered = renderReceptionScene(
         {
           ...panelModel(
             effectiveArgs,
             {
               ...snapshot,
-              reports: dependencies.enrichReports?.(snapshot.reports) ?? snapshot.reports,
+              reports: dependencies.enrichReports?.(reports) ?? reports,
             },
             ageReference,
             preferences,
+            clusterDisplay,
           ),
           defaultWindowMinutes: config.windowMinutes,
         },
@@ -279,11 +404,13 @@ export function createRbnPanel(
       state.selection = rendered.selection
       state.bands = rendered.bands
       bindPanelEvents(state, rendered.scene)
+      const tick =
+        snapshot.refresh?.state === 'pending' ? 1 : fastTick ? liveTickSeconds : undefined
       return {
         kind: 'scene',
         title: `My Signal${call ? ` · ${call}` : ''}`,
         scene: rendered.scene,
-        ...(snapshot.refresh?.state === 'pending' ? { triggers: ['tick:1'] } : {}),
+        ...(tick ? { triggers: [`tick:${tick}`] } : {}),
       }
     },
     async onEvent(args, ctx) {

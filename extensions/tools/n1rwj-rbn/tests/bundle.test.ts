@@ -2,11 +2,14 @@ import { readFile } from 'node:fs/promises'
 import { setImmediate as settleHostCalls } from 'node:timers/promises'
 import { createContext, runInContext } from 'node:vm'
 import type {
+  ClusterHook,
   DataFileDefinition,
   ExtensionDefinition,
   JSONValue,
   PanelHook,
   RegisterHookParams,
+  Spot,
+  SpotsHook,
 } from '@ham2k/extension-sdk'
 import { expect, it } from 'vitest'
 import { environment } from '../../../../packages/reception/tests/environment.ts'
@@ -19,8 +22,8 @@ function required<T>(value: T | undefined): T {
   return value
 }
 
-it('registers and loads the weekly receiver data file in the packaged sandbox', async () => {
-  expect(manifest.api).toBe(12)
+it('automatically configures the live cluster feed and publishes spots from the bundle', async () => {
+  expect(manifest).toMatchObject({ api: 21, requiresClusterCommand: true })
   const source = await readFile(new URL('../build/index.js', import.meta.url), 'utf8')
   const sharedModules = Object.fromEntries(
     await Promise.all(
@@ -32,9 +35,26 @@ it('registers and loads the weekly receiver data file in the packaged sandbox', 
   )
   const definitions: ExtensionDefinition[] = []
   const registered = new Map<string, RegisterHookParams>()
+  const timers = createHostTimerHarness()
+  let clock = NOW
+  let fetches = 0
+  let subscribed = false
+  let published: Spot[] = []
+  const commands: string[] = []
+  const status = {
+    state: 'connected',
+    node: { name: 'VE7CC-1', host: 've7cc.net', port: 23 },
+    call: 'N1RWJ',
+    lastSeq: 0,
+  }
   runInContext(
     source,
     createContext({
+      Date: class extends Date {
+        static now() {
+          return clock
+        }
+      },
       __polo: {
         sharedModules,
         defineExtension: (definition: ExtensionDefinition) => definitions.push(definition),
@@ -44,13 +64,58 @@ it('registers and loads the weekly receiver data file in the packaged sandbox', 
   )
   expect(definitions).toHaveLength(1)
   definitions[0].onActivation({
-    timers: createHostTimerHarness().api,
+    timers: timers.api,
     registerHook: (category, hook) => registered.set(category, hook),
-    hostCall: async (method) => {
+    hostCall: async (method, params) => {
+      if (method === 'getSettings') {
+        return {
+          extensions: {
+            'extension_n1rwj-rbn': {
+              spotContinents: ['NA'],
+              spotMode: 'CW',
+              spotSkimmers: 'W3LPL',
+              spotGrids: 'FM',
+              spotRadiusGrid: 'FM19',
+              spotRadiusMiles: 100,
+              spotMinWpm: 18,
+            },
+          },
+        }
+      }
+      if (method === 'fetch') {
+        expect(String(params.url)).toContain('spotter=W3LPL')
+        fetches++
+        return { status: 200, body: JSON.stringify(payload()) }
+      }
+      if (method === 'clusterStatus') return status
+      if (method === 'clusterSubscribe') {
+        subscribed = true
+        return status
+      }
+      if (method === 'clusterUnsubscribe') {
+        subscribed = false
+        return status
+      }
+      if (method === 'clusterLines') {
+        expect(params).toMatchObject({ limit: 1, match: [expect.any(Object)] })
+        return [{ seq: 0, at: clock, text: 'N1RWJ de VE7CC-1 1710Z CCC >' }]
+      }
+      if (method === 'clusterSend') {
+        expect(subscribed).toBe(true)
+        commands.push(String(params.command))
+        return { ok: true, lines: [] }
+      }
+      if (method === 'replaceSpots') {
+        expect(params.source).toBe(manifest.key)
+        expect(params.ns).toBe(manifest.key)
+        published = params.spots as Spot[]
+        return null
+      }
       throw new Error(`Unexpected host call ${method}`)
     },
   })
   expect([...registered.keys()].sort()).toEqual([...manifest.hooks].sort())
+
   const dataFile = registered.get('dataFile')?.hook as DataFileDefinition
   expect(dataFile).toMatchObject({ key: 'n1rwj-rbn_receivers', fetchType: 'raw', maxAgeInDays: 7 })
   const saved = await required(dataFile.rawToJSONData)({
@@ -65,7 +130,62 @@ it('registers and loads the weekly receiver data file in the packaged sandbox', 
     country: 'Kazakhstan',
     continent: 'AS',
   })
-  required(dataFile.onLoadRawData)(JSON.parse(JSON.stringify(saved)))
+  const localReceiver = { call: 'W3LPL', grid: 'FM19', country: 'United States', continent: 'NA' }
+  required(dataFile.onLoadRawData)(
+    JSON.parse(
+      JSON.stringify({
+        ...saved,
+        nodes: [...saved.nodes, localReceiver, { ...localReceiver, call: 'W3LPL-2' }],
+      }),
+    ),
+  )
+  const spots = registered.get('spots')?.hook as SpotsHook
+  const cluster = registered.get('cluster')?.hook as ClusterHook
+  expect(registered.get('cluster')?.key).toBe(manifest.key)
+  const readBoard = () => required(spots.fetchSpots)({}, { online: true, distanceUnits: 'miles' })
+  expect(commands).toEqual([])
+  expect(await readBoard()).toMatchObject([{ their: { call: 'N1RWJ' } }])
+  await settleHostCalls()
+  expect(fetches).toBe(1)
+  expect(subscribed).toBe(true)
+  expect(commands).toEqual(['SET/NOFILTER', 'SET/FILTER DXBM/OFF', 'SET/SKIMMER'])
+
+  const utc = new Date(clock).toISOString().slice(11, 16).replace(':', '')
+  await cluster.onLines(
+    {
+      lines: [
+        `\x07DX de W3LPL-#: 14060.1 W1AW/P 19 dB 20 WPM CQ FN42${utc}Z`,
+        `DX de W3LPL-#: 14061.0 W2ABC CW 19dB Q:3 ${utc}Z`,
+        `DX de W3LPL-#: 14062.0 W3ABC CW 19 dB 15 WPM CQ ${utc}Z`,
+        `DX de W3LPL-2-#: 14063.0 W4ABC CW 19 dB 20 WPM CQ ${utc}Z`,
+      ].map((text, index) => ({ seq: index + 1, at: clock, text })),
+    },
+    { online: true },
+  )
+  await settleHostCalls()
+  timers.advance(1000)
+  await settleHostCalls()
+  expect(published.find((spot) => spot.their.call === 'W1AW/P')).toMatchObject({
+    mode: 'CW',
+    spot: {
+      label: '19 dB · RX 0 mi',
+      sourceInfo: { spotter: 'W3LPL', spotterGrid: 'FM19', wpm: 20 },
+    },
+  })
+  expect(published.find((spot) => spot.their.call === 'W2ABC')?.spot.label).toContain('WPM unknown')
+  clock += 65_000
+  expect((await readBoard())?.map((spot) => spot.their.call).sort()).toEqual([
+    'N1RWJ',
+    'W1AW/P',
+    'W2ABC',
+  ])
+  expect(fetches).toBe(1)
+  expect(commands).toHaveLength(3)
+  await required(definitions[0].onHide)()
+  await settleHostCalls()
+  expect(subscribed).toBe(false)
+  expect(timers.pendingCount).toBe(0)
+
   await expect(
     required(dataFile.rawToJSONData)({
       body: 'Bad gateway',
@@ -86,7 +206,7 @@ it('restores reports and shared server backoff through the actual SDK settings b
       }),
     ),
   )
-  let saved: Record<string, JSONValue> = { spotMode: 'CW' }
+  let saved: Record<string, JSONValue> = { spotMode: 'CW', liveClusterUpdates: false }
   let clock = NOW
   let requests = 0
   const requestUrls: string[] = []
@@ -272,7 +392,7 @@ it('renders before a slow fetch settles and uses host timers without ambient tim
   )
   let definition: ExtensionDefinition | undefined
   let panel: PanelHook | undefined
-  let saved: Record<string, JSONValue> = {}
+  let saved: Record<string, JSONValue> = { liveClusterUpdates: false }
   let clock = NOW
   let requests = 0
   let finish!: () => void

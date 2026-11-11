@@ -5,6 +5,9 @@ import type {
   PanelRenderArgs,
 } from '@ham2k/extension-sdk'
 import { describe, expect, it, vi } from 'vitest'
+import type { RbnCluster } from '../src/cluster/index.ts'
+import { parseClusterReport } from '../src/cluster/parser.ts'
+import { liveClusterSettingKey } from '../src/cluster-settings.ts'
 import { createRbnClient } from '../src/data/client.ts'
 import { createReceiverData } from '../src/data/receivers.ts'
 import type { RbnSnapshot } from '../src/model.ts'
@@ -188,6 +191,163 @@ function deferred<T>() {
 }
 
 describe('RBN native panel integration', () => {
+  it('combines fresh live reports for the watched call with Vail without changing the saved observations', async () => {
+    const vailReport = { ...snapshot.reports[0], timeMs: now - 55_000, wpm: 24 }
+    const current = { ...snapshot, reports: [vailReport], lastSuccessMs: now - 45_000 }
+    const getSnapshot = vi.fn().mockResolvedValue(current)
+    const liveReport = {
+      ...vailReport,
+      receiver: 'W1NT-2',
+      id: 'live-1',
+      timeMs: now - 60_000,
+      wpm: null,
+      receiverLatitude: null,
+      receiverLongitude: null,
+      country: null,
+    }
+    const live: ReturnType<RbnCluster['getSnapshot']> = {
+      state: 'connected',
+      lastReportAt: { CW: now },
+      reports: [
+        liveReport,
+        { ...liveReport, receiver: 'K1TTT-3', id: 'live-2', timeMs: now - 10_000 },
+        { ...liveReport, receiver: 'W3LPL', call: 'K8BTU/P' },
+        { ...liveReport, receiver: 'K3LR', timeMs: now - 16 * 60_000 },
+        { ...liveReport, receiver: 'W2GD', timeMs: now + 1000 },
+      ],
+    }
+    const cluster = {
+      renew: vi.fn(),
+      release: vi.fn(),
+      getSnapshot: vi.fn(() => live),
+    }
+    const enrichReports = vi.fn((reports: Readonly<typeof snapshot.reports>) => [...reports])
+    const panel = createRbnPanel({
+      client: { getSnapshot },
+      now: () => now,
+      settings: async () => ({}),
+      cluster,
+      enrichReports,
+    })
+    const initial = await panel.render(args, { online: true })
+    expect(initial.triggers).toEqual(['tick:5'])
+    expect(cluster.renew).toHaveBeenCalledWith(`panel:${args.instanceId}`, 20_000, 'K8BTU')
+    expect(cluster.getSnapshot).toHaveBeenCalledWith('K8BTU')
+    expect(enrichReports).toHaveBeenLastCalledWith([
+      expect.objectContaining({
+        receiver: 'W1NT-2',
+        timeMs: vailReport.timeMs,
+        wpm: 24,
+        receiverLatitude: null,
+      }),
+      expect.objectContaining({ receiver: 'K1TTT-3' }),
+    ])
+    expect(current.reports).toEqual([vailReport])
+    expect(current.reports[0].receiver).toBe('W1NT')
+    expect(sceneText(initial)).toContain('K1TTT-3')
+    expect(getSnapshot).toHaveBeenLastCalledWith(
+      { call: 'K8BTU', windowMinutes: 15 },
+      { instanceId: args.instanceId, online: true, waitForRequest: false },
+    )
+    await panel.onEvent?.(event(panel, 'details'), { online: true })
+    const details = await detailsText(panel, args)
+    expect(details).toContain('DX cluster')
+    expect(details).toContain('Connected')
+    expect(details).toContain('Last successful Vail check')
+    expect(details).toContain('13:59:15 UTC')
+    expect(details).toContain('14:00:00 UTC')
+  })
+
+  it('retains Vail on unsupported hosts and releases live demand when disabled or offline', async () => {
+    const getSnapshot = vi.fn().mockResolvedValue(snapshot)
+    let enabled = true
+    let live: ReturnType<RbnCluster['getSnapshot']> = {
+      state: 'unavailable',
+      error: 'unsupported',
+      lastReportAt: {},
+      reports: [],
+    }
+    const cluster = { renew: vi.fn(), release: vi.fn(), getSnapshot: () => live }
+    const panel = createRbnPanel({
+      client: { getSnapshot },
+      now: () => now,
+      settings: async () => ({
+        extensions: { 'extension_n1rwj-rbn': { [liveClusterSettingKey]: enabled } },
+      }),
+      cluster,
+    })
+    const unsupported = await panel.render(args, { online: true })
+    expect(unsupported.triggers).toBeUndefined()
+    expect(sceneText(unsupported)).toContain('W1NT')
+    expect(cluster.renew).toHaveBeenCalledWith(`panel:${args.instanceId}`, 75_000, 'K8BTU')
+
+    live = {
+      state: 'connected',
+      lastReportAt: { CW: now },
+      reports: [{ ...snapshot.reports[0], receiver: 'K1TTT-3' }],
+    }
+    enabled = false
+    const disabled = await panel.render(args, { online: true })
+    expect(disabled.triggers).toBeUndefined()
+    expect(sceneText(disabled)).not.toContain('K1TTT-3')
+    expect(cluster.release).toHaveBeenCalledTimes(1)
+
+    enabled = true
+    const offline = await panel.render(args, { online: false })
+    expect(offline.triggers).toBeUndefined()
+    expect(sceneText(offline)).toContain('K1TTT-3')
+    expect(cluster.release).toHaveBeenCalledTimes(2)
+    expect(getSnapshot).toHaveBeenCalledTimes(3)
+  })
+
+  it('filters by the newest live observation within a UTC minute', async () => {
+    const strong = parseClusterReport({
+      seq: 9,
+      at: now - 50_000,
+      text: 'DX de W1NT-2-#: 7034.0 K8BTU CW 20 dB 26 WPM CQ 1359Z',
+    })
+    const weak = parseClusterReport({
+      seq: 10,
+      at: now - 30_000,
+      text: 'DX de W1NT-2-#: 7034.0 K8BTU CW 9 dB 25 WPM CQ 1359Z',
+    })
+    const unknown = parseClusterReport({
+      seq: 11,
+      at: now - 20_000,
+      text: 'DX de K1TTT-3-#: 7034.0 K8BTU CW CQ 1359Z',
+    })
+    if (!strong || !weak || !unknown) throw new Error('Expected parsed live RBN observations')
+    expect(weak.timeMs).toBe(strong.timeMs)
+    expect(unknown).toMatchObject({ snrDb: null, wpm: null })
+
+    let reports = [strong]
+    const panel = createRbnPanel({
+      client: { getSnapshot: async () => ({ ...snapshot, status: 'empty', reports: [] }) },
+      now: () => now,
+      settings: async () => ({}),
+      cluster: {
+        renew: vi.fn(),
+        release: vi.fn(),
+        getSnapshot: () => ({ state: 'connected', lastReportAt: { CW: now }, reports }),
+      },
+    })
+    const list = { ...args, config: { ...args.config, view: 'list' } }
+    const minimum = { ...list, config: { ...list.config, minSnrDb: 10 } }
+    expect(sceneText(await panel.render(minimum, { online: true }))).toContain('W1NT-2')
+
+    reports = [strong, weak, unknown]
+    const filtered = sceneText(await panel.render(minimum, { online: true }))
+    expect(filtered).not.toContain('W1NT-2')
+    expect(filtered).not.toContain('K1TTT-3')
+
+    const unfiltered = sceneText(await panel.render(list, { online: true }))
+    expect(unfiltered).toContain('W1NT-2')
+    expect(unfiltered).toContain('9 dB')
+    expect(unfiltered).not.toContain('20 dB')
+    expect(unfiltered).toContain('K1TTT-3')
+    expect(unfiltered).not.toContain('0 dB')
+  })
+
   it.each([320, 390])(
     'uses compact menus for band, window, and view on a %dpx phone',
     async (width) => {

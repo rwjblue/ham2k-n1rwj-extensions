@@ -2,13 +2,51 @@
 
 See where the [Reverse Beacon Network](https://www.reversebeacon.net/) has
 heard your CW, RTTY, FT8, and FT4 signals, with a reception map and sortable
-receiver reports provided by [Vail ReRBN](https://vailrerbn.com/).
-Requires Ham2K extension API 12 and native panel controls.
+receiver reports. The app's DX cluster supplies live spots and
+[Vail ReRBN](https://vailrerbn.com/) supplies recent reports and history.
+This build requires Ham2K extension API 21.
 The panel automatically follows your operation's station callsign and location.
 It is read-only: it does not transmit, spot a station, post to POTA, or create
 contacts.
 
 Part of the [N1RWJ extension family](../../../README.md).
+
+## Live updates from the DX cluster
+
+Live updates are on by default. Choose a node that forwards RBN skimmer spots
+in **Settings → DX Cluster**. For example, the **VE7CC‑1** preset can forward
+CW, RTTY, FT4, and FT8 when enabled at the node. RBN uses the app's shared
+connection and works without the Cluster Spots extension. Turn off **Live
+updates from DX cluster** under **Settings → Spotting → RBN** to use Vail alone.
+Web uses Vail because the browser host has no cluster connection.
+
+RBN identifies AR-Cluster, DXSpider, or CC Cluster from the node's login prompt.
+The first live connection for a callsign and node in an extension session runs
+the same filter reset and skimmer commands as Cluster Spots. The reset changes
+saved settings for that login on the node, including for other clients using
+the same login. PoLo asks for DX cluster command permission so RBN can set up
+the feed. [Cluster Spots setup commands](https://github.com/ham2k/extensions/blob/832b8bb1e0363ca7ff98da9c6023910be1bd12d7/extensions/spots/ham2k-cluster-spots/src/index.ts#L56-L68)
+
+A dedicated DXSpider RBN filter can still limit the reports the node forwards.
+If a DXSpider node stays quiet, inspect its filters with `SHOW/FILTER` in
+PoLo's DX Cluster console.
+RBN accepts newly delivered CW spots with a DXSpider Qualitee `Q:` marker
+through five UTC minutes of report age. The node can hold those reports while
+it gathers corroboration. RBN displays the receiver's original report time.
+
+Spots starts a Vail snapshot while the cluster connects. Once the node delivers
+a fresh skimmer report in the selected RBN mode, Spots uses the cluster and
+stops routine Vail requests. Feed activity is measured before receiver filters,
+so a 100-mile limit can leave the board empty even with an active feed. When
+PoLo reports a disconnect or the node stops delivering matching reports for
+five minutes, Spots resumes Vail checks subject to its cooldown and backoff.
+Fresh cluster reports resume live updates. Recent rows can stay on the board
+through either handoff for up to ten minutes, within the cache limits. **All**
+uses the modes the node forwards, which may differ from Vail's coverage.
+
+My Signal adds fresh reports for the watched callsign as they arrive. It also
+checks Vail for the recent window and for receivers the node may have filtered
+or combined. Recorded evidence and historical exports use Vail reports.
 
 ## Export an activation reception report
 
@@ -59,14 +97,15 @@ Open **Settings → Spotting → RBN → Spots — Who I might hear** to choose:
   here when you want only RTTY reports. Previously saved mode choices are preserved.
 - **CW speed range:** optional minimum and maximum WPM, including the entered
   speeds. Both default to blank (no limit); either end can be left open.
-  Limits apply only to CW, even in **All** mode. CW reports without a known
-  positive speed are excluded while a limit is set; digital reports are unaffected.
-  Speed filtering reuses cached reports and runs before duplicate reports are
-  collapsed. Vail ReRBN supplies `wpm` but documents no speed-range query parameter.
-- **Only these skimmers:** IDs as reported by Vail, for example `KM3T`.
+  Limits apply only to CW, even in **All** mode. Some cluster nodes omit the
+  measured speed. Spots keeps using the live feed and can show those reports
+  with **WPM unknown**. Vail reports need a measured speed to pass an active
+  range. Speed filtering runs before duplicate reports are collapsed.
+- **Only these skimmers:** exact reported IDs, for example `KM3T` or `KM3T-2`.
   Live comparison found that Vail omits numeric node suffixes: `KM3T-2`
   and `KM3T-3` requests return no reports, while `KM3T` includes the receiver
-  family. Individual nodes cannot be isolated without their original IDs.
+  family. A cluster can carry the original IDs for individual nodes, but some
+  relays shorten the ID to the base callsign.
   Existing suffixed selections are preserved and show an explanatory notice;
   they are never silently widened to include other nodes.
 - **Receiver grid regions:** Maidenhead prefixes, for example `FN, EM`, `JO`,
@@ -185,8 +224,8 @@ these results.
 
 ## Install and open the panel
 
-1. Use a Ham2K version supporting extension API 12 and native panel controls. If the panel shows
-   **App update needed**, update Ham2K before using it.
+1. Use a Ham2K version supporting extension API 21. The catalog offers older
+   compatible versions to older hosts.
 2. Install **N1RWJ RBN** from **Settings → Extensions & Features**.
    [Catalog listing](https://catalog.ham2k.net/extensions/n1rwj-rbn?channel=stable)
 3. Open an operation, choose **Edit Layout → Add a Panel → My Signal**,
@@ -329,16 +368,16 @@ placement; tune settings remain the defaults across restarts.
 
 ## Refreshes and interpreting reports
 
-While visible, the panel normally requests a scheduled render every 60 seconds
-and automatically checks Vail ReRBN at most once per minute for each
+While visible, the panel requests a short render interval when live cluster
+reports are available. It automatically checks Vail ReRBN at most once per minute for each
 callsign/report-window combination. The first render starts a due request and
 returns cached reports immediately, or a checking status when there is no saved
 result. Host timers start subsequent due requests while a placement remains
 visible; they do not wait for the next display tick.
 While that request is pending, the panel adds one-second render ticks. These
 read the shared cache without starting another request. The first render after
-completion shows the result and removes the fast tick, restoring the normal
-60-second cadence.
+completion shows the result and returns to the usual display cadence for the
+current live feed state.
 Multiple panels watching the same query share results. Switching away does not
 clear that cache: returning less than 60 seconds after the last request reuses
 the reports. The cooldown starts at the request, not at the last tab visit.
@@ -428,7 +467,7 @@ The simplified world geography is bundled in the package, so the map needs no
 tile downloads or internet connection. New reception reports need internet
 access. See [map attribution and licenses](../../../packages/reception/assets/MAP_ATTRIBUTION.md).
 
-Reports come from the documented [Vail ReRBN HTTP API](https://vailrerbn.com/docs/endpoints)
+History and fallback reports come from the documented [Vail ReRBN HTTP API](https://vailrerbn.com/docs/endpoints)
 at `https://vailrerbn.com/api/v1/spots`. Vail ReRBN receives both RBN streams:
 CW/RTTY and FT8/FT4. Each check requests up to 500 recent reports within the
 selected time window. The API searches partial callsigns; the panel keeps only
@@ -495,3 +534,34 @@ background/foreground behavior still need a native Ham2K runtime check.
 Settings use native collapsible sections with stable fold identities. Export
 options and My Signal guidance start folded. Spot filters start open, with RBN
 health diagnostics outside the folded groups.
+
+For the DX cluster parser and prompt helpers, see the
+[vendoring and refresh workflow](src/vendor/README.md).
+
+### Test the live cluster presets
+
+Run the direct Telnet harness with your callsign or a test SSID. The extensions
+send their normal setup commands, which reset saved cluster filters for that
+login. A node that requires a password needs a login that it accepts without
+one for this harness.
+
+```sh
+mise run rbn:test-cluster-presets YOUR_CALL --seconds 60 --output /tmp/rbn-cluster-results.json
+mise run rbn:test-cluster-presets YOUR_CALL --presets W3LPL --presets K3LR --scenario alone
+mise run rbn:test-cluster-presets --help
+```
+
+The task runs the RBN build alone and then with Cluster Spots from the vendor
+pin. Both extensions share one socket during the combined run. It counts live
+CW skimmer lines after setup and any history reply, then reports how many RBN
+parsed and how many distinct spots each extension published. The board can
+combine reports of the same station on the same band and mode. The JSON also
+includes DXSpider `Q:` counts, parser rejection examples, and setup replies.
+A run exits nonzero if a requested scenario fails or publishes zero live CW
+spots.
+
+With Mise shell completion enabled, tab-complete the preset name after each
+`--presets` flag and the scenario after `--scenario`. A comma-separated list
+such as `--presets K3LR,NC7J` also works. Use
+`--call-overrides W3LPL=YOUR_CALL-15` to choose a different login for one node.
+[Mise shell completion](https://mise.jdx.dev/cli/completion.html)

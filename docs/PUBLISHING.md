@@ -781,6 +781,11 @@ the already uploaded GitHub release assets remain available.
 
 ## Prepare and publish a release
 
+Before preparing a release that updates RBN, run
+`mise run rbn:vendor-cluster-spots --check`. If the upstream inputs changed,
+review and regenerate them before tagging. The tagged build uses the copy
+committed with the release. [RBN vendor refresh workflow](../extensions/tools/n1rwj-rbn/src/vendor/README.md)
+
 All extensions and shared workspaces retain one synchronized version, including
 extensions with no behavior changes. Choose an unused version; for example:
 

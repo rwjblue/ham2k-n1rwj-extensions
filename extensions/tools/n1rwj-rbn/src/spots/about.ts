@@ -4,6 +4,11 @@ export function rbnAboutDefinition(): FormDefinition {
   return {
     title: 'About RBN',
     elements: [
+      { type: 'divider', title: 'Live updates' },
+      {
+        type: 'markdown',
+        text: 'Spots and My Signal read live skimmer spots from your selected DX cluster node. RBN uses the same skimmer setup as Cluster Spots, including resetting saved spot filters for your login on supported nodes. Vail ReRBN supplies the initial Spots snapshot, fallback when the feed is unavailable, and My Signal history.',
+      },
       { type: 'divider', title: 'My Signal — Who hears me' },
       {
         type: 'markdown',
@@ -26,7 +31,7 @@ export function rbnAboutDefinition(): FormDefinition {
       { type: 'divider', title: 'CW speed range' },
       {
         type: 'markdown',
-        text: 'Leave either end blank for an open-ended range. Limits include the entered speeds and apply only to CW, including in All mode. CW reports without a known positive speed are excluded while a limit is set.',
+        text: 'Leave either end blank for an open-ended range. Limits include the entered speeds and apply only to CW, including in All mode. Live cluster spots without a measured speed can still appear. Vail reports need a known speed to pass an active range.',
       },
       { type: 'divider', title: 'Receivers and distance' },
       {
@@ -42,7 +47,7 @@ export function rbnAboutDefinition(): FormDefinition {
         text: 'Bare receiver IDs use directory metadata only when their nodes agree. Conflicting node grids are excluded from grid-region and distance filters. Receivers with no known continent are excluded when continents are selected; receivers with no known grid are excluded when a grid region or distance limit is set.',
       },
       { type: 'link', label: 'Reverse Beacon Network', url: 'https://www.reversebeacon.net/' },
-      { type: 'link', label: 'Reports provided by Vail ReRBN', url: 'https://vailrerbn.com/' },
+      { type: 'link', label: 'Vail ReRBN', url: 'https://vailrerbn.com/' },
     ],
   }
 }

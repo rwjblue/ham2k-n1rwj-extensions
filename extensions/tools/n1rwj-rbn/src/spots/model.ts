@@ -84,7 +84,12 @@ export type ReceiverLookup = (
   call: string,
 ) => { grid: string | null; continent?: Continent | null; gridAmbiguous?: boolean } | undefined
 
-function spotLabel(snr: unknown, receiverKm: number | undefined, distanceUnits?: string): string {
+function spotLabel(
+  snr: unknown,
+  receiverKm: number | undefined,
+  distanceUnits?: string,
+  unknownCwSpeed?: boolean,
+): string {
   const parts: string[] = []
   if (typeof snr === 'number' && Number.isFinite(snr)) parts.push(`${snr} dB`)
   if (receiverKm !== undefined) {
@@ -92,6 +97,7 @@ function spotLabel(snr: unknown, receiverKm: number | undefined, distanceUnits?:
     const distance = Math.round(kilometers ? receiverKm : receiverKm / 1.609344)
     parts.push(`RX ${distance} ${kilometers ? 'km' : 'mi'}`)
   }
+  if (unknownCwSpeed) parts.push('WPM unknown')
   return parts.join(' · ') || 'RBN'
 }
 
@@ -103,21 +109,27 @@ export function selectSpots(
   now: number,
   distanceUnits?: string,
 ): Spot[] {
-  const selected = new Map<string, { report: Spot; grid: string; receiverKm?: number }>()
+  const selected = new Map<
+    string,
+    { report: Spot; grid: string; receiverKm?: number; unknownCwSpeed: boolean }
+  >()
   const origin = receivers.radius?.origin ?? receivers.distanceOrigin
   for (const report of reports) {
     if (report.spot.timeInMillis < now - maxAgeMs || report.spot.timeInMillis > now) continue
     const info = report.spot.sourceInfo ?? {}
+    let unknownCwSpeed = false
     if (report.mode === 'CW' && receivers.cwSpeed) {
       const speed = info.wpm
-      if (
-        typeof speed !== 'number' ||
-        !Number.isFinite(speed) ||
-        speed <= 0 ||
+      if (typeof speed !== 'number' || !Number.isFinite(speed) || speed <= 0) {
+        // Some cluster nodes omit CW speed from their live spot format.
+        if (info.transport !== 'cluster') continue
+        unknownCwSpeed = true
+      } else if (
         (receivers.cwSpeed.min !== undefined && speed < receivers.cwSpeed.min) ||
         (receivers.cwSpeed.max !== undefined && speed > receivers.cwSpeed.max)
-      )
+      ) {
         continue
+      }
     }
     const receiver = String(info.spotter ?? '')
     if (receivers.skimmers.length && !receivers.skimmers.includes(receiver)) continue
@@ -157,15 +169,15 @@ export function selectSpots(
       )
         continue
     }
-    selected.set(key, { report, grid, receiverKm })
+    selected.set(key, { report, grid, receiverKm, unknownCwSpeed })
   }
   return [...selected.values()]
     .sort((a, b) => b.report.spot.timeInMillis - a.report.spot.timeInMillis)
-    .map(({ report, grid, receiverKm }) => ({
+    .map(({ report, grid, receiverKm, unknownCwSpeed }) => ({
       ...report,
       spot: {
         ...report.spot,
-        label: spotLabel(report.spot.sourceInfo?.snr, receiverKm, distanceUnits),
+        label: spotLabel(report.spot.sourceInfo?.snr, receiverKm, distanceUnits, unknownCwSpeed),
         sourceInfo: { ...report.spot.sourceInfo, spotterGrid: grid },
       },
     }))

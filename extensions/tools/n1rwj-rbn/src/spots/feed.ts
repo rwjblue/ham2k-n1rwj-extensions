@@ -161,5 +161,6 @@ export function createSpotFeed(options: FeedOptions) {
       return inFlight
     },
     getStatus: () => status,
+    nextRequestAt: () => nextFetchAt,
   }
 }

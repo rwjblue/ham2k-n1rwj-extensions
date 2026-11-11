@@ -10,7 +10,7 @@ your signal is heard. Published extensions are available as ready-to-install
 | [SKCC Companion](extensions/activities/n1rwj-skcc/README.md) (`n1rwj-skcc`) | Offline member names, manual-key exchanges, SKCC events, member spots, award audits and application worksheets |
 | [BIGFOOT Hunt](extensions/activities/n1rwj-bigfoot/README.md) (`n1rwj-bigfoot`) | 2026 BIGFOOT letter and Skunk Ape bonus tracking, same-mode progress, and event worksheets |
 | [Contest Calendar](extensions/tools/n1rwj-contest-calendar/README.md) (`n1rwj-contest-calendar`) | Optional Home panel with upcoming contests, UTC/local times, and sponsor rules from ContestClock |
-| [RBN](extensions/tools/n1rwj-rbn/README.md) (`n1rwj-rbn`) | Reception map and sortable CW, RTTY, FT8, and FT4 reports from the Reverse Beacon Network via Vail ReRBN, using your operation's callsign and location |
+| [RBN](extensions/tools/n1rwj-rbn/README.md) (`n1rwj-rbn`) | Live skimmer spots and a reception map for your signal, with recent reports and history from Vail ReRBN |
 | [CWops CWT](extensions/contests/n1rwj-cwt/README.md) (`n1rwj-cwt`) | CWT sessions, exchange suggestions, scoring, and exports |
 | [ICWC MST](extensions/contests/n1rwj-mst/README.md) (`n1rwj-mst`) | MST sessions, name suggestions, outgoing serials, scoring, and exports |
 | [K1USN SST](extensions/contests/n1rwj-sst/README.md) (`n1rwj-sst`) | SST sessions, name/location suggestions, scoring, and exports |
@@ -124,8 +124,8 @@ distance limit in miles from your chosen grid. RBN ignores **Station filter**
 selections saved by earlier versions. Filtering by the current operation's
 contest or roster awaits native HaLo support.
 
-The My Signal panel requires a Ham2K version with native SVG panel support.
-If it shows **App update needed**, update Ham2K before using the panel.
+This release requires Ham2K extension API 21. Live updates use the node
+selected in **Settings → DX Cluster** when it forwards RBN skimmer spots.
 See the [verification record](docs/VERIFICATION.md) for tested builds.
 
 1. Open an operation and choose **Edit Layout → Add a Panel → My Signal**.
@@ -143,7 +143,7 @@ panel controls to sort reports, page through receivers, and refresh manually.
 Wide panes show a table; narrow panes use receiver cards.
 Explicit callsign/grid overrides stay with that panel placement until cleared,
 so leave them blank for normal operation. The map geography is bundled; new
-RBN reports are provided by Vail ReRBN and need internet access. Receiver positions
+RBN reports come from the DX cluster and Vail ReRBN and need internet access. Receiver positions
 use cached RBN node grids, with registered grids as a fallback, so map paths,
 distances, and bearings are estimates. Refresh the **RBN receiver directory**
 in **Settings → Data Files** when needed; it becomes eligible for automatic
@@ -357,6 +357,10 @@ data. MST, SST, RBN, monorepo tooling, and personal packaging are independent of
 that CWT synchronization requirement.
 
 ## Release
+
+For releases that update RBN, follow the
+[Cluster Spots vendor check in the publishing checklist](docs/PUBLISHING.md#prepare-and-publish-a-release)
+before preparing the version.
 
 All extensions and shared workspaces use one synchronized repository version.
 Choose an unused version; for example:
