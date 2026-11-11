@@ -25,9 +25,10 @@ two images. NS, WRT, RandomGram and Contest Calendar have no usable captures in
 this pass; no gallery was submitted for them. Native capture stopped when the
 Mac locked, before an existing RandomGram demo operation could be opened.
 
-The local RBN gallery omits the 0.18.3 settings and About captures because they
-show the retired Station filter. The original media remain in the screenshot
-archive. The public gallery changes after a screenshot-only submission.
+The RBN gallery omits the 0.18.3 settings and About captures because they show
+the retired Station filter. The original media remain in the screenshot
+archive. The three retained images went live on November 11, 2026, after a
+screenshot-only submission.
 [Historical RBN captures](images/README.md#rbn-settings-and-about-from-0183)
 
 ## Provenance and limits

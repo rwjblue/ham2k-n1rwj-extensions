@@ -13,11 +13,29 @@ The temporary `n1rwj-cqww` workspace was removed on October 21, 2026 after
 Build, packaging, release notes, and catalog submission tasks discover current
 workspaces, so future releases exclude this extension. Ten extensions remained
 after removal.
-Repository removal does not withdraw previously published catalog entries or
-GitHub release assets, or change installed providers. The release records below
-remain historical; no new release or catalog submission accompanies removal.
+The preview remains listed at 0.14.0 in the public catalog. The compatibility
+fixes needed for an operator-confirmed replacement are in
+[Ham2K/extensions PR #8](https://github.com/ham2k/extensions/pull/8).
+A catalog administrator can offer the replacement once a corrected official
+bundle is public. Historical GitHub releases remain available.
 
 ## Current release status
+
+[v0.19.0](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.19.0)
+was published from signed main commit `a25009e7610f85ea07b22f852b067f8d69ae7bc8`
+on **November 11, 2026 at 08:44:00 US Eastern (13:44:00 UTC)**.
+The [Check workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/43031595640)
+and both [Release jobs](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/43031789204)
+passed. All thirteen GitHub bundles and thirteen checksums are available.
+The downloaded assets passed `mise run release:catalog v0.19.0 --dry-run`,
+and the GitHub body matches [the authored notes](releases/v0.19.0.md).
+
+All thirteen stable submissions returned **pending review**. The public
+catalog still served the preceding approved bundle versions after submission.
+The independently submitted RBN gallery is live with three images. See the
+[verification record](VERIFICATION.md#release-0190-publication--2026-11-11).
+
+### Previous releases
 
 [v0.18.4](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.18.4)
 was published from signed main commit `8c0346ef64b1fff64d05efe83cd9c295c8ee1ed6`
@@ -40,8 +58,6 @@ fix and synchronized personal release packaging do not require upstream CWT
 synchronization. Native Ham2K runtime acceptance remains separate. See the
 [release notes](releases/v0.18.4.md) and
 [verification record](VERIFICATION.md#release-0184-publication--2026-11-02).
-
-### Previous releases
 
 [v0.18.3](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.18.3)
 was published from signed main commit `ab7c9b042b73642e160ece4cbc632a8bc8396b5c`

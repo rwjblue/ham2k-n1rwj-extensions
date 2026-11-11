@@ -1,5 +1,33 @@
 # Verification and compatibility
 
+## Release 0.19.0 publication — 2026-11-11
+
+Published [v0.19.0](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.19.0)
+at **08:44:00 US Eastern (13:44:00 UTC)** from signed main commit
+`a25009e7610f85ea07b22f852b067f8d69ae7bc8`.
+[Check](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/43031595640)
+passed for that commit. The [Release workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/43031789204)
+attached 13 archives and checksums and submitted all 13 bundles to stable.
+All submissions returned **pending review**. The GitHub notes match
+`docs/releases/v0.19.0.md`, and the downloaded archives and checksums passed
+the catalog dry run.
+
+- `mise run check` and the release dry run passed 1,960 tests in 151 files,
+  strict typechecking, lint, and 13 official builds and packages.
+- The rebuilt bundles passed `verify-host` on the Regular 189 and Next 192
+  Mac kernels under Node VM. The preview used simulated feed responses.
+- A build 192 kernel probe paired the CWT and RBN bundles and loaded a
+  synthetic history file. Both RBN spots stayed on the feed. The cached
+  station had a candidate badge, and selecting it yielded the compact
+  `CWT: AL 4567` call-info note. A curated note took priority. Native Flutter
+  rendering and on-air operation were outside this test.
+- CWT behavior and tests were mirrored in [PR #1](https://github.com/ham2k/extensions/pull/1)
+  at signed commit `abb04924c911ce7be4e9865bd5c6b1955c772a0e`.
+  The PR source checkout passed 99 tests, typechecking and official packing.
+- The RBN gallery update is live. The catalog shows the three retained
+  images and the original settings and About captures remain in
+  [the repository archive](images/README.md#rbn-settings-and-about-from-0183).
+
 ## Release 0.18.4 publication — 2026-11-02
 
 Published [v0.18.4](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.18.4)
