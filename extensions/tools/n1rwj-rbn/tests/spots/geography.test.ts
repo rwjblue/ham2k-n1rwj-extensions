@@ -2,7 +2,7 @@ import { expect, it } from 'vitest'
 import { receiverLocation } from '../../src/data/parser.ts'
 import { createReceiverData } from '../../src/data/receivers.ts'
 import { distanceKm } from '../../src/model.ts'
-import { parseReports, type ReceiverLookup, selectSpots } from '../../src/spots/model.ts'
+import { maxAgeMs, parseReports, type ReceiverLookup, selectSpots } from '../../src/spots/model.ts'
 import { readPreferences, validateEdit, validation } from '../../src/spots/preferences.ts'
 
 const now = Date.parse('2026-09-23T13:10:00Z')
@@ -64,6 +64,30 @@ it('uses directory grid then report fallback, excludes unknown positions only wi
   expect(selectSpots(reports, readPreferences({}), lookup, now)).toHaveLength(3)
 })
 
+it('prefers the closest report in the window and breaks distance ties by time', () => {
+  const reports = parseReports(
+    [
+      { ...row('K1NEAR', 'FN42', 9 * 60_000), snr: 5 },
+      { ...row('DL1FAR', 'JO31', 1000), snr: 30 },
+      { ...row('K1NEAR', 'FN42', 8 * 60_000), snr: 12, frequency: 14031 },
+      { ...row('W1NOGRID', '', 500), snr: 40 },
+    ],
+    'rbn',
+    now,
+  )
+  const withOrigin = readPreferences({ spotRadiusGrid: 'FN42' })
+  expect(selectSpots(reports, withOrigin, lookup, now)).toMatchObject([
+    { freq: 14031, spot: { label: '12 dB · RX 0 mi', sourceInfo: { spotter: 'K1NEAR', snr: 12 } } },
+  ])
+  expect(selectSpots(reports, readPreferences({}), lookup, now)).toMatchObject([
+    { spot: { label: '40 dB', sourceInfo: { spotter: 'W1NOGRID' } } },
+  ])
+  const afterNearExpires = now + maxAgeMs - 8 * 60_000 + 1
+  expect(selectSpots(reports, withOrigin, lookup, afterNearExpires)).toMatchObject([
+    { spot: { sourceInfo: { spotter: 'DL1FAR', snr: 30 } } },
+  ])
+})
+
 it('uses unanimous family locations for bare reports without inventing an exact receiver ID', () => {
   const directory = createReceiverData()
   directory.dataFile.onLoadRawData({
@@ -103,7 +127,7 @@ it('rejects ambiguous family grids before deduplication while retaining known ex
     ],
   })
   const reports = parseReports(
-    [row('KM3T', 'FN42ET', 1000), row('KM3T-2', 'JO31', 2000)],
+    [{ ...row('KM3T', 'FN42ET', 1000), snr: 18 }, row('KM3T-2', 'JO31', 2000)],
     'rbn',
     now,
   )
@@ -111,12 +135,23 @@ it('rejects ambiguous family grids before deduplication while retaining known ex
     selectSpots(reports, readPreferences(raw), directory.lookup, now)
   expect(select({})[0].spot.sourceInfo?.spotter).toBe('KM3T')
   expect(select({ spotContinents: ['NA'] })[0].spot.sourceInfo?.spotter).toBe('KM3T')
+  expect(select({ spotRadiusGrid: 'FN41FR' })).toMatchObject([
+    { spot: { label: 'RX 75 mi', sourceInfo: { spotter: 'KM3T-2' } } },
+  ])
+  expect(select({ spotRadiusGrid: 'FN41FR', spotSkimmers: 'KM3T' })).toMatchObject([
+    { spot: { label: '18 dB', sourceInfo: { spotter: 'KM3T' } } },
+  ])
   for (const preferences of [
     { spotGrids: 'FN' },
     { spotRadiusGrid: 'FN41FR', spotRadiusMiles: 100 },
   ])
     expect(select(preferences)).toMatchObject([
-      { spot: { sourceInfo: { spotter: 'KM3T-2', spotterGrid: 'FN42ET' } } },
+      {
+        spot: {
+          label: preferences.spotRadiusGrid ? 'RX 75 mi' : 'RBN',
+          sourceInfo: { spotter: 'KM3T-2', spotterGrid: 'FN42ET' },
+        },
+      },
     ])
   expect(select({ spotSkimmers: 'KM3T', spotGrids: 'FN' })).toEqual([])
 })

@@ -44,15 +44,21 @@ test('rejects malformed, stale, future, unsupported-mode, and out-of-band report
   )
 })
 
-test('labels native Spots with the reporting receiver and known CW speed', () => {
+test('labels native Spots with signed SNR and keeps a label when SNR is missing', () => {
   const reports = parseReports(
-    [row(), row({ mode: 'FT8' }), row({ wpm: 0 }), row({ wpm: undefined })],
+    [
+      row(),
+      row({ mode: 'FT8', snr: -7 }),
+      row({ mode: 'RTTY', snr: 0 }),
+      row({ mode: 'FT4', snr: undefined }),
+    ],
     'n1rwj-rbn',
     at,
   )
+  const spots = selectSpots(reports, { skimmers: [], grids: [] }, () => undefined, at)
   assert.deepEqual(
-    reports.map(({ spot }) => spot.label),
-    ['K1TTT · 28 WPM', 'K1TTT', 'K1TTT', 'K1TTT'],
+    spots.map(({ spot }) => spot.label),
+    ['12 dB', '-7 dB', '0 dB', 'RBN'],
   )
 })
 

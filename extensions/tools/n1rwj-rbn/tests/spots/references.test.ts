@@ -42,7 +42,6 @@ describe('RBN station references', () => {
           refs: reference(call),
         })),
       )
-      expect(reports.map(({ spot }) => spot.label)).toEqual(['K1TTT', 'K1TTT', 'K1TTT'])
     },
   )
 

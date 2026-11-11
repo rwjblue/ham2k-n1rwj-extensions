@@ -47,6 +47,7 @@ async function harness(saved: Record<string, JSONValue> = {}) {
               spotter_grid: 'FN42',
               mode: 'CW',
               frequency: 14032,
+              snr: 18,
               wpm: 25,
               timestamp: new Date(now - 60_000).toISOString(),
             }))
@@ -405,14 +406,26 @@ it('bundled RBN gives calls on one frequency distinct stable references when mer
       ),
     ),
   )
-  expect(first.map(({ spot }) => spot.label)).toEqual([
-    'KM3T-5 · 25 WPM',
-    'KM3T-5 · 25 WPM',
-    'KM3T-5 · 25 WPM',
-  ])
+  expect(first.map(({ spot }) => spot.label)).toEqual(['18 dB', '18 dB', '18 dB'])
   const requests = runtime.requests.mock.calls.length
   expect(await runtime.fetch()).toEqual(first)
   expect(await runtime.spots.fetchSpots({}, { online: false, locale: 'en' })).toEqual(first)
+  expect(runtime.requests).toHaveBeenCalledTimes(requests)
+})
+
+it('shows receiver distance from the origin without a limit and uses HaLo’s units', async () => {
+  const runtime = await harness({
+    'extension_n1rwj-rbn': { spotRadiusGrid: 'FN20', spotContinents: [] },
+  })
+  const first = await runtime.fetch()
+  expect(first.map(({ spot }) => spot.label)).toEqual(Array(3).fill('18 dB · RX 249 mi'))
+  expect(first[0]?.spot.sourceInfo).toMatchObject({ spotter: 'KM3T-5', snr: 18, wpm: 25 })
+  expect(
+    runtime.requests.mock.calls.every(([url]) => !new URL(url).searchParams.has('spotter')),
+  ).toBe(true)
+  const requests = runtime.requests.mock.calls.length
+  const cached = await runtime.spots.fetchSpots({}, { online: false, distanceUnits: 'kilometers' })
+  expect(cached.map(({ spot }) => spot.label)).toEqual(Array(3).fill('18 dB · RX 400 km'))
   expect(runtime.requests).toHaveBeenCalledTimes(requests)
 })
 

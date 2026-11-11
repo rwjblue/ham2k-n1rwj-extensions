@@ -57,11 +57,6 @@ export function parseReports(rows: readonly unknown[], source: string, now: numb
       sourceInfo.spotterGrid = String(raw.spotter_grid).trim().toUpperCase()
     if (typeof raw.snr === 'number' && Number.isFinite(raw.snr)) sourceInfo.snr = raw.snr
     if (typeof raw.wpm === 'number' && Number.isFinite(raw.wpm)) sourceInfo.wpm = raw.wpm
-    const speed = sourceInfo.wpm
-    const label =
-      raw.mode === 'CW' && typeof speed === 'number' && speed > 0
-        ? `${sourceInfo.spotter} · ${speed} WPM`
-        : sourceInfo.spotter
     spots.push({
       their: { call },
       freq: freq as number,
@@ -71,7 +66,7 @@ export function parseReports(rows: readonly unknown[], source: string, now: numb
       // empty lists. A stable full-call reference keeps different RBN stations
       // separate without changing identity on every receiver report or refresh.
       refs: [{ type: 'rbn', ref: call }],
-      spot: { timeInMillis: time, source, label, sourceInfo },
+      spot: { timeInMillis: time, source, sourceInfo },
     })
   }
   return spots
@@ -81,6 +76,7 @@ export interface ReceiverSelection {
   skimmers: string[]
   grids: string[]
   continents?: Continent[]
+  distanceOrigin?: Coordinates
   radius?: { origin: Coordinates; miles: number }
   cwSpeed?: { min?: number; max?: number }
 }
@@ -88,14 +84,27 @@ export type ReceiverLookup = (
   call: string,
 ) => { grid: string | null; continent?: Continent | null; gridAmbiguous?: boolean } | undefined
 
-/** Filter receivers before collapsing duplicate station reports. */
+function spotLabel(snr: unknown, receiverKm: number | undefined, distanceUnits?: string): string {
+  const parts: string[] = []
+  if (typeof snr === 'number' && Number.isFinite(snr)) parts.push(`${snr} dB`)
+  if (receiverKm !== undefined) {
+    const kilometers = distanceUnits === 'kilometers'
+    const distance = Math.round(kilometers ? receiverKm : receiverKm / 1.609344)
+    parts.push(`RX ${distance} ${kilometers ? 'km' : 'mi'}`)
+  }
+  return parts.join(' · ') || 'RBN'
+}
+
+/** Filter receivers, then pick the closest report for each station, band, and mode. */
 export function selectSpots(
   reports: readonly Spot[],
   receivers: ReceiverSelection,
   lookup: ReceiverLookup,
   now: number,
+  distanceUnits?: string,
 ): Spot[] {
-  const latest = new Map<string, Spot>()
+  const selected = new Map<string, { report: Spot; grid: string; receiverKm?: number }>()
+  const origin = receivers.radius?.origin ?? receivers.distanceOrigin
   for (const report of reports) {
     if (report.spot.timeInMillis < now - maxAgeMs || report.spot.timeInMillis > now) continue
     const info = report.spot.sourceInfo ?? {}
@@ -124,24 +133,40 @@ export function selectSpots(
       continue
     if (receivers.grids.length && !receivers.grids.some((prefix) => grid.startsWith(prefix)))
       continue
-    if (receivers.radius) {
+    let receiverKm: number | undefined
+    if (origin && !directory?.gridAmbiguous) {
       const [latitude, longitude] = receiverLocation(grid)
+      if (latitude !== null && longitude !== null) {
+        receiverKm = distanceKm(origin, { latitude, longitude })
+      }
+    }
+    if (
+      receivers.radius &&
+      (receiverKm === undefined || receiverKm > receivers.radius.miles * 1.609344)
+    )
+      continue
+    const key = `${report.their.call}:${report.band}:${report.mode}`
+    const previous = selected.get(key)
+    if (previous) {
+      const distance = receiverKm ?? Infinity
+      const previousDistance = previous.receiverKm ?? Infinity
       if (
-        latitude === null ||
-        longitude === null ||
-        distanceKm(receivers.radius.origin, { latitude, longitude }) >
-          receivers.radius.miles * 1.609344
+        distance > previousDistance ||
+        (distance === previousDistance &&
+          report.spot.timeInMillis <= previous.report.spot.timeInMillis)
       )
         continue
     }
-    const key = `${report.their.call}:${report.band}:${report.mode}`
-    const previous = latest.get(key)
-    if (!previous || report.spot.timeInMillis > previous.spot.timeInMillis) {
-      latest.set(key, {
-        ...report,
-        spot: { ...report.spot, sourceInfo: { ...info, spotterGrid: grid } },
-      })
-    }
+    selected.set(key, { report, grid, receiverKm })
   }
-  return [...latest.values()].sort((a, b) => b.spot.timeInMillis - a.spot.timeInMillis)
+  return [...selected.values()]
+    .sort((a, b) => b.report.spot.timeInMillis - a.report.spot.timeInMillis)
+    .map(({ report, grid, receiverKm }) => ({
+      ...report,
+      spot: {
+        ...report.spot,
+        label: spotLabel(report.spot.sourceInfo?.snr, receiverKm, distanceUnits),
+        sourceInfo: { ...report.spot.sourceInfo, spotterGrid: grid },
+      },
+    }))
 }

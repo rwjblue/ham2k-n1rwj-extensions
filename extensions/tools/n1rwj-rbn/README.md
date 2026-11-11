@@ -43,7 +43,9 @@ Spots refreshes do not run health checks. A healthy API and database do not
 guarantee live reports or a match for your filters.
 
 Enable **N1RWJ RBN** and select **RBN** in the native Spots source filter.
-Each RBN row shows its reporting receiver and, for CW, the speed when known.
+Each RBN row shows the signal-to-noise ratio measured at the skimmer. If you
+set a distance origin grid, `RX` shows the approximate distance to that receiver
+when its grid is known. A row can show `18 dB · RX 320 mi`.
 Open **Settings → Spotting → RBN → Spots — Who I might hear** to choose:
 
 - **Allow merging of RBN spots:** on by default. Nearby stations can merge in
@@ -79,7 +81,8 @@ Open **Settings → Spotting → RBN → Spots — Who I might hear** to choose:
   file after upgrading to populate this field in older caches. Unknown
   continents are excluded only while this filter is enabled.
 - **Distance origin grid:** your 4, 6, or 8 character grid, such as `FN42FK`.
-  This explicit origin is shared across operations; update it when you move.
+  Spots can show receiver distance with just this grid. The origin is shared
+  across operations. Update it when you move.
 - **Maximum receiver distance (miles):** a positive distance, such as `250`.
   Leave blank for no limit. Set the origin first; clear the limit before
   clearing its origin. Distances use the great-circle path between grid centers.
@@ -112,9 +115,10 @@ can use the same fix to suggest a continent, provided no explicit choice was mad
 All these settings apply only to Spots, across operations. They never filter
 the **My Signal** map or its receiver reports. **About RBN** explains that
 panel’s separate tune settings in your operation.
-Every enabled filter must match; multiple entries within a filter are alternatives.
-Receiver selection happens
-before reports are collapsed to the newest station/band/mode observation.
+Every enabled filter must match. Multiple entries within a filter are alternatives.
+For each callsign, band, and mode, RBN shows the closest qualifying receiver
+with a known distance in the last ten minutes. If distances tie or none can
+be calculated, the newest qualifying report wins.
 Regions use the cached RBN directory grid first, then the report grid; unknown
 locations are excluded when a region or distance limit is selected. Locations are approximate,
 and reception by a nearby skimmer does not guarantee reception at your station.

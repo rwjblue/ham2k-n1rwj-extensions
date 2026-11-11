@@ -133,6 +133,8 @@ export function readPreferences(raw: Record<string, unknown>): SpotPreferences {
   const issue = radiusIssue(raw) || speedIssue(raw)
   if (issue) throw new Error(issue)
   const [latitude, longitude] = receiverLocation(raw.spotRadiusGrid)
+  const distanceOrigin =
+    latitude !== null && longitude !== null ? { latitude, longitude } : undefined
   const min = speedBound(raw.spotMinWpm)
   const max = speedBound(raw.spotMaxWpm)
   return {
@@ -143,9 +145,10 @@ export function readPreferences(raw: Record<string, unknown>): SpotPreferences {
     continents: [
       ...new Set((raw.spotContinents as NonNullable<ReceiverSelection['continents']>) ?? []),
     ],
-    ...(hasRadius(raw) && latitude !== null && longitude !== null
+    ...(distanceOrigin ? { distanceOrigin } : {}),
+    ...(hasRadius(raw) && distanceOrigin
       ? {
-          radius: { origin: { latitude, longitude }, miles: Number(raw.spotRadiusMiles) },
+          radius: { origin: distanceOrigin, miles: Number(raw.spotRadiusMiles) },
         }
       : {}),
   }

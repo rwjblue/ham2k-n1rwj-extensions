@@ -138,7 +138,7 @@ export function settingsDefinition(
         key: 'spotRadiusGrid',
         label: 'Distance origin grid',
         description:
-          'Default: blank. Your grid for distance filtering, shared across operations. Update it when you move. Reset distance clears both the origin and the limit.',
+          'Default: blank. Your grid for showing approximate receiver distance in Spots and for the optional distance limit. Shared across operations. Update it when you move.',
         placeholder: 'e.g. FN42FK',
         value: raw.spotRadiusGrid ?? '',
         uppercase: true,

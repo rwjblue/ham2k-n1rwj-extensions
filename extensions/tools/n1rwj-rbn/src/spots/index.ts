@@ -167,7 +167,7 @@ export function createRbnSpots(options: Options) {
         }
         // A settings edit while the network was pending invalidates this answer.
         if (settingsGeneration !== generation) return []
-        return selectSpots(reports, prefs, options.lookup, now()).map((spot) =>
+        return selectSpots(reports, prefs, options.lookup, now(), ctx.distanceUnits).map((spot) =>
           allowSpotMerging(raw)
             ? { ...spot, refs: spot.refs?.filter((ref) => ref.type !== 'rbn') }
             : spot,

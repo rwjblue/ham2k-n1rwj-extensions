@@ -31,6 +31,10 @@ export function rbnAboutDefinition(): FormDefinition {
       { type: 'divider', title: 'Receivers and distance' },
       {
         type: 'markdown',
+        text: 'The dB value is the signal-to-noise ratio measured at the skimmer. RX shows the approximate distance from your origin grid to that receiver in HaLo’s distance units. With an origin grid, Spots prefers the closest qualifying receiver in the last ten minutes. The newest report wins when distances tie or none are known.',
+      },
+      {
+        type: 'markdown',
         text: 'Nearby receivers can help you find stations to try; reception at your station is not guaranteed. Every enabled receiver filter must match. Distance is approximate, measured between grid centers. Refresh the RBN receiver directory in Data Files to load continents and updated grids.',
       },
       {
