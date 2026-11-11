@@ -30,9 +30,11 @@ passed. All thirteen GitHub bundles and thirteen checksums are available.
 The downloaded assets passed `mise run release:catalog v0.19.0 --dry-run`,
 and the GitHub body matches [the authored notes](releases/v0.19.0.md).
 
-All thirteen stable submissions returned **pending review**. The public
-catalog still served the preceding approved bundle versions after submission.
-The independently submitted RBN gallery is live with three images. See the
+All thirteen stable submissions initially returned **pending review**.
+Eleven went live on November 11. Their public bundle sizes and checksums
+match GitHub. RBN and PSK Reporter still served their previous approved
+versions at the last check. The independently submitted RBN gallery is
+live with three images. See the
 [verification record](VERIFICATION.md#release-0190-publication--2026-11-11).
 
 ### Previous releases

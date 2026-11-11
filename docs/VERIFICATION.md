@@ -8,9 +8,12 @@ at **08:44:00 US Eastern (13:44:00 UTC)** from signed main commit
 [Check](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/43031595640)
 passed for that commit. The [Release workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/43031789204)
 attached 13 archives and checksums and submitted all 13 bundles to stable.
-All submissions returned **pending review**. The GitHub notes match
-`docs/releases/v0.19.0.md`, and the downloaded archives and checksums passed
-the catalog dry run.
+All submissions initially returned **pending review**. The GitHub notes
+match `docs/releases/v0.19.0.md`, and the downloaded archives and checksums
+passed the catalog dry run. Eleven bundles went live on stable between
+13:46 and 13:51 UTC. All eleven public bundle downloads matched GitHub's
+sizes and SHA-256 digests. RBN and PSK Reporter still served the preceding
+approved releases at the last check.
 
 - `mise run check` and the release dry run passed 1,960 tests in 151 files,
   strict typechecking, lint, and 13 official builds and packages.
