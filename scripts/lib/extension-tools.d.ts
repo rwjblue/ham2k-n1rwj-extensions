@@ -14,6 +14,7 @@ declare module '@ham2k/extension-tools' {
 
 declare module '@ham2k/extension-tools/format' {
   export function pack(dir: string, options: { outPath: string }): Promise<unknown>
+  export function settingsReviewReasons(manifest: Record<string, unknown>): string[]
   export function keyProblem(key: unknown): string | null
   export const SCAFFOLD_SHARED_DEPENDENCIES: Record<string, string>
 }

@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import { buildExtensions } from '../../scripts/lib/build.ts'
-import { discoverExtensions, selectExtensions } from '../../scripts/lib/extensions.ts'
+import { discoverExtensions, selectExtensions, writeJson } from '../../scripts/lib/extensions.ts'
 import { packExtensions } from '../../scripts/lib/pack.ts'
 import { scaffoldExtension } from '../../scripts/lib/scaffold.ts'
 
@@ -131,6 +131,36 @@ describe('extension discovery and scaffolding', () => {
     await writeFile(manifestPath, JSON.stringify(manifest))
     await expect(packExtensions(dir)).rejects.toThrow('build manifest is stale')
   }, 20_000)
+
+  it('blocks packaging a settings panel with no section', async () => {
+    const dir = await fixture()
+    const key = 'n1rwj-rbn'
+    const extension = await scaffoldExtension(dir, { key, group: 'tools' })
+    const source = join(extension, 'manifest.json')
+    const built = join(extension, 'build/manifest.json')
+    const manifest = {
+      ...JSON.parse(await readFile(source, 'utf8')),
+      hooks: ['settingsPanel'],
+      requiresLocation: true,
+    }
+    await mkdir(join(extension, 'build'))
+    await writeFile(join(extension, 'build/index.js'), 'export {}\n')
+    await writeJson(source, manifest)
+    await writeJson(built, manifest)
+
+    const archive = join(dir, 'dist/n1rwj-rbn-0.2.0.h2kext')
+    await expect(packExtensions(dir, key)).rejects.toThrow(
+      /n1rwj-rbn settings placement requires catalog review\.\n.*'settings\.section' names no section/,
+    )
+    await expect(readFile(archive)).rejects.toMatchObject({ code: 'ENOENT' })
+
+    const placed = { ...manifest, settings: { section: 'spotting', sidebar: false } }
+    await writeJson(source, placed)
+    await writeJson(built, placed)
+    await packExtensions(dir, key)
+    expect((await readFile(archive)).subarray(0, 2).toString()).toBe('PK')
+    expect(await readFile(`${archive}.sha256`, 'utf8')).toMatch(/^[0-9a-f]{64} {2}/)
+  })
 
   it('packages nested extension assets while preserving repository notices', async () => {
     const dir = await fixture()
