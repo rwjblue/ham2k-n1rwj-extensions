@@ -15,7 +15,7 @@ outside `assets/` so they do not enlarge installable bundles.
 | [CWT](../extensions/contests/n1rwj-cwt/screenshots/) | 1 | Historical native setup dialog, cropped |
 | [MST](../extensions/contests/n1rwj-mst/screenshots/) | 2 | Historical native logging and cropped setup dialog |
 | [SST](../extensions/contests/n1rwj-sst/screenshots/) | 2 | Historical native logging and cropped setup dialog |
-| [RBN](../extensions/tools/n1rwj-rbn/screenshots/) | 5 | Historical native map views plus current native preferences, controls and About |
+| [RBN](../extensions/tools/n1rwj-rbn/screenshots/) | 3 | Historical native map views and the Spotting preferences entry |
 | [SKCC Companion](../extensions/activities/n1rwj-skcc/screenshots/) | 4 | Current native grouped controls, exchange preferences, About and Activities placement |
 | [Zombie Shuffle](../extensions/contests/n1rwj-zombie/screenshots/) | 4 | Current native demo panel, About and Activities placement; synthetic rebirth preview |
 | [PSK Reporter](../extensions/tools/n1rwj-psk-reporter/screenshots/) | 2 | Production Status and About previews with synthetic reports |
@@ -24,6 +24,11 @@ The October 30, 2026 pass adds 22 images to eight galleries and preserves BKG's
 two images. NS, WRT, RandomGram and Contest Calendar have no usable captures in
 this pass; no gallery was submitted for them. Native capture stopped when the
 Mac locked, before an existing RandomGram demo operation could be opened.
+
+The local RBN gallery omits the 0.18.3 settings and About captures because they
+show the retired Station filter. The original media remain in the screenshot
+archive. The public gallery changes after a screenshot-only submission.
+[Historical RBN captures](images/README.md#rbn-settings-and-about-from-0183)
 
 ## Provenance and limits
 
@@ -66,11 +71,12 @@ The source native CWT image already accompanies the upstream guide.
 
 ## Publishing
 
-Use the official publisher with a current local bundle solely to identify the
-extension key. For example:
+Use the official publisher with a local build directory or `.h2kext` to identify
+the extension key. The following example publishes the SKCC gallery.
 
 ```sh
-mise exec -- npx --no-install h2kext-publish dist/n1rwj-skcc-0.18.3.h2kext --screenshots extensions/activities/n1rwj-skcc/screenshots --screenshots-only
+mise run build n1rwj-skcc
+mise exec -- npx --no-install h2kext-publish extensions/activities/n1rwj-skcc/build --screenshots extensions/activities/n1rwj-skcc/screenshots --screenshots-only
 ```
 
 `H2K_CATALOG_TOKEN` comes from the existing local Mise environment. This command

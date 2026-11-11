@@ -405,7 +405,11 @@ it('bundled RBN gives calls on one frequency distinct stable references when mer
       ),
     ),
   )
-  expect(first.every((spot) => spot.spot.label === undefined)).toBe(true)
+  expect(first.map(({ spot }) => spot.label)).toEqual([
+    'KM3T-5 · 25 WPM',
+    'KM3T-5 · 25 WPM',
+    'KM3T-5 · 25 WPM',
+  ])
   const requests = runtime.requests.mock.calls.length
   expect(await runtime.fetch()).toEqual(first)
   expect(await runtime.spots.fetchSpots({}, { online: false, locale: 'en' })).toEqual(first)

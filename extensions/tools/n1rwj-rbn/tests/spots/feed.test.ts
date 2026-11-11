@@ -44,6 +44,18 @@ test('rejects malformed, stale, future, unsupported-mode, and out-of-band report
   )
 })
 
+test('labels native Spots with the reporting receiver and known CW speed', () => {
+  const reports = parseReports(
+    [row(), row({ mode: 'FT8' }), row({ wpm: 0 }), row({ wpm: undefined })],
+    'n1rwj-rbn',
+    at,
+  )
+  assert.deepEqual(
+    reports.map(({ spot }) => spot.label),
+    ['K1TTT · 28 WPM', 'K1TTT', 'K1TTT', 'K1TTT'],
+  )
+})
+
 test('keeps the newest frequency for each full callsign and band, preserving other bands', () => {
   const reports = parseReports(
     [

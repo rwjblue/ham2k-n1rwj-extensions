@@ -58,6 +58,97 @@ class Controls {
   }
 }
 
+describe('CWT spot exchange hints', () => {
+  it('shows a compact exchange on selection while keeping curated notes and deliberate clears', async () => {
+    const { lookup } = await setup()
+    const lookupCall = (call: string, refs: Qson[] = [], note?: string) =>
+      lookup.lookupCall(
+        {
+          operation,
+          qso: { their: { call, guess: { state: 'WI' } }, refs },
+          callInfo: { call, ...{ note } },
+        },
+        ctx,
+      )
+    expect((await lookupCall('K1ABC/P'))[0]).toMatchObject({
+      scope: 'operation',
+      note: 'CWT: AL 4567',
+    })
+    expect((await lookupCall('K2ABC'))[0]).toMatchObject({ note: 'CWT: BOB CWA' })
+    expect((await lookupCall('K3ABC'))[0]).toMatchObject({ note: 'CWT: CARL PA' })
+    expect((await lookupCall('K3ABC/P'))[0]).toMatchObject({ note: 'CWT: CARL' })
+    expect((await lookupCall('K4ABC'))[0]).toMatchObject({ note: 'CWT: DAN' })
+    expect(await lookupCall('W9ZZZ')).toEqual([])
+    expect(
+      (await lookupCall('K1ABC', [{ type: 'cwt', name: 'Pat', number: '' }]))[0],
+    ).toMatchObject({
+      note: 'CWT: PAT',
+    })
+    expect(
+      (await lookupCall('K1ABC', [{ type: 'cwt', name: '', number: '' }]))[0],
+    ).not.toHaveProperty('note')
+    const curated = (await lookupCall('K1ABC', [], 'Existing callsign note'))[0]
+    expect(curated).not.toHaveProperty('note')
+    expect(curated.notes?.[0]).toContain('exchange 4567 (selected file)')
+  })
+
+  it('does not ask for local history on board-wide or mismatched lookups', async () => {
+    const { lookup } = await setup()
+    const getHistoryForCall = vi.fn(async () => [])
+    const drafts: Qson[] = [{}, { their: { call: 'K2ABC' } }]
+    for (const qso of drafts) {
+      expect(
+        await lookup.lookupCall(
+          { operation, qso, callInfo: { call: 'K1ABC' } },
+          { ...ctx, getHistoryForCall },
+        ),
+      ).toEqual([])
+    }
+    expect(getHistoryForCall).not.toHaveBeenCalled()
+  })
+
+  it('adds only the icon and color to eligible candidates with cached exchange history', async () => {
+    const cache = createFileCache()
+    const base = contestScorer(CWTScorer, { scope: { refTypes: ['cwt'] } })
+    if (!base.scoreCandidates) throw new Error('Missing native candidate scorer')
+    const scorer = createPrefill(cache).scoring(base)
+    const candidate = (call: string, band = '20m', mode = 'CW') => ({
+      key: call,
+      qso: { their: { call, guess: { state: 'WI' } }, band, mode },
+    })
+    const candidates = [
+      candidate('K1ABC/P'),
+      candidate('K2ABC'),
+      candidate('K3ABC/P'),
+      candidate('K4ABC', '20m', 'SSB'),
+      candidate('K1ABC', '30m'),
+      candidate('W9ZZZ'),
+    ]
+    const args = { operation, candidates, qsos: [] }
+    const baseline = await base.scoreCandidates(args, ctx)
+    expect(await scorer.scoreCandidates?.(args, ctx)).toEqual(baseline)
+    await cache.replace({
+      schema: 1,
+      body: file,
+      url: 'file.txt',
+      fetchedAt: '2026-09-19T15:00:00.000Z',
+    })
+    const marker = { icon: 'card-account-details-outline', color: '#4527A0' }
+    expect(await scorer.scoreCandidates?.(args, ctx)).toEqual({
+      ...baseline,
+      'K1ABC/P': { ...baseline['K1ABC/P'], ...marker },
+      K2ABC: { ...baseline.K2ABC, ...marker },
+      'K3ABC/P': { ...baseline['K3ABC/P'], ...marker },
+    })
+    const other = { ...args, operation: {} }
+    expect(await scorer.scoreCandidates?.(other, ctx)).toEqual(
+      await base.scoreCandidates(other, ctx),
+    )
+    await cache.remove()
+    expect(await scorer.scoreCandidates?.(args, ctx)).toEqual(baseline)
+  })
+})
+
 describe('prefill to saved/exported CWT exchange', () => {
   it('retains a corrected saved exchange in native UUID-less controls and provenance lookups', async () => {
     const prefill = await setup('!!Order!!,Call,Name,Exch1\n# CWOPS\nK0ACP,Art,3806')
@@ -102,9 +193,14 @@ describe('prefill to saved/exported CWT exchange', () => {
     expect(controls[0]?.input).toMatchObject({ suggestedValue: 'ARTHUR' })
     expect(controls[1]?.input).toMatchObject({ suggestedValue: '3806' })
     const lookups = await prefill.lookup.lookupCall(
-      { operation: nativeOperation, qso: {}, callInfo: { call: 'K0ACP' } },
+      {
+        operation: nativeOperation,
+        qso: { their: { call: 'K0ACP' } },
+        callInfo: { call: 'K0ACP' },
+      },
       context,
     )
+    expect(lookups[0]).toMatchObject({ note: 'CWT: ARTHUR 3806' })
     expect(lookups[0]?.notes?.[0]).toContain(
       'name ARTHUR (current operation); exchange 3806 (current operation)',
     )
@@ -304,7 +400,7 @@ describe('prefill to saved/exported CWT exchange', () => {
       ],
     ]) {
       const notes = await prefill.lookup.lookupCall(
-        { operation, qso: {}, callInfo: { call: 'K1ABC' } },
+        { operation, qso: { their: { call: 'K1ABC' } }, callInfo: { call: 'K1ABC' } },
         { ...context, locale },
       )
       expect(notes[0]).toMatchObject({ source: 'n1rwj-cwt', notes: [expected] })

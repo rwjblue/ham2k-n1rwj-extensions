@@ -6,7 +6,8 @@ product or a substitute for the club’s award managers.
 
 ## Start operating
 
-1. Install `n1rwj-skcc` in a Ham2K host supporting **extension API 12**.
+1. Install **SKCC Companion** from **Settings → Extensions & Features** on a
+   host supporting **extension API 12**. [Catalog listing](https://catalog.ham2k.net/extensions/n1rwj-skcc?channel=stable)
 2. Download **SKCC member roster** through native Data Files. Open
    **Settings → Activities → SKCC Companion** and set your usual
    number, name, location and key. The section entry opens grouped native

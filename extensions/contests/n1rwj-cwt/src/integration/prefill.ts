@@ -9,8 +9,9 @@ import manifest from '../../manifest.json'
 import { firstName, guessedQth } from '../cwt/exchange.ts'
 import { tFor } from '../cwt/i18n.ts'
 import { ActivityHook as UpstreamActivity } from '../cwt/index.ts'
+import { VALID_BANDS } from '../cwt/scorer.ts'
 import type { FileCache } from '../data/cache.ts'
-import { callLookupKeys } from '../history/callsign.ts'
+import { callLookupKeys, normalizeCall } from '../history/callsign.ts'
 import { membershipForExchange, normalizeKnownExchange } from '../history/exchange.ts'
 import { resolveCwtExchange } from '../history/index.ts'
 import { createHistoryAdapter, cwtRef, object, text } from './history.ts'
@@ -73,12 +74,12 @@ export function createPrefill(cache: FileCache) {
 
   const lookup: LookupHook = {
     async lookupCall({ operation, qso, callInfo }, ctx) {
-      if (!cwtRef(operation)) return []
-      const result = await resolve(
-        operation,
-        { ...qso, their: { ...object(qso.their), call: callInfo.call ?? '' } },
-        ctx,
-      )
+      const call = normalizeCall(callInfo.call ?? '')
+      // The Spots board's background lookups pass an empty QSO and retain
+      // neither exchange text nor detailed notes. Wait for a selected call.
+      if (!cwtRef(operation) || !call || call !== normalizeCall(text(object(qso.their).call)))
+        return []
+      const result = await resolve(operation, qso, ctx)
       if (!result.name && !result.number) return []
       const t = tFor(ctx)
       const fields = [
@@ -101,11 +102,24 @@ export function createPrefill(cache: FileCache) {
               downloadDate: file.snapshot.fetchedAt.slice(0, 10),
             })
           : ''
+      const draft = cwtRef(qso)
+      const name = firstName(draft?.name === undefined ? result.name?.value : draft.name)
+      const number = normalizeKnownExchange(
+        draft?.number === undefined ? result.number?.value : text(draft.number),
+      )
+      const exchange = [name.replace(/[\\`*_[\]<>]/g, '\\$&'), number].filter(Boolean).join(' ')
+      // The compact call-info line uses the documented `note` field, while
+      // the detail dialog reads the separate source notes. Keep curated notes.
+      const curated =
+        'note' in callInfo && typeof callInfo.note === 'string' && callInfo.note.trim()
       return [
         {
-          call: callInfo.call ?? '',
+          call,
           source: manifest.key,
-          scope: 'general',
+          scope: 'operation',
+          ...(exchange && !curated
+            ? { note: t('prefillNote', { fields: exchange, freshness: '' }) }
+            : {}),
           notes: [t('prefillNote', { fields: fields.join('; '), freshness })],
         },
       ]
@@ -118,6 +132,26 @@ export function createPrefill(cache: FileCache) {
       async scoreQsos(args, ctx) {
         history.update(args)
         return base.scoreQsos(args, ctx)
+      },
+      async scoreCandidates(args, ctx) {
+        const scores = (await base.scoreCandidates?.(args, ctx)) ?? {}
+        const selectedFile = cache.current()?.parsed.records
+        if (!selectedFile || !cwtRef(args.operation)) return scores
+        for (const { key, qso } of args.candidates) {
+          const score = scores[key]
+          if (!score || score.icon || qso.mode !== 'CW' || !VALID_BANDS.includes(text(qso.band)))
+            continue
+          const call = text(object(qso.their).call)
+          const exchange = resolveCwtExchange({ call, selectedFile })
+          if (exchange.name?.value || exchange.number?.value) {
+            scores[key] = {
+              ...score,
+              icon: 'card-account-details-outline',
+              color: manifest.accentColor,
+            }
+          }
+        }
+        return scores
       },
     }
   }

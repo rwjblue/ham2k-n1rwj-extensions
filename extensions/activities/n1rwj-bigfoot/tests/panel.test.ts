@@ -39,8 +39,11 @@ test('one integrated panel uses operation/log/spot refresh signals without per-k
   const [panel] = await BigfootPanel.getPanels({}, ctx)
   assert.equal(panel.key, 'hunt')
   assert.deepEqual(panel.on, ['operation', 'qsoLogged', 'spots'])
-  assert.equal(panel.form?.[0].key, 'focus')
-  assert.equal(panel.form?.[0].value, 'CW')
+  const focus = panel.form?.[0]
+  assert.ok(focus)
+  assert.equal(focus.type, 'field')
+  assert.equal(focus.key, 'focus')
+  assert.equal(focus.value, 'CW')
   const preview = panel.preview
   assert.ok(preview)
   assert.ok(preview.startsWith('<svg'))

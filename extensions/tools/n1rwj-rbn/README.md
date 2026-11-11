@@ -43,6 +43,7 @@ Spots refreshes do not run health checks. A healthy API and database do not
 guarantee live reports or a match for your filters.
 
 Enable **N1RWJ RBN** and select **RBN** in the native Spots source filter.
+Each RBN row shows its reporting receiver and, for CW, the speed when known.
 Open **Settings → Spotting → RBN → Spots — Who I might hear** to choose:
 
 - **Allow merging of RBN spots:** on by default. Nearby stations can merge in
@@ -182,14 +183,12 @@ these results.
 
 1. Use a Ham2K version supporting extension API 12 and native panel controls. If the panel shows
    **App update needed**, update Ham2K before using it.
-2. Download `n1rwj-rbn-<version>.h2kext` from the
-   [latest GitHub release](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/latest).
-3. In Ham2K, open **Settings → Features & Extensions → Install from file**
-   and select the downloaded package.
-4. Open an operation, choose **Edit Layout → Add a Panel → My Signal**,
+2. Install **N1RWJ RBN** from **Settings → Extensions & Features**.
+   [Catalog listing](https://catalog.ham2k.net/extensions/n1rwj-rbn?channel=stable)
+3. Open an operation, choose **Edit Layout → Add a Panel → My Signal**,
    and save the layout. On narrow layouts, **Edit Layout** is under **Tools**.
    If editing is unavailable, enable **Enable Layout Customization** in settings.
-5. Leave **Watch callsign** and **Map origin grid** blank to follow the operation.
+4. Leave **Watch callsign** and **Map origin grid** blank to follow the operation.
    Reports load automatically when the panel is visible.
 
 No build tools, map accounts, or custom Ham2K build are required.
@@ -463,7 +462,7 @@ coverage boundary, and no recent reports do not establish a transmitter problem.
 CW, RTTY, FT8, and FT4 reports are included without a mode filter. WSPR is not
 provided by this source.
 These My Signal reports are independent of the native RBN Spots source and
-its station, mode, skimmer, continent, grid-region, and distance filters.
+its mode, speed, skimmer, continent, grid-region, and distance filters.
 
 ## Try it without transmitting
 

@@ -7,9 +7,8 @@ settings, account, identity picker, or operation activity is required.
 
 ## Install and use
 
-1. Install `n1rwj-bkg-0.16.0.h2kext` from the
-   [v0.16.0 release](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.16.0)
-   on a host supporting extension API 13.
+1. Install **BKG Companion** from **Settings → Extensions & Features** on a
+   host supporting extension API 13. [Catalog listing](https://catalog.ham2k.net/extensions/n1rwj-bkg?channel=stable)
 2. Ham2K downloads **BKG member roster** through its native Data Files manager.
    It becomes eligible for refresh after one day; native synchronization decides
    when to fetch. Manual refresh and offline cache removal remain in Data Files.
@@ -103,7 +102,7 @@ Sources, captions and screenshot-only update instructions are kept in
 
 Automated bundle/kernel checks and browser-rendered scene previews are distinct
 from native UI acceptance and actual chase ranking in the app. See the
-[verification record](../../../../docs/VERIFICATION.md). No native UI or on-air
+[verification record](../../../docs/VERIFICATION.md). No native UI or on-air
 acceptance is claimed.
 
 ## Native panel controls

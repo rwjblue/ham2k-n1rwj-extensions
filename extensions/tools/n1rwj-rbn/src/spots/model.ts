@@ -57,6 +57,11 @@ export function parseReports(rows: readonly unknown[], source: string, now: numb
       sourceInfo.spotterGrid = String(raw.spotter_grid).trim().toUpperCase()
     if (typeof raw.snr === 'number' && Number.isFinite(raw.snr)) sourceInfo.snr = raw.snr
     if (typeof raw.wpm === 'number' && Number.isFinite(raw.wpm)) sourceInfo.wpm = raw.wpm
+    const speed = sourceInfo.wpm
+    const label =
+      raw.mode === 'CW' && typeof speed === 'number' && speed > 0
+        ? `${sourceInfo.spotter} · ${speed} WPM`
+        : sourceInfo.spotter
     spots.push({
       their: { call },
       freq: freq as number,
@@ -66,7 +71,7 @@ export function parseReports(rows: readonly unknown[], source: string, now: numb
       // empty lists. A stable full-call reference keeps different RBN stations
       // separate without changing identity on every receiver report or refresh.
       refs: [{ type: 'rbn', ref: call }],
-      spot: { timeInMillis: time, source, sourceInfo },
+      spot: { timeInMillis: time, source, label, sourceInfo },
     })
   }
   return spots

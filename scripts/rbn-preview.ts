@@ -1,7 +1,6 @@
 import { createHash } from 'node:crypto'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { dirname, join, resolve } from 'node:path'
-import { createContext, runInContext } from 'node:vm'
 import type {
   PanelEnvironment,
   PanelScene,
@@ -10,6 +9,7 @@ import type {
 } from '@ham2k/extension-sdk'
 import { satisfies } from 'semver'
 import { selectExtensions } from './lib/extensions.ts'
+import { createInstalledKernel, type KernelHostCall } from './lib/installed-kernel.ts'
 import { installedHostAssetsPath, selectInstalledHost } from './verify-installed-host.ts'
 
 interface PreviewOptions {
@@ -27,37 +27,6 @@ interface PreviewOptions {
   direction?: 'asc' | 'desc'
 }
 
-interface HostMessage {
-  type: string
-  method?: string
-  callId: string
-  params?: { url?: string; method?: string; timeout?: number }
-  message?: string
-}
-
-interface HookResult {
-  key: string
-  ok: boolean
-  value?: unknown
-  error?: string
-}
-
-interface Kernel {
-  sharedVersions: Record<string, string>
-  hostResponse(callId: string, success: boolean, value: string): void
-  activateAll(): void
-  invokeLocal(
-    category: string,
-    method: string,
-    args: unknown,
-    online: boolean,
-    key: string,
-  ): Promise<HookResult[]>
-  beginBundle(key: string): void
-  endBundle(): void
-  registeredHooks(): string[]
-}
-
 interface FetchRecord {
   url: string
   durationMs: number
@@ -71,13 +40,6 @@ function object(value: unknown): Record<string, unknown> | undefined {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
     ? (value as Record<string, unknown>)
     : undefined
-}
-
-function resultValue(results: HookResult[], method: string): unknown {
-  if (results.length !== 1 || !results[0].ok) {
-    throw new Error(`${method} failed: ${results[0]?.error ?? 'no single registered RBN panel'}`)
-  }
-  return results[0].value
 }
 
 function xml(value: string): string {
@@ -298,21 +260,23 @@ export async function previewRbn(root: string, options: PreviewOptions): Promise
   ])
   const fetches: FetchRecord[] = []
   const logs: string[] = []
-  let kernel: Kernel
 
-  async function handleHostCall(message: HostMessage): Promise<unknown> {
-    if (message.method === 'getSettings') return { locale: 'en', themeMode: environment.brightness }
-    if (message.method !== 'fetch') throw new Error(`Preview does not implement ${message.method}.`)
-    const url = new URL(message.params?.url ?? '')
+  async function handleHostCall({ method, params }: KernelHostCall): Promise<unknown> {
+    if (method === 'getSettings') return { locale: 'en', themeMode: environment.brightness }
+    if (method !== 'fetch') throw new Error(`Preview does not implement ${method}.`)
+    const url = new URL(typeof params?.url === 'string' ? params.url : '')
     if (
       url.protocol !== 'https:' ||
       url.hostname !== 'vailrerbn.com' ||
       url.pathname !== '/api/v1/spots' ||
-      (message.params?.method ?? 'GET') !== 'GET'
+      (params?.method ?? 'GET') !== 'GET'
     ) {
       throw new Error('Preview only permits read-only HTTPS Vail ReRBN spot requests.')
     }
-    const timeoutMs = Math.min(3000, Math.max(1, message.params?.timeout ?? 3000))
+    const timeoutMs = Math.min(
+      3000,
+      Math.max(1, typeof params?.timeout === 'number' ? params.timeout : 3000),
+    )
     const started = performance.now()
     const record: FetchRecord = { url: url.href, durationMs: 0, timeoutMs }
     fetches.push(record)
@@ -333,26 +297,11 @@ export async function previewRbn(root: string, options: PreviewOptions): Promise
     }
   }
 
-  const context = createContext({
-    sendMessage(_channel: string, raw: string) {
-      const message = JSON.parse(raw) as HostMessage
-      if (message.type === 'log' && message.message) logs.push(message.message)
-      if (message.type !== 'hostCall') return
-      queueMicrotask(() => {
-        void handleHostCall(message).then(
-          (value) => kernel.hostResponse(message.callId, true, JSON.stringify(value)),
-          (error) =>
-            kernel.hostResponse(
-              message.callId,
-              false,
-              JSON.stringify(error instanceof Error ? error.message : String(error)),
-            ),
-        )
-      })
-    },
+  const host = createInstalledKernel(kernelSource, {
+    onHostCall: handleHostCall,
+    onLog: (message) => logs.push(message),
   })
-  runInContext(kernelSource, context, { filename: 'installed-kernel.js', timeout: 5000 })
-  kernel = context.__polo as Kernel
+  const { kernel } = host
   for (const [name, range] of Object.entries(extension.manifest.sharedDependencies ?? {})) {
     if (!kernel.sharedVersions[name] || !satisfies(kernel.sharedVersions[name], range)) {
       throw new Error(
@@ -360,17 +309,9 @@ export async function previewRbn(root: string, options: PreviewOptions): Promise
       )
     }
   }
-  kernel.beginBundle(extension.manifest.key)
-  try {
-    runInContext(bundle, context, { filename: 'n1rwj-rbn-built-es2020.js', timeout: 5000 })
-  } finally {
-    kernel.endBundle()
-  }
-  kernel.activateAll()
-  const panels = resultValue(
-    await kernel.invokeLocal('panel', 'getPanels', {}, true, extension.manifest.key),
-    'getPanels',
-  )
+  host.loadBundle(extension.manifest, bundle, 'n1rwj-rbn-built-es2020.js')
+  await host.activateAll()
+  const panels = await host.invokeHook('panel', extension.manifest.key, 'getPanels', {})
   const panelKey = Array.isArray(panels) ? object(panels[0])?.key : undefined
   if (typeof panelKey !== 'string') throw new Error('RBN did not return a panel descriptor.')
 
@@ -385,39 +326,16 @@ export async function previewRbn(root: string, options: PreviewOptions): Promise
     direction: options.direction ?? 'desc',
   }
   const renderStarted = performance.now()
-  let deadline: ReturnType<typeof setTimeout> | undefined
-  let rendered: unknown
-  try {
-    rendered = resultValue(
-      await Promise.race([
-        kernel.invokeLocal(
-          'panel',
-          'render',
-          {
-            panelKey,
-            instanceId: `ext:${extension.manifest.key}:${panelKey}#preview`,
-            environment,
-            clock: { nowMillis: Date.now(), realNowMillis: Date.now() },
-            operation,
-            qsoCount: 0,
-            config,
-            reason: 'preview',
-          },
-          true,
-          extension.manifest.key,
-        ),
-        new Promise<never>((_, reject) => {
-          deadline = setTimeout(
-            () => reject(new Error('RBN render exceeded the host five-second deadline.')),
-            5000,
-          )
-        }),
-      ]),
-      'render',
-    )
-  } finally {
-    if (deadline) clearTimeout(deadline)
-  }
+  const rendered = await host.invokeHook('panel', extension.manifest.key, 'render', {
+    panelKey,
+    instanceId: `ext:${extension.manifest.key}:${panelKey}#preview`,
+    environment,
+    clock: { nowMillis: Date.now(), realNowMillis: Date.now() },
+    operation,
+    qsoCount: 0,
+    config,
+    reason: 'preview',
+  })
   const renderDurationMs = Math.round(performance.now() - renderStarted)
   const panel = object(rendered)
   if (!['scene', 'svgScene'].includes(String(panel?.kind)) || !object(panel?.scene))

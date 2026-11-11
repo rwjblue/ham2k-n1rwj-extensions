@@ -26,8 +26,10 @@ testing remains pending; see the [verification record](docs/VERIFICATION.md).
 
 ## Install
 
-Start with [Ham2K Power Logger (PoLo), Next Edition](https://ham2k.com/downloads/),
-the new Ham2K logger with installable extensions.
+Open **Settings → Extensions & Features** in Ham2K Power Logger. Search for
+the extension's name, choose it from the catalog, and review its installation
+prompt. The catalog offers releases supported by your app's extension API level.
+[Ham2K downloads](https://ham2k.com/downloads/) · [Extension catalog](https://catalog.ham2k.net/)
 
 Contest Calendar is available starting with
 [v0.9.0](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.9.0).
@@ -39,19 +41,17 @@ session verified import, logging, the exchange panel, keyer expansion and
 exports in build 179. Mobile use and radio sending remain unverified; see the
 [verification record](docs/VERIFICATION.md).
 
-1. Download the bundle for each extension you want from
-   [latest GitHub release](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/latest).
-   Choose the `.h2kext` asset whose name starts with the extension key in the
-   table above. The matching `.sha256` file lets you verify the download.
-2. In Ham2K, choose **Settings → Features & Extensions → Install from file**
-   and select the `.h2kext` file. Each bundle installs separately. The host
-   must support the hooks and shared-library versions declared in its manifest.
+To install from a file, download the `.h2kext` asset whose name starts with the
+extension key in the table above. Use the matching `.sha256` file to verify
+the download. In Ham2K, choose **Settings → Extensions & Features → Install
+from file** and select the bundle. The host must support the API and shared
+libraries declared by that bundle. [Latest GitHub release](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/latest)
 
 Then follow the steps for the extension below. Building from source is
 optional. GitHub downloads and catalog availability are separate; see
 [publishing status and recovery](docs/PUBLISHING.md) for the catalog workflow.
 
-After installation, search for **N1RWJ** in **Features & Extensions** to
+After installation, search for **N1RWJ** in **Extensions & Features** to
 see the installed extensions and their enable switches. See the
 [screenshot record](docs/images/README.md) for the captured app and extension
 versions; use the latest release linked above when installing.
@@ -70,9 +70,7 @@ scoring reviews, imports and native rescan instructions.
 
 ### BIGFOOT Hunt
 
-Download and install `n1rwj-bigfoot-0.12.1.h2kext` from the
-[v0.12.1 release](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.12.1).
-Create a dedicated operation and add the
+Install `n1rwj-bigfoot`, create a dedicated operation, and add the
 **BIGFOOT Hunt 2026** activity. Its score summary and optional panel track
 **B I G F O O T** plus the separate **W4S** Skunk Ape bonus, with Mixed,
 CW, Phone, and Digital completion shown independently.
@@ -93,10 +91,8 @@ links, export instructions, certificate requests, and verification limits.
 
 ### Zombie Shuffle
 
-Install `n1rwj-zombie-0.18.0.h2kext` from
-[v0.18.0](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.18.0).
-Create a dedicated **Zombie Shuffle 2026** operation and configure your sent
-exchange and event-day UTC offset. Add **Edit Layout → Add a Panel → Zombie
+Install `n1rwj-zombie`, create a dedicated **Zombie Shuffle 2026** operation,
+and configure your sent exchange and event-day UTC offset. Add **Edit Layout → Add a Panel → Zombie
 Shuffle** for the graveyard, rebirth watch and Book of the Undead. Panel settings
 choose the view and motion; native Info also shows the score and identity hints.
 Zombie no longer downloads N1MM call history; exchange hints come from your
@@ -107,7 +103,7 @@ remains pending.
 
 ### Contest Calendar
 
-Download and install `n1rwj-contest-calendar-0.10.0.h2kext` in a Ham2K version
+Install `n1rwj-contest-calendar` in a Ham2K version
 supporting extension API 5. On **Home**, choose **Edit Layout → Add a Panel →
 Contest Calendar** and save the layout. Enable **Layout Customization** in app
 settings if layout editing is unavailable.
@@ -229,8 +225,8 @@ Native N1MM call history, local NS contacts and host lookups supply name/QTH
 suggestions; copy each received serial on air. CQ/S&P/Unknown entry and the
 optional NS Sprint guide provide advisory QSY reminders without changing scores.
 NS requires extension API 11. Observe the 1 kHz Sprint QSY rule and
-disable RBN/packet assistance. Build with `mise run pack n1rwj-ns`; publication
-and native UI/on-air acceptance are pending.
+disable RBN/packet assistance. Build with `mise run pack n1rwj-ns`. Native
+UI and on-air acceptance are pending.
 
 ### Weekly RTTY Test
 
@@ -240,8 +236,7 @@ or country prefix for DX. Score eligible QSOs × unique callsigns across the
 session, with one contact per station per band. Select QRP (5 W) or low power
 (100 W), configure your sent exchange, and report your summary on 3830 Scores.
 
-Install the WRT bundle from [v0.6.0](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.6.0),
-or build it locally with `mise run pack n1rwj-wrt`.
+Install `n1rwj-wrt` or build it locally with `mise run pack n1rwj-wrt`.
 WRT suggests exchanges from previous WRT contacts and ordinary host lookups.
 It has no downloadable history file or history-file spot filter. Its guide
 covers RTTY mode selection, prefix handling, exports, and verification limits.
@@ -300,6 +295,28 @@ Node, DOM, or global `fetch`. Read the installed SDK's `AGENTS.md`, relevant
 `docs/`, and published `dist/index.d.ts` before changing hooks. Host-provided
 shared libraries stay declared in each manifest and externalized from bundles;
 local installations of those libraries are development dependencies.
+
+### Preview changes in Ham2K
+
+After `mise run install`, run the official extension dev server from the
+repository root, with the path to the extension you want to work on.
+
+```sh
+mise exec -- npx --no-install h2kext-dev --dir extensions/tools/n1rwj-rbn --host 127.0.0.1
+```
+
+In a supported Ham2K build, open **Settings → Developer → Extension Dev
+Server** and connect to `http://127.0.0.1:8787`. It reloads that extension
+after each successful build and forwards extension logs to the terminal.
+For a device on the same network, omit `--host 127.0.0.1` and use the LAN
+address printed by the command. For release validation, use `mise run pack`
+and install the resulting `.h2kext` in Ham2K.
+
+Write catalog and in-app installation text in `ABOUT.md` beside the extension's
+manifest. Add translations as `ABOUT.<locale>.md`, for example `ABOUT.es.md`.
+The official tools put the text into the built manifest. Use one source for
+each language's About text, either the Markdown file or its manifest field.
+Keep release notes in the release document and gallery images in `screenshots/`.
 
 ### Add an extension
 

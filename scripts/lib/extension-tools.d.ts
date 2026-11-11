@@ -1,4 +1,4 @@
-// @ham2k/extension-tools 0.13.0 publishes JavaScript without declarations.
+// @ham2k/extension-tools publishes JavaScript without declarations.
 // These signatures cover the public functions used by our build tasks.
 declare module '@ham2k/extension-tools' {
   import type { build } from 'esbuild'
@@ -6,6 +6,10 @@ declare module '@ham2k/extension-tools' {
     esbuild: typeof build,
     options: { dir: string },
   ): Promise<{ outDir: string; manifest: { key: string; version: string } }>
+  export function withAboutFiles(
+    manifest: Record<string, unknown>,
+    dir: string,
+  ): Promise<Record<string, unknown>>
 }
 
 declare module '@ham2k/extension-tools/format' {

@@ -2,12 +2,10 @@ import { execFileSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { access, readdir, readFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import { performance } from 'node:perf_hooks'
-import { createContext, runInContext } from 'node:vm'
 import type { ActivationApi } from '@ham2k/extension-sdk'
 import { satisfies } from 'semver'
-import type { Manifest } from './lib/extensions.ts'
 import { selectExtensions } from './lib/extensions.ts'
+import { createInstalledKernel } from './lib/installed-kernel.ts'
 
 const assetsPath =
   'Contents/Frameworks/App.framework/Versions/A/Resources/flutter_assets/assets/extensions'
@@ -57,49 +55,6 @@ async function selectApp(explicitPath?: string) {
 
 export { assetsPath as installedHostAssetsPath, selectApp as selectInstalledHost }
 
-interface HostMessage {
-  type: string
-  method?: string
-  callId: string
-  message?: string
-}
-
-interface Kernel {
-  sharedVersions: Record<string, string>
-  registerSocket?: unknown
-  socketEvent?: unknown
-  runTimers?(): void
-  setAppVisible?(visible: boolean): void
-  hostResponse(callId: string, success: boolean, value: string): void
-  defineExtension(extension: {
-    key: string
-    version: string
-    onShow?(): void
-    onHide?(): void
-    onActivation(context: {
-      timers?: ActivationApi['timers']
-      registerHook(
-        category: string,
-        definition: {
-          key: string
-          hook: { probe(args: unknown, context: Record<string, unknown>): Promise<string[]> }
-        },
-      ): void
-    }): void
-  }): void
-  activateAll(): void | Promise<void>
-  invokeLocal(
-    category: string,
-    method: string,
-    args: unknown,
-    all: boolean,
-    key: string,
-  ): Promise<Array<{ value: string[] }>>
-  beginBundle(key: string): void
-  endBundle(): void
-  registeredHooks(): string[]
-}
-
 export async function verifyInstalledHost(
   root: string,
   key?: string,
@@ -110,31 +65,26 @@ export async function verifyInstalledHost(
   const assets = join(app, assetsPath)
   const kernelSource = await readFile(join(assets, 'kernel.js'), 'utf8')
   const extensions = await selectExtensions(root, key)
-  const manifests: Manifest[] = extensions.map(({ manifest }) => manifest)
-  const messages: HostMessage[] = []
-  const context = createContext({
-    performance,
-    sendMessage(_channel: string, raw: string) {
-      const message = JSON.parse(raw) as HostMessage
-      messages.push(message)
-      if (message.type === 'hostCall') {
-        queueMicrotask(() => {
-          const value = message.method === 'getSettings' ? { locale: 'en' } : null
-          const bridge = context.__polo as Kernel
-          bridge.hostResponse(message.callId, true, JSON.stringify(value))
-        })
-      }
+  const logs: string[] = []
+  let timerWake = false
+  const host = createInstalledKernel(kernelSource, {
+    onHostCall: ({ method }) => (method === 'getSettings' ? { locale: 'en' } : null),
+    onLog: (message) => logs.push(message),
+    onTimerWake: () => {
+      timerWake = true
     },
   })
-  runInContext(kernelSource, context, { filename: 'installed-kernel.js', timeout: 5000 })
-  const kernel = context.__polo as Kernel
+  const { kernel } = host
   const problems: string[] = []
-  for (const manifest of manifests) {
-    if (
-      Array.isArray(manifest.webSockets) &&
-      manifest.webSockets.length &&
-      (typeof kernel.registerSocket !== 'function' || typeof kernel.socketEvent !== 'function')
-    ) {
+  let socketEventDelivered = false
+  if (kernel.registerSocket && host.socketEvent) {
+    const socketId = kernel.registerSocket((event) => {
+      socketEventDelivered = event.type === 'close'
+    })
+    host.socketEvent(socketId, { type: 'close' })
+  }
+  for (const { manifest } of extensions) {
+    if (Array.isArray(manifest.webSockets) && manifest.webSockets.length && !socketEventDelivered) {
       problems.push(
         `${manifest.key}: installed kernel lacks the API-2 WebSocket bridge; use build 171 or newer`,
       )
@@ -170,9 +120,9 @@ export async function verifyInstalledHost(
       })
     },
   })
-  await kernel.activateAll()
-  const probe = await kernel.invokeLocal('lookup', 'probe', {}, false, probeKey)
-  const contextCapabilities = probe[0]?.value ?? []
+  await host.activateAll()
+  const probe = await host.invokeHook('lookup', probeKey, 'probe', { online: false })
+  const contextCapabilities = Array.isArray(probe) ? probe : []
   if (!contextCapabilities.includes('getHistoryForCall')) {
     problems.push(
       'HookContext.getHistoryForCall is unavailable; cross-operation history cannot run',
@@ -187,28 +137,28 @@ export async function verifyInstalledHost(
   const timerCapabilities = {
     activationBindings:
       typeof timerBindings?.set === 'function' && typeof timerBindings?.clear === 'function',
-    runTimers: typeof kernel.runTimers === 'function',
+    runTimers: Boolean(host.runTimers),
     wakeMessage: false,
     oneShot: false,
     cancellation: false,
     visibilityCallbacks: false,
   }
-  if (timerCapabilities.activationBindings && timerCapabilities.runTimers && timerBindings) {
+  if (timerCapabilities.activationBindings && host.runTimers && timerBindings) {
     timerBindings.set(() => fired++, 0, false, [])
     const cancelled = timerBindings.set(() => cancelledFired++, 0, false, [])
     timerBindings.clear(cancelled)
-    kernel.runTimers?.()
-    kernel.runTimers?.()
-    timerCapabilities.wakeMessage = messages.some((message) => message.type === 'timerWake')
+    host.runTimers()
+    host.runTimers()
+    timerCapabilities.wakeMessage = timerWake
     timerCapabilities.oneShot = fired === 1
     timerCapabilities.cancellation = cancelledFired === 0
   }
-  if (typeof kernel.setAppVisible === 'function') {
-    kernel.setAppVisible(false)
-    kernel.setAppVisible(true)
+  if (host.setAppVisible) {
+    host.setAppVisible(false)
+    host.setAppVisible(true)
     timerCapabilities.visibilityCallbacks = hidden === 1 && shown === 1
   }
-  for (const manifest of manifests) {
+  for (const { manifest } of extensions) {
     if (
       typeof manifest.api === 'number' &&
       manifest.api >= 3 &&
@@ -224,21 +174,13 @@ export async function verifyInstalledHost(
   if (problems.length === 0) {
     for (const { dir, manifest } of extensions) {
       const bundle = await readFile(join(dir, 'build/index.js'), 'utf8')
-      kernel.beginBundle(manifest.key)
-      try {
-        runInContext(bundle, context, { filename: 'built-extension.js', timeout: 5000 })
-      } finally {
-        kernel.endBundle()
-      }
-      await kernel.activateAll()
-      registeredHooks.push(
-        ...kernel.registeredHooks().filter((hook) => hook.includes(`(${manifest.key})`)),
-      )
+      host.loadBundle(manifest, bundle, `${manifest.key}-built-es2020.js`)
     }
-    for (const message of messages) {
-      if (message.type === 'log' && message.message?.includes('ERROR'))
-        problems.push(message.message)
-    }
+    await host.activateAll()
+    const allHooks = kernel.registeredHooks()
+    for (const { manifest } of extensions)
+      registeredHooks.push(...allHooks.filter((hook) => hook.endsWith(`(${manifest.key})`)))
+    problems.push(...logs.filter((message) => message.includes('ERROR')))
   }
 
   console.log(
@@ -249,11 +191,12 @@ export async function verifyInstalledHost(
         sharedVersions: kernel.sharedVersions,
         contextCapabilities,
         timerCapabilities,
+        socketEventDelivered,
         registeredHooks,
         compatible: problems.length === 0,
         problems,
         scope:
-          'Installed JavaScript kernel under Node VM; timer wake delivery is simulated. This does not exercise native scheduling or app UI.',
+          'Installed JavaScript kernel under Node VM. This does not exercise native install checks, timer scheduling, or app UI.',
       },
       null,
       2,

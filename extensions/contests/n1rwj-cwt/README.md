@@ -102,6 +102,12 @@ source, band, and mode filters to browse those reports. The CWT call-history
 selector was removed from RBN because newer hosts reject its cross-extension
 hook. HaLo does not yet offer a native call-history filter.
 
+In a CWT operation, an ID-card icon can mark CW spots with cached CWT history
+on rows that show source details. Select a spot to see the known exchange in
+the logging call info. If a curated callsign note already occupies the compact
+line, open the call details to see the CWT source note. Spot rows keep their
+source labels, and the history hint does not determine the QSO score.
+
 CWT still supplies `spotCallFilter:v1` for older RBN bundles on hosts that
 support it. The legacy filter includes all entries in the cached file,
 including nonmembers and calls with no exchange. An unambiguous base call

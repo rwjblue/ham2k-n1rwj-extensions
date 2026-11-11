@@ -81,6 +81,14 @@ describe('extension discovery and scaffolding', () => {
       await copyFile(join(repo, path), join(dir, path))
     }
     const extension = await scaffoldExtension(dir, { key: 'n1rwj-demo', name: 'My "quoted" panel' })
+    const manifestPath = join(extension, 'manifest.json')
+    const manifest = JSON.parse(await readFile(manifestPath, 'utf8'))
+    manifest.translations = { es: { name: 'Mi panel' } }
+    await writeFile(manifestPath, JSON.stringify(manifest))
+    const about = 'Install this panel to see an example.'
+    const localizedAbout = join(extension, 'ABOUT.es.md')
+    await writeFile(join(extension, 'ABOUT.md'), `${about}\n`)
+    await writeFile(localizedAbout, 'Instala este panel para ver un ejemplo.\n')
     execFileSync(
       process.execPath,
       [
@@ -102,13 +110,25 @@ describe('extension discovery and scaffolding', () => {
       { stdio: 'pipe' },
     )
     await buildExtensions(dir)
+    expect(JSON.parse(await readFile(join(extension, 'build/manifest.json'), 'utf8'))).toEqual({
+      ...manifest,
+      about,
+      translations: {
+        es: { name: 'Mi panel', about: 'Instala este panel para ver un ejemplo.' },
+      },
+    })
     await packExtensions(dir)
     expect(
       (await readFile(join(dir, 'dist/n1rwj-demo-0.2.0.h2kext'))).subarray(0, 2).toString(),
     ).toBe('PK')
-    const manifest = JSON.parse(await readFile(join(extension, 'manifest.json'), 'utf8'))
+    await writeFile(localizedAbout, 'Texto actualizado.\n')
+    await expect(packExtensions(dir)).rejects.toThrow('build manifest is stale')
+    await rm(localizedAbout)
+    await expect(packExtensions(dir)).rejects.toThrow('build manifest is stale')
+    await buildExtensions(dir)
+    await packExtensions(dir)
     manifest.name = 'Changed since build'
-    await writeFile(join(extension, 'manifest.json'), JSON.stringify(manifest))
+    await writeFile(manifestPath, JSON.stringify(manifest))
     await expect(packExtensions(dir)).rejects.toThrow('build manifest is stale')
   }, 20_000)
 

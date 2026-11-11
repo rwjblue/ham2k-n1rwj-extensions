@@ -1,7 +1,7 @@
 # README screenshots
 
-These are unmodified screenshots of the native Ham2K macOS app, captured
-September 21, 2026 in published **Ham2K Next 26.9.0 build 170**. The RBN map,
+The installation, contest, and My Signal examples were captured September 21,
+2026 in the native **Ham2K Next 26.9.0 build 170** macOS app. The RBN map,
 receiver, and tune-settings images now show the local compact-layout **0.3.2**
 candidate. The installation, contest, and Add a Panel images still show the
 published **0.3.1** bundles; those screens are unchanged by the RBN layout work.
@@ -57,6 +57,13 @@ captures, not physical-phone runtime evidence.
 
 The older `rbn-next170-*` images remain as historical evidence for the earlier
 SVG migration; they are no longer the current README examples.
+
+## RBN settings and About from 0.18.3
+
+These October 30, 2026 captures show the former Station filter in Next build
+186 with RBN 0.18.3. The settings image was cropped to 790, 72, 1300 × 1524,
+and the About image to 870, 72, 1140 × 1524. The settings capture shows a
+service health-check timeout. [Settings](rbn/rbn-settings-v0.18.3.png) · [About](rbn/rbn-about-v0.18.3.png)
 
 See [verification and compatibility](../VERIFICATION.md) for package hashes,
 runtime checks, and limitations. Keep capture details here rather than pinning
