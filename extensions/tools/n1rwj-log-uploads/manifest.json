@@ -1,0 +1,28 @@
+{
+  "key": "n1rwj-log-uploads",
+  "name": "N1RWJ LoTW Uploads",
+  "shortName": "LoTW Uploads",
+  "version": "0.21.0",
+  "description": "LoTW upload development using Ham2K’s transfer workflow.",
+  "category": "exports",
+  "icon": "cloud-upload-outline",
+  "api": 28,
+  "keywords": ["lotw", "logbook", "transfer", "tq8", "upload"],
+  "hooks": ["transfer", "settingsPanel"],
+  "settings": {
+    "section": "exports",
+    "sidebar": false
+  },
+  "domains": [],
+  "sharedDependencies": {
+    "@ham2k/lib-callsigns": "^1.0.2",
+    "@ham2k/lib-country-files": "^1.0.202605301",
+    "@ham2k/lib-dxcc-data": "^1.0.1",
+    "@ham2k/lib-format-tools": "^1.2.0",
+    "@ham2k/lib-geo-tools": "^1.1.1",
+    "@ham2k/lib-operation-data": "^1.1.3",
+    "@ham2k/lib-qson-cabrillo": "^1.2.0",
+    "i18next": "^23.16.8",
+    "liquidjs": "^10.28.0"
+  }
+}

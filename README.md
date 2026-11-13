@@ -23,6 +23,10 @@ The [PSK Reporter extension](extensions/tools/n1rwj-psk-reporter/README.md)
 uses live MQTT reception and shares the native reception panel with RBN.
 Both extensions require Ham2K extension API 25.
 
+The unreleased [LoTW upload work](extensions/tools/n1rwj-log-uploads/README.md)
+targets HaLo’s transfer workflow. QRZ uploads use the official QRZ extension.
+See the [host evaluation](docs/LOG-UPLOAD-EVALUATION.md) for remaining work.
+
 ## Install
 
 Open **Settings → Extensions & Features** in Ham2K Power Logger. Search for
