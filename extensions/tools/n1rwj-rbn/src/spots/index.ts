@@ -308,6 +308,7 @@ export function createRbnSpots(options: Options) {
     merging: { spotAllowMerging: true },
     mode: { spotMode: 'all' },
     speed: { spotMinWpm: '', spotMaxWpm: '' },
+    snr: { spotMinCwSnrDb: '' },
     skimmers: { spotSkimmers: '' },
     grids: { spotGrids: '' },
     distance: { spotRadiusGrid: '', spotRadiusMiles: '' },
@@ -355,6 +356,7 @@ export function createRbnSpots(options: Options) {
     resetAllSpotSettings: (_args: unknown, _ctx: HookContext) => reset('all'),
     resetSpotMode: (_args: unknown, _ctx: HookContext) => reset('mode'),
     resetSpotSpeed: (_args: unknown, _ctx: HookContext) => reset('speed'),
+    resetSpotSnr: (_args: unknown, _ctx: HookContext) => reset('snr'),
     resetSpotSkimmers: (_args: unknown, _ctx: HookContext) => reset('skimmers'),
     resetSpotGrids: (_args: unknown, _ctx: HookContext) => reset('grids'),
     resetSpotContinents: (_args: unknown, _ctx: HookContext) => reset('continents'),
@@ -415,7 +417,8 @@ export function createRbnSpots(options: Options) {
                 ? [...new Set(value as string[])]
                 : fieldKey === 'spotRadiusMiles' ||
                     fieldKey === 'spotMinWpm' ||
-                    fieldKey === 'spotMaxWpm'
+                    fieldKey === 'spotMaxWpm' ||
+                    fieldKey === 'spotMinCwSnrDb'
                   ? value === null || String(value).trim() === ''
                     ? ''
                     : Number(value)

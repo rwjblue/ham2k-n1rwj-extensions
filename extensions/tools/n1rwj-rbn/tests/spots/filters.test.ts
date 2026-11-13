@@ -60,6 +60,26 @@ it('validates saved and edited filters without silently treating bad settings as
   expect(readPreferences({ spotGrids: 'fn, FN' }).grids).toEqual(['FN'])
 })
 
+it('supports signed and zero CW SNR minimums without treating unknown SNR as zero', () => {
+  const reports = parseReports(
+    [row({ snr: -2.5 }), row({ callsign: 'N2ABC', snr: 0 }), row({ callsign: 'N3ABC' })],
+    'rbn',
+    now,
+  )
+  const calls = (minimum: unknown) =>
+    selectSpots(reports, readPreferences({ spotMinCwSnrDb: minimum }), () => undefined, now).map(
+      ({ their }) => their.call,
+    )
+
+  expect(calls('-2.5')).toEqual(['K1ABC', 'N2ABC'])
+  expect(calls(0)).toEqual(['N2ABC'])
+  expect(calls(null)).toEqual(['K1ABC', 'N2ABC', 'N3ABC'])
+  expect(calls('')).toEqual(['K1ABC', 'N2ABC', 'N3ABC'])
+  for (const value of [false, [], '10 dB', 'Infinity', NaN, Infinity]) {
+    expect(validation('spotMinCwSnrDb', value)).toBeTruthy()
+  }
+})
+
 it('keeps UNKNOWN reports and matches their receiver ID and cached directory grid in Spots', () => {
   const directory = createReceiverData()
   directory.dataFile.onLoadRawData({

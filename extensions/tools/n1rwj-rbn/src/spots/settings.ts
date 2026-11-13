@@ -79,7 +79,7 @@ export function settingsDefinition(
         options: spotModes.map((value) => ({ label: value === 'all' ? 'All' : value, value })),
       },
       reset('resetSpotMode', 'Reset mode — All'),
-      { type: 'header', style: 'section', key: 'rbn-speed', title: 'CW speed range' },
+      { type: 'header', style: 'section', key: 'rbn-speed', title: 'CW filters' },
       {
         type: 'field',
         fieldType: 'number',
@@ -100,6 +100,17 @@ export function settingsDefinition(
         value: raw.spotMaxWpm ?? '',
       },
       reset('resetSpotSpeed', 'Reset CW speed range — No limits'),
+      {
+        type: 'field',
+        fieldType: 'number',
+        key: 'spotMinCwSnrDb',
+        label: 'Minimum CW SNR (dB)',
+        description:
+          'Show CW reports at or above this skimmer reading. Reports with unknown SNR are hidden while a minimum is set. Leave blank for no minimum.',
+        placeholder: 'No minimum',
+        value: raw.spotMinCwSnrDb ?? '',
+      },
+      reset('resetSpotSnr', 'Reset CW SNR — No minimum'),
       { type: 'header', style: 'section', key: 'rbn-receivers', title: 'Receivers' },
       {
         type: 'field',

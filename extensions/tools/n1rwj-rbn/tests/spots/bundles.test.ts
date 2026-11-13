@@ -493,6 +493,28 @@ it('persists CW speed bounds across bundle restarts and rejects stale crossing e
   expect(results.map((result) => result.status)).toEqual(['fulfilled', 'rejected'])
 })
 
+it('persists the optional CW SNR minimum and filters Vail reports inclusively in the bundle', async () => {
+  const runtime = await harness()
+  const panelKey = 'n1rwj-rbn'
+  const fieldKey = 'spotMinCwSnrDb'
+  const ctx = { online: true }
+  const form = await runtime.settings.getDefinition({ panelKey }, ctx)
+  expect(form.elements).toContainEqual(
+    expect.objectContaining({ key: fieldKey, fieldType: 'number', value: '' }),
+  )
+
+  const edit = (value: JSONValue) =>
+    runtime.settings.onChangeField({ panelKey, fieldKey, value, state: {} }, ctx)
+  await edit('19')
+  expect(runtime.preferences['extension_n1rwj-rbn']).toEqual({ [fieldKey]: 19 })
+  expect(await (await harness(runtime.preferences)).fetch()).toEqual([])
+  await expect(edit('invalid')).rejects.toThrow('Enter a number')
+  await edit(18)
+  expect(await runtime.fetch()).toHaveLength(3)
+  await edit(null)
+  expect(runtime.preferences['extension_n1rwj-rbn']).toEqual({ [fieldKey]: '' })
+})
+
 it('resets all spot settings in the bundle while preserving reception caches and unrelated values', async () => {
   const runtime = await harness({
     'extension_n1rwj-rbn': {
@@ -500,6 +522,7 @@ it('resets all spot settings in the bundle while preserving reception caches and
       spotMode: 'CW',
       spotMinWpm: 30,
       spotMaxWpm: 20, // Reset repairs inconsistent saved pairs.
+      spotMinCwSnrDb: 12,
       spotSkimmers: 'KM3T-5',
       spotGrids: 'FN',
       spotContinents: ['NA'], // A preference from before continent memory existed.
@@ -531,6 +554,7 @@ it('resets all spot settings in the bundle while preserving reception caches and
     spotMode: 'all',
     spotMinWpm: '',
     spotMaxWpm: '',
+    spotMinCwSnrDb: '',
     spotSkimmers: '',
     spotGrids: '',
     spotContinents: ['NA'],
@@ -551,6 +575,7 @@ it('each bundled reset changes only its filter and displays the persisted defaul
     spotMode: 'CW',
     spotMinWpm: 10,
     spotMaxWpm: 20,
+    spotMinCwSnrDb: 12,
     spotSkimmers: 'KM3T-5',
     spotGrids: 'FN',
     spotContinents: ['EU'],
@@ -561,6 +586,7 @@ it('each bundled reset changes only its filter and displays the persisted defaul
   const cases: [ResetMethod, Record<string, JSONValue>][] = [
     ['resetSpotMode', { spotMode: 'all' }],
     ['resetSpotSpeed', { spotMinWpm: '', spotMaxWpm: '' }],
+    ['resetSpotSnr', { spotMinCwSnrDb: '' }],
     ['resetSpotSkimmers', { spotSkimmers: '' }],
     ['resetSpotGrids', { spotGrids: '' }],
     ['resetSpotContinents', { spotContinents: ['NA'], spotLastContinents: ['NA'] }],

@@ -41,6 +41,13 @@ export function validation(key: string, value: unknown): string | null {
       ? null
       : 'Enter a positive whole-number CW speed in WPM, or leave blank for no limit.'
   }
+  if (key === 'spotMinCwSnrDb') {
+    if (value === null || (typeof value === 'string' && !value.trim())) return null
+    return (typeof value === 'number' || typeof value === 'string') &&
+      Number.isFinite(Number(value))
+      ? null
+      : 'Enter a number in dB, or leave blank for no minimum.'
+  }
   if (key === 'spotContinents')
     return Array.isArray(value) &&
       value.length <= 7 &&
@@ -76,15 +83,15 @@ export function validation(key: string, value: unknown): string | null {
       ? 'Use exact receiver IDs, such as KM3T-5 or UNKNOWN.'
       : 'Use Maidenhead regions such as FN, EM, JO, or FN42.'
 }
-function speedBound(value: unknown): number | undefined {
+function optionalNumber(value: unknown): number | undefined {
   return value === undefined || value === null || String(value).trim() === ''
     ? undefined
     : Number(value)
 }
 
 export function speedIssue(raw: Record<string, unknown>): string | null {
-  const min = speedBound(raw.spotMinWpm)
-  const max = speedBound(raw.spotMaxWpm)
+  const min = optionalNumber(raw.spotMinWpm)
+  const max = optionalNumber(raw.spotMaxWpm)
   return min !== undefined && max !== undefined && min > max
     ? 'Minimum CW speed must not exceed maximum CW speed.'
     : null
@@ -129,6 +136,7 @@ export function readPreferences(raw: Record<string, unknown>): SpotPreferences {
     'spotRadiusMiles',
     'spotMinWpm',
     'spotMaxWpm',
+    'spotMinCwSnrDb',
   ]) {
     if (raw[key] !== undefined && validation(key, raw[key]))
       throw new Error(`Invalid saved RBN setting: ${key}. Correct it in RBN settings.`)
@@ -138,13 +146,15 @@ export function readPreferences(raw: Record<string, unknown>): SpotPreferences {
   const [latitude, longitude] = receiverLocation(raw.spotRadiusGrid)
   const distanceOrigin =
     latitude !== null && longitude !== null ? { latitude, longitude } : undefined
-  const min = speedBound(raw.spotMinWpm)
-  const max = speedBound(raw.spotMaxWpm)
+  const min = optionalNumber(raw.spotMinWpm)
+  const max = optionalNumber(raw.spotMaxWpm)
+  const minCwSnrDb = optionalNumber(raw.spotMinCwSnrDb)
   return {
     mode: String(raw.spotMode ?? 'all'),
     skimmers: tokens(String(raw.spotSkimmers ?? '')),
     grids: tokens(String(raw.spotGrids ?? '')),
     ...(min !== undefined || max !== undefined ? { cwSpeed: { min, max } } : {}),
+    ...(minCwSnrDb !== undefined ? { minCwSnrDb } : {}),
     continents: [
       ...new Set((raw.spotContinents as NonNullable<ReceiverSelection['continents']>) ?? []),
     ],

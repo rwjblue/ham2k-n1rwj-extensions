@@ -101,6 +101,12 @@ Open **Settings → Spotting → RBN → Spots — Who I might hear** to choose:
   measured speed. Spots keeps using the live feed and can show those reports
   with **WPM unknown**. Vail reports need a measured speed to pass an active
   range. Speed filtering runs before duplicate reports are collapsed.
+- **Minimum CW SNR (dB):** optional minimum measured at the skimmer. A report
+  exactly at the cutoff qualifies. The cutoff applies to CW from the live
+  cluster and Vail, including in **All** mode, before Spots picks one report
+  per station, band, and mode. While the minimum is set, CW reports with
+  unknown SNR are hidden. Clear the field or use **Reset CW SNR** to show
+  reports at any SNR again.
 - **Only these skimmers:** exact reported IDs, for example `KM3T` or `KM3T-2`.
   Live comparison found that Vail omits numeric node suffixes: `KM3T-2`
   and `KM3T-3` requests return no reports, while `KM3T` includes the receiver
@@ -127,7 +133,7 @@ Open **Settings → Spotting → RBN → Spots — Who I might hear** to choose:
   clearing its origin. Distances use the great-circle path between grid centers.
 
 **Reset all spot settings**, at the top of that section, turns merging back on,
-restores **All** modes, clears the speed, skimmer, grid and distance limits, and
+restores **All** modes, clears the speed, SNR, skimmer, grid and distance limits, and
 restores the local or last nonempty receiver-continent selection. It also clears
 the distance origin. The defaults are listed beside the reset control.
 

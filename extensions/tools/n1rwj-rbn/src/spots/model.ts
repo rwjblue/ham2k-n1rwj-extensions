@@ -79,6 +79,7 @@ export interface ReceiverSelection {
   distanceOrigin?: Coordinates
   radius?: { origin: Coordinates; miles: number }
   cwSpeed?: { min?: number; max?: number }
+  minCwSnrDb?: number
 }
 export type ReceiverLookup = (
   call: string,
@@ -101,7 +102,7 @@ function spotLabel(
   return parts.join(' · ') || 'RBN'
 }
 
-/** Filter receivers, then pick the closest report for each station, band, and mode. */
+/** Filter reports, then pick the closest one for each station, band, and mode. */
 export function selectSpots(
   reports: readonly Spot[],
   receivers: ReceiverSelection,
@@ -117,6 +118,10 @@ export function selectSpots(
   for (const report of reports) {
     if (report.spot.timeInMillis < now - maxAgeMs || report.spot.timeInMillis > now) continue
     const info = report.spot.sourceInfo ?? {}
+    if (report.mode === 'CW' && receivers.minCwSnrDb !== undefined) {
+      const snr = info.snr
+      if (typeof snr !== 'number' || !Number.isFinite(snr) || snr < receivers.minCwSnrDb) continue
+    }
     let unknownCwSpeed = false
     if (report.mode === 'CW' && receivers.cwSpeed) {
       const speed = info.wpm

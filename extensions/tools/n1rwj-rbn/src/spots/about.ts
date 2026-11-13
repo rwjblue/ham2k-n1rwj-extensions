@@ -26,12 +26,16 @@ export function rbnAboutDefinition(): FormDefinition {
       },
       {
         type: 'markdown',
-        text: 'Resetting Spots allows merging and restores all modes, CW speeds, skimmers, and grid regions. It clears the distance limit and origin grid. Receiver-continent defaults use the local suggestion, then your last nonempty selection. Resetting Spots preserves export-file preferences and My Signal settings.',
+        text: 'Resetting Spots allows merging and restores all modes, skimmers, and grid regions. It clears the CW speed and SNR limits, distance limit, and origin grid. Receiver-continent defaults use the local suggestion, then your last nonempty selection. Resetting Spots preserves export-file preferences and My Signal settings.',
       },
-      { type: 'divider', title: 'CW speed range' },
+      { type: 'divider', title: 'CW filters' },
       {
         type: 'markdown',
         text: 'Leave either end blank for an open-ended range. Limits include the entered speeds and apply only to CW, including in All mode. Live cluster spots without a measured speed can still appear. Vail reports need a known speed to pass an active range.',
+      },
+      {
+        type: 'markdown',
+        text: 'Minimum CW SNR applies to both live and Vail CW reports, including in All mode. A report at or above the minimum qualifies. Reports with unknown SNR are hidden while a minimum is set. Spots chooses among the qualifying reports for each station, band, and mode.',
       },
       { type: 'divider', title: 'Receivers and distance' },
       {

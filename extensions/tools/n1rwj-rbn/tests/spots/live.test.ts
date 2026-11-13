@@ -161,6 +161,43 @@ it('prefers a fresh digital-only cluster in All with a CW speed range', async ()
   expect(s.fetch).toHaveBeenCalledTimes(1)
 })
 
+it('reselects qualifying CW reports from live and cached Spots when the SNR minimum changes', async () => {
+  const s = fixture({ spotMode: 'all', spotRadiusGrid: 'FN42' })
+  s.update({
+    state: 'connected',
+    lastSpotsReportAt: { all: start, CW: start, FT8: start },
+    reports: [
+      s.report({ snrDb: 8 }),
+      s.report({ id: 'cluster/2', receiver: 'K5ABC' }),
+      s.report({ id: 'cluster/3', call: 'W2AW', snrDb: null }),
+      s.report({ id: 'cluster/4', mode: 'FT8', snrDb: -14 }),
+    ],
+  })
+  const summary = (spots: Spot[] | undefined) =>
+    spots?.map(({ their, mode, spot }) => [their.call, mode, spot.sourceInfo?.snr ?? null])
+  const all = [
+    ['W1AW', 'CW', 8],
+    ['W2AW', 'CW', null],
+    ['W1AW', 'FT8', -14],
+    ['K1ABC', 'CW', null], // Cached Vail report
+  ]
+  expect(summary(await s.fetchBoard())).toEqual(all)
+
+  await s.edit('spotMinCwSnrDb', 10)
+  await vi.advanceTimersByTimeAsync(300)
+  const passing = [
+    ['W1AW', 'CW', 10],
+    ['W1AW', 'FT8', -14],
+  ]
+  expect(summary(s.publishSpots.mock.lastCall?.[0])).toEqual(passing)
+  expect(summary(await s.fetchBoard())).toEqual(passing)
+
+  await s.edit('spotMinCwSnrDb', '')
+  await vi.advanceTimersByTimeAsync(300)
+  expect(summary(s.publishSpots.mock.lastCall?.[0])).toEqual(all)
+  expect(s.fetch).toHaveBeenCalledTimes(1)
+})
+
 it('primes Vail, pushes live reports, and resumes Vail after a disconnect without discarding recent reports', async () => {
   const s = fixture()
   s.update({ state: 'connected', lastReportAt: { CW: start }, reports: [s.report()] })
