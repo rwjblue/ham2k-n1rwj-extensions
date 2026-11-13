@@ -9,7 +9,7 @@ export type ClusterSetupHost = Pick<typeof host, 'clusterStatus' | 'clusterLines
   Partial<Pick<typeof host, 'log'>>
 
 const retryMs = 120_000
-const promptLine = /^\s*\S+\s+de\s+.+>\s*$/i
+const promptLine = /^\s*\S+\s+de\s.+>\s*$/i
 const refusal =
   /^\s*(?:sorry|error|invalid|unknown command|unrecogni[sz]ed command|not allowed|permission denied|you (?:are not|need))\b/i
 
