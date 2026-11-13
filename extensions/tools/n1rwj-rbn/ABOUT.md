@@ -1,12 +1,21 @@
-See where the Reverse Beacon Network hears your CW, RTTY, FT8, and FT4 signals.
-Add **My Signal** to an operation for a receiver map and sortable reports. The
-panel follows the operation's station callsign and location by default.
+Call CQ and see which Reverse Beacon Network skimmers heard you. Add **My Signal**
+to your operation’s layout for a map and sortable list of CW, RTTY, FT8, and FT4
+reports, including the signal-to-noise ratio at each receiver. The panel follows
+the operation’s callsign and location by default.
 
-Enable **RBN** in **Spots** to find stations heard by selected receivers. In
-**Settings → Spotting → RBN**, choose modes, CW speeds, skimmers, receiver
-regions, and distance limits. RBN can use your device location to suggest a
-receiver continent. Fresh reports require internet access. [Vail ReRBN](https://vailrerbn.com/)
+Select **RBN** in **Spots** to see what your chosen skimmers are hearing. Under
+**Settings → Spotting → RBN**, filter by receiver, region, distance, mode, or
+CW speed. RBN can use your device location to suggest a receiver continent.
 
-Open the operation's **Exports** view for an offline HTML report with receiver
-maps, UTC SNR timelines, and contact context. Turn on **Save reception evidence**
-in My Signal's panel settings to collect observations for a future report.
+Fresh reports require internet access. For live spots, choose a DX cluster
+node that forwards skimmer reports. RBN asks for permission to send setup
+commands, which can reset saved spot filters for your login on supported nodes.
+Vail ReRBN supplies recent history and fills in when the cluster feed is
+unavailable.
+
+To keep a record of an activation, turn on **Save reception evidence** in My
+Signal before you start. It collects reports while the panel is visible. Open
+the operation’s **Exports** view for an offline HTML report with maps, signal
+levels over time, and contact context.
+
+[Reverse Beacon Network](https://www.reversebeacon.net/) · [Vail ReRBN](https://vailrerbn.com/)

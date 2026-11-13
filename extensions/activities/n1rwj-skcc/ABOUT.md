@@ -1,12 +1,14 @@
-Recognize Straight Key Century Club members, log manual-key exchanges, and review
-your progress toward club awards. This independent N1RWJ extension includes
-everyday SKCC operation and event profiles such as WES, SKS, and K3Y.
+If you operate with a straight key, bug, or sideswiper, SKCC Companion helps you
+log Straight Key Century Club contacts in Ham2K. Add **SKCC contacts and hunting**
+to your operation or pick an event such as WES, SKS, or K3Y. Set your usual
+exchange under **Settings → Activities → SKCC Companion**.
 
-Download **SKCC member roster** in **Data Files** for offline member lookups and
-exchange suggestions. Set your usual exchange in **Settings → Activities → SKCC
-Companion**. Add the **SKCC Companion** panel to see recent member spots and
-progress in the operation.
+Download the **SKCC member roster** in **Data Files** and Ham2K can suggest a name,
+location, and member number even offline. Log the exchange you actually copy.
+The optional companion panel shows recent member spots and your progress in the
+operation. For the unassisted SKS, operate with spots, chasing, and sked assistance
+turned off. [Straight Key Sprint rules](https://www.skccgroup.com/operating_activities/weekday_sprint/)
 
-Use a complete ADIF export to audit historical award progress and prepare
-worksheets for review. SKS is unassisted. Turn off spots, chasing, and sked
-assistance for that event. [SKCC rules and awards](https://www.skccgroup.com/)
+If you’re working toward Centurion, Tribune, or Senator, analyze a complete ADIF
+export to see which contacts count and make a worksheet to review before applying.
+This is an independent extension by N1RWJ. [SKCC activities and awards](https://www.skccgroup.com/)

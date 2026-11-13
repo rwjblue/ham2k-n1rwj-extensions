@@ -1,10 +1,13 @@
-Recognize Brass Knuckle Gang members in **Info**, find members recently spotted,
-and track the gang you've worked. The **BKG** panel shows your member card and
-progress in the operation. Add it through **Edit Layout → Add a Panel**.
+The Brass Knuckle Gang is a club for 2-meter CW operators. BKG Companion brings
+the club’s public roster into Ham2K, so **Info** can show a member’s name and BKG
+number as you log their call on any band or mode. Ham2K keeps a copy of the roster
+for offline use in **Data Files**.
 
-Choose **Worked the Gang** in native Chasing for a lifetime checklist. Credit is
-for 2 m CW contacts. Member lookups work on any band and mode. The panel requests
-read-only radio access to show your dial and mode beside the 2 m CW guidance.
+Pick **Worked the Gang** in **Chasing** to see how many members you’ve worked
+over time. Anyone can hunt, and only 2-meter CW contacts count.
 
-Ham2K's **Data Files** manager downloads the public membership roster for offline
-use. Members and prospective members can use the checklist. [Brass Knuckle Gang](https://www.bkg.club/)
+Add the **BKG** panel to your layout for recent member spots, your member card,
+and a count of the members you’ve worked in the current operation. The panel uses
+read-only access to show a connected radio’s frequency and mode.
+
+[Brass Knuckle Gang roster and joining info](https://www.bkg.club/)
