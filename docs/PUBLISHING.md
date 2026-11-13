@@ -21,6 +21,20 @@ bundle is public. Historical GitHub releases remain available.
 
 ## Current release status
 
+[v0.20.0](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.20.0)
+was published from signed main commit `4df31137c4aae2760cf391fd2e5ef0cb7a88b126`
+on **November 12, 2026 at 21:41:57 US Eastern (November 13 at 02:41:57 UTC)**.
+The [Check workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/43353872562)
+and both [Release jobs](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/43353967226)
+passed. GitHub has all thirteen bundles and their checksums. The downloaded
+assets passed `mise run release:catalog v0.20.0 --dry-run`, and the GitHub
+body matches [the authored notes](releases/v0.20.0.md).
+
+All thirteen stable catalog submissions were accepted for review. See the
+[verification record](VERIFICATION.md#release-0200-publication--2026-11-12).
+
+### Previous releases
+
 [v0.19.0](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.19.0)
 was published from signed main commit `a25009e7610f85ea07b22f852b067f8d69ae7bc8`
 on **November 11, 2026 at 08:44:00 US Eastern (13:44:00 UTC)**.
@@ -36,8 +50,6 @@ at 14:46 US Eastern (19:46 UTC). Their public bundle sizes and checksums
 match GitHub. The independently submitted RBN gallery is live with three
 images. See the
 [verification record](VERIFICATION.md#release-0190-publication--2026-11-11).
-
-### Previous releases
 
 [v0.18.4](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.18.4)
 was published from signed main commit `8c0346ef64b1fff64d05efe83cd9c295c8ee1ed6`

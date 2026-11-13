@@ -1,5 +1,17 @@
 # Verification and compatibility
 
+## Release 0.20.0 publication — 2026-11-12
+
+Published [v0.20.0](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.20.0)
+at **21:41:57 US Eastern on November 12 (02:41:57 UTC on November 13)** from
+signed main commit `4df31137c4aae2760cf391fd2e5ef0cb7a88b126`.
+[Check](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/43353872562)
+passed for that commit. The [Release workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/43353967226)
+uploaded thirteen archives and checksums and submitted all thirteen bundles
+to stable. The catalog accepted all submissions for review. The GitHub body
+matches `docs/releases/v0.20.0.md`, and the downloaded assets passed
+`mise run release:catalog v0.20.0 --dry-run`.
+
 ## Live RBN release candidate — 2026-11-12
 
 The [Check workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/43352599732)
@@ -17,8 +29,12 @@ text and match their SHA-256 files.
   responses. After the freshness fix, RBN parsed all 19 W3LPL CW lines in
   the solo run and all 21 in the shared run, each over two minutes.
 - `mise run verify-host n1rwj-rbn` registered all seven hooks in the installed
-  Next 26.11.0 build 193 JavaScript kernel under Node VM. The catalog upgrade
-  and command-consent prompt still need a native UI check.
+  Next 26.11.0 build 193 JavaScript kernel under Node VM.
+- Two isolated native Flutter tests used the published RBN 0.19.0 archive
+  and the locally packed 0.20.0 candidate. Update All prompted for DX cluster
+  command permission. Cancel kept 0.19.0, and accepting installed 0.20.0.
+  The install service preserved saved mode, skimmer, continent, grid, and
+  distance settings.
 
 ## Release 0.19.0 publication — 2026-11-11
 
