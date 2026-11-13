@@ -31,10 +31,10 @@ The downloaded assets passed `mise run release:catalog v0.19.0 --dry-run`,
 and the GitHub body matches [the authored notes](releases/v0.19.0.md).
 
 All thirteen stable submissions initially returned **pending review**.
-Eleven went live on November 11. Their public bundle sizes and checksums
-match GitHub. RBN and PSK Reporter still served their previous approved
-versions at the last check. The independently submitted RBN gallery is
-live with three images. See the
+All thirteen were approved on November 11, including RBN and PSK Reporter
+at 14:46 US Eastern (19:46 UTC). Their public bundle sizes and checksums
+match GitHub. The independently submitted RBN gallery is live with three
+images. See the
 [verification record](VERIFICATION.md#release-0190-publication--2026-11-11).
 
 ### Previous releases

@@ -1,5 +1,25 @@
 # Verification and compatibility
 
+## Live RBN release candidate — 2026-11-12
+
+The [Check workflow](https://github.com/rwjblue/ham2k-n1rwj-extensions/actions/runs/43352599732)
+passed on signed main commit `4d6d38a2cd4dfc641fa86caaba2f8b2352b0ca32`.
+It ran 2,037 tests in 156 files, lint, strict typechecking, and 13 official
+builds and packages. All 13 CI archives contain their current catalog About
+text and match their SHA-256 files.
+
+- Native PoLo loopback tests published CW spots for AR-Cluster, DXSpider,
+  and CC Cluster with RBN alone, and for CC Cluster with Cluster Spots also
+  enabled. Both extensions used one Telnet connection in the combined test.
+- `mise run rbn:test-cluster-presets` passed on all five public presets
+  with RBN alone and with the pinned Cluster Spots bundle. The harness
+  counted live CW lines after setup and the history reply, with empty Vail
+  responses. After the freshness fix, RBN parsed all 19 W3LPL CW lines in
+  the solo run and all 21 in the shared run, each over two minutes.
+- `mise run verify-host n1rwj-rbn` registered all seven hooks in the installed
+  Next 26.11.0 build 193 JavaScript kernel under Node VM. The catalog upgrade
+  and command-consent prompt still need a native UI check.
+
 ## Release 0.19.0 publication — 2026-11-11
 
 Published [v0.19.0](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.19.0)
@@ -12,8 +32,14 @@ All submissions initially returned **pending review**. The GitHub notes
 match `docs/releases/v0.19.0.md`, and the downloaded archives and checksums
 passed the catalog dry run. Eleven bundles went live on stable between
 13:46 and 13:51 UTC. All eleven public bundle downloads matched GitHub's
-sizes and SHA-256 digests. RBN and PSK Reporter still served the preceding
-approved releases at the last check.
+sizes and SHA-256 digests. The two later approvals completed all thirteen
+stable submissions on November 11. The catalog metadata for both matches
+the corresponding GitHub asset sizes and SHA-256 digests.
+
+| Extension | Stable approval (UTC) | Bundle bytes | SHA-256 |
+| --- | --- | ---: | --- |
+| [RBN](https://catalog.ham2k.net/api/v1/extensions/n1rwj-rbn?channel=stable) | 19:46:33.786 | 324,362 | `6b38cfc5e26c604ffb4e87dff008cabe65586b757f34fbe6b4fb8e82b66e2ebd` |
+| [PSK Reporter](https://catalog.ham2k.net/api/v1/extensions/n1rwj-psk-reporter?channel=stable) | 19:46:37.514 | 291,633 | `249986cca58eb904babaae179c34d9558d584e9fadd4a636657cbc536b938c7e` |
 
 - `mise run check` and the release dry run passed 1,960 tests in 151 files,
   strict typechecking, lint, and 13 official builds and packages.

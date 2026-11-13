@@ -124,7 +124,7 @@ distance limit in miles from your chosen grid. RBN ignores **Station filter**
 selections saved by earlier versions. Filtering by the current operation's
 contest or roster awaits native HaLo support.
 
-This release requires Ham2K extension API 21. Live updates use the node
+RBN 0.20.0 requires Ham2K extension API 21. Live updates use the node
 selected in **Settings → DX Cluster** when it forwards RBN skimmer spots.
 See the [verification record](docs/VERIFICATION.md) for tested builds.
 
