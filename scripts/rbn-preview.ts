@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { dirname, join, resolve } from 'node:path'
+import { setImmediate as settleHostCalls } from 'node:timers/promises'
 import type {
   PanelEnvironment,
   PanelScene,
@@ -163,16 +164,22 @@ export function scenePreviewSvg(
   // Schematic rectangles communicate reserved space; these are not Material
   // widget renderings. Layout-only controls require an actual native preview.
   for (const [index, control] of (scene.controls ?? []).entries()) {
-    if (!control.kind.startsWith('native') || control.opacity === 0) continue
+    const nativeMap = control.kind === 'map'
+    if ((!nativeMap && !control.kind.startsWith('native')) || control.opacity === 0) continue
     const { x, y, width, height } = control
     if (x === undefined || y === undefined || width === undefined || height === undefined) continue
     const key = control.value ?? ''
     const value = scene.strings?.[key] ?? String(scene.values[key] ?? '')
     const selected = control.options?.find((option) => option.value === value)?.label ?? value
-    const caption = control.options ? `${control.label}: ${selected}` : control.label
+    const caption = nativeMap
+      ? 'Map rendered by HaLo'
+      : control.options
+        ? `${control.label}: ${selected}`
+        : control.label
+    const description = nativeMap ? 'native map placeholder' : 'schematic native control'
     const clip = `preview-control-${index}`
     layers.push(
-      `<g transform="translate(${x} ${y})"><title>${xml(control.label)} — schematic native control</title><defs><clipPath id="${clip}"><rect width="${width}" height="${height}"/></clipPath></defs><rect x=".5" y=".5" width="${width - 1}" height="${height - 1}" rx="8" fill="${environment.colors.surfaceContainer}" stroke="${environment.colors.outline}" stroke-dasharray="4 2"/><text x="12" y="${height / 2}" dominant-baseline="central" font-family="sans-serif" font-size="${environment.typography.label.scaledFontSize}" fill="${environment.colors.onSurface}" clip-path="url(#${clip})">${xml(caption)}</text></g>`,
+      `<g transform="translate(${x} ${y})"><title>${xml(control.label)} — ${description}</title><defs><clipPath id="${clip}"><rect width="${width}" height="${height}"/></clipPath></defs><rect x=".5" y=".5" width="${width - 1}" height="${height - 1}" rx="8" fill="${environment.colors.surfaceContainer}" stroke="${environment.colors.outline}" stroke-dasharray="4 2"/><text x="12" y="${height / 2}" dominant-baseline="central" font-family="sans-serif" font-size="${environment.typography.label.scaledFontSize}" fill="${environment.colors.onSurface}" clip-path="url(#${clip})">${xml(caption)}</text></g>`,
     )
   }
   const caption = [
@@ -259,6 +266,7 @@ export async function previewRbn(root: string, options: PreviewOptions): Promise
     readFile(join(extension.dir, 'build/index.js'), 'utf8'),
   ])
   const fetches: FetchRecord[] = []
+  const requests: Promise<unknown>[] = []
   const logs: string[] = []
 
   async function handleHostCall({ method, params }: KernelHostCall): Promise<unknown> {
@@ -277,6 +285,12 @@ export async function previewRbn(root: string, options: PreviewOptions): Promise
       3000,
       Math.max(1, typeof params?.timeout === 'number' ? params.timeout : 3000),
     )
+    const request = fetchReports(url, timeoutMs)
+    requests.push(request)
+    return request
+  }
+
+  async function fetchReports(url: URL, timeoutMs: number) {
     const started = performance.now()
     const record: FetchRecord = { url: url.href, durationMs: 0, timeoutMs }
     fetches.push(record)
@@ -325,8 +339,7 @@ export async function previewRbn(root: string, options: PreviewOptions): Promise
     sort: options.sort ?? 'age',
     direction: options.direction ?? 'desc',
   }
-  const renderStarted = performance.now()
-  const rendered = await host.invokeHook('panel', extension.manifest.key, 'render', {
+  const args = {
     panelKey,
     instanceId: `ext:${extension.manifest.key}:${panelKey}#preview`,
     environment,
@@ -335,9 +348,23 @@ export async function previewRbn(root: string, options: PreviewOptions): Promise
     qsoCount: 0,
     config,
     reason: 'preview',
-  })
-  const renderDurationMs = Math.round(performance.now() - renderStarted)
-  const panel = object(rendered)
+  }
+  let renderDurationMs = 0
+  async function render() {
+    const started = performance.now()
+    const content = await host.invokeHook('panel', extension.manifest.key, 'render', args)
+    renderDurationMs = Math.max(renderDurationMs, Math.round(performance.now() - started))
+    return object(content)
+  }
+  let panel = await render()
+  // The panel starts refresh in the background and ordinarily polls on a host
+  // tick. Capture the snapshot after the request settles in this one-shot CLI.
+  await settleHostCalls()
+  if (requests.length) {
+    await Promise.allSettled(requests)
+    await settleHostCalls()
+    panel = await render()
+  }
   if (!['scene', 'svgScene'].includes(String(panel?.kind)) || !object(panel?.scene))
     throw new Error(
       `RBN render did not return scene content: ${String(panel?.content ?? panel?.kind)}.`,
@@ -356,8 +383,9 @@ export async function previewRbn(root: string, options: PreviewOptions): Promise
   const sceneJson = `${JSON.stringify(scene, null, 2)}\n`
   const metadata = {
     scope:
-      'Installed Ham2K JavaScript kernel and built ES2020 extension under Node VM with a synthetic scene environment. Static SVG approximates native text/layers; native rendering, controls, fonts, and animation are not exercised. Kernel compatibility does not establish native scene support in the installed app.',
+      'Installed Ham2K JavaScript kernel and built ES2020 extension under Node VM with a synthetic scene environment. Static SVG approximates native text and layers and shows placeholders for HaLo maps. Rendering, controls, fonts, and animation in the installed app require separate verification.',
     ...installation,
+    extensionApi: extension.manifest.api,
     operation,
     config,
     environment,

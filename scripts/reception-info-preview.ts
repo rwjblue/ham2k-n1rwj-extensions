@@ -4,6 +4,7 @@ import type { PanelEnvironment, PanelRenderArgs, PanelScene } from '@ham2k/exten
 import type { LiveSnapshot } from '../extensions/tools/n1rwj-psk-reporter/src/live.ts'
 import type { RbnSnapshot } from '../extensions/tools/n1rwj-rbn/src/model.ts'
 import type { ReceptionReport } from '../packages/reception/src/reports.ts'
+import type { SceneSelection } from '../packages/reception/src/ui/scene.ts'
 import type { UiModel } from '../packages/reception/src/ui/types.ts'
 import { scenePreviewSvg } from './rbn-preview.ts'
 
@@ -25,7 +26,7 @@ export interface ReceptionPreviewRuntime {
   renderReceptionScene(
     model: UiModel,
     environment: PanelEnvironment,
-    selection: { details: true; detailsTab: DetailsTab; page: number },
+    selection: Partial<SceneSelection>,
     options: { nativeControls: true },
   ): { scene: PanelScene; pageCount: number }
 }
@@ -362,15 +363,28 @@ function overview(scenarios: RenderedScenario[]): string {
 }
 
 export async function previewReceptionInfo(
-  root: string,
+  output: string,
   runtime: ReceptionPreviewRuntime,
+  includeMaps = false,
 ): Promise<void> {
-  const output = join(root, 'docs/images/reception-info')
   await mkdir(output, { recursive: true })
   const rendered: RenderedScenario[] = []
   for (const scenario of scenarios) {
     const environment = previewEnvironment(scenario)
     const model = modelFor(scenario, environment, runtime)
+    if (includeMaps && (scenario.id === 'psk-phone' || scenario.id === 'rbn-desktop')) {
+      const { scene } = runtime.renderReceptionScene(
+        model,
+        environment,
+        { view: 'map' },
+        { nativeControls: true },
+      )
+      if (!scene.controls?.some((control) => control.kind === 'map'))
+        throw new Error(`Expected a native map in ${scenario.id}.`)
+      const mapPath = join(output, `${scenario.id}-map`)
+      await writeFile(`${mapPath}.svg`, scenePreviewSvg(scene, environment, scenario.source))
+      await writeFile(`${mapPath}.scene.json`, `${JSON.stringify(scene, null, 2)}\n`)
+    }
     const tabs: Record<DetailsTab, string[]> = { status: [], about: [] }
     for (const tab of ['status', 'about'] as const) {
       let pageCount = 1

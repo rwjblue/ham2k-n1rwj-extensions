@@ -47,20 +47,15 @@ describe('reception map palette', () => {
           accent: monochrome,
         },
         mapOptions: {
-          width: 640,
-          height: 400,
           origin: { latitude: 28, longitude: -81 },
           stations: [],
-          theme,
         },
       }
       const { scene } = renderReceptionScene(model)
-      const mapSvg = scene.layers
-        .filter((layer) => layer.id.startsWith('reception-map-'))
-        .map((layer) => layer.svg)
-        .join('')
-      expect(mapSvg).toContain(`fill="${theme.surface}"`)
-      expect(mapSvg).toContain(`fill="${theme.land}"`)
+      expect(scene.controls?.find((control) => control.kind === 'map')?.map).toMatchObject({
+        sea: theme.surface,
+        land: theme.land,
+      })
       expect(receptionMapTheme(brightness, monochrome).accent).toBe(theme.accent)
     })
   }

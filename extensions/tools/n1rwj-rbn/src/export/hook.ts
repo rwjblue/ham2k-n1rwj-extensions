@@ -11,7 +11,6 @@ import {
   renderEvidenceCsv,
   renderEvidenceHtml,
   renderEvidenceJson,
-  renderEvidenceMap,
   renderEvidenceMarkdown,
   renderEvidenceQsoCsv,
 } from './render.ts'
@@ -42,12 +41,6 @@ const formats = [
     label: 'RBN collected evidence',
     mime: 'application/json',
     render: renderEvidenceJson,
-  },
-  {
-    extension: 'svg',
-    label: 'RBN reception map',
-    mime: 'image/svg+xml',
-    render: renderEvidenceMap,
   },
   {
     extension: 'qso.csv',

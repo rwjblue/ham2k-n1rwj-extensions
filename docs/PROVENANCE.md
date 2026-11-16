@@ -274,28 +274,27 @@ and are delivered by the [Vail ReRBN HTTP API](https://vailrerbn.com/docs/endpoi
 which receives the CW/RTTY and FT8/FT4 streams. Vail ReRBN supplies receiver
 locations from HamDB registered callsign grids; these can differ from the actual
 skimmer locations, so map paths, distances, and bearings are estimates.
-Receivers without valid grids remain in the list. The bundled map uses
-Natural Earth geometry and ISC-licensed projection libraries; the
-[map attribution](https://github.com/rwjblue/ham2k-n1rwj-extensions/blob/main/packages/reception/assets/MAP_ATTRIBUTION.md)
-records their sources and retained notices. RBN does not change CWT behavior
-or participate in its temporary upstream synchronization.
+Receivers without valid grids remain in the list. Earlier releases bundled
+Natural Earth geometry and ISC-licensed projection libraries with their
+[attribution and notices](https://github.com/rwjblue/ham2k-n1rwj-extensions/blob/v0.20.1/packages/reception/assets/MAP_ATTRIBUTION.md).
+The live map now uses the native scene control introduced in
+[Ham2K/halo 5fef326](https://github.com/ham2k/halo/commit/5fef326a68bb0847a880bfa845103a9b37e68d21).
+RBN’s export keeps the offline report, tables, and machine-readable evidence.
 
 ### Shared reception code and PSK Reporter
 
-`packages/reception/` extracts the original N1RWJ RBN map, scene renderer,
-configuration, geography, and panel state. RBN and PSK Reporter
-consume that source in independent bundles; each retains the map notices.
+`packages/reception/` shares the reception model, scene renderer, configuration,
+distance and bearing calculations, and panel state between the independent RBN
+and PSK Reporter bundles.
 The PSK payload parser follows the [M0LTE MQTT feed documentation](https://www.mqtt.pskreporter.info/).
 Its original MQTT subscriber follows the [MQTT 3.1.1 specification](https://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html).
 The live build uses the published SDK 0.12.0 socket and timer contracts. The
 socket contract was first verified in
 [Ham2K/halo 17b15fdcafdd](https://github.com/ham2k/halo/commit/17b15fdcafdd).
-No SDK implementation is vendored. Normal reception packaging uses API 5 and
-published tools 0.8.0. The `scene` payload provides native Band, Sort, and info-tab
-choices around the retained SVG cartography and text layers. The extension does not
-submit reports or log QSOs.
-These reception-only changes and packaging work do not affect CWT behavior
-and are exempt from the upstream CWT synchronization requirement.
+The `scene` payload uses API 25 for maps and keeps the native Band, Sort, and
+info-tab controls. PSK Reporter only reads reception reports. Reception changes
+and the monorepo toolchain update are independent of CWT behavior and exempt
+from upstream CWT synchronization.
 
 ### Existing CWT operations and exchanges
 

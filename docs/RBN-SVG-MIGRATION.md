@@ -1,5 +1,8 @@
 # RBN native SVG migration and maintainer notes
 
+> Historical record of the bundled SVG implementation. Current versions use
+> [HaLo's native reception maps](NATIVE-RECEPTION-MAPS.md).
+
 > Timer update (2026-09-27): RBN now requires extension API 3. My Signal uses
 > host timers with 75-second placement leases and pauses on `onHide`. The
 > render-driven polling and SDK 0.5.0 limitations below describe the earlier
@@ -163,7 +166,7 @@ adequate text contrast against both fills.
 
 The additional geography is generated from checksum-verified Natural Earth
 v5.1.2 sources. Run `mise run rbn:geography`, then `mise run format` to regenerate
-it. The [map attribution](../packages/reception/assets/MAP_ATTRIBUTION.md)
+it. The [map attribution](https://github.com/rwjblue/ham2k-n1rwj-extensions/blob/v0.20.1/packages/reception/assets/MAP_ATTRIBUTION.md)
 records the source files, simplification and license. No tiles or new runtime
 network requests are required. See the [verification record](VERIFICATION.md)
 for the published package and the remaining native acceptance work.

@@ -2,7 +2,7 @@
 
 Enable N1RWJ RBN, use **My Signal** during your activation, then open the
 operation's **Exports** view. By default, RBN adds one file: an HTML reception
-report containing the maps, receiver timelines, collection history, and contact
+report containing receiver tables, signal timelines, collection history, and contact
 context together. It is selected by default and opens offline in a browser.
 
 For other workflows, open **Settings → Spotting → RBN → Exports → Additional export files**
@@ -16,14 +16,17 @@ filter resets preserve them.
 | Markdown summary | Readable receiver statistics and UTC quarter-hour timelines. |
 | Observation CSV | One row per distinct retained observation, with measurements, timestamps, and collection/location provenance. |
 | Collected-evidence JSON | Archived provider rows when available, normalized observations, retrieval attempts, warnings, and normalized contact context. |
-| SVG map | A portable text-based image of recorded receiver sites. |
 | Contact-context CSV | One row per contact, including matched receiver evidence or an explicit unmatched reason. |
 
 Exports read local evidence and cache;
 they do not start a history request or enable recording. ZIP and PNG need binary
 support in the host's extension export workflow, tracked in
-[HALO-757](https://cabo.ham2k.com/halo/c/757); SVG works through the existing text
-contract. The extension supplies content to Ham2K's normal save/share workflow.
+[HALO-757](https://cabo.ham2k.com/halo/c/757). Maps are available in My Signal.
+The [export hook](https://github.com/ham2k/halo/blob/83f5a1a77639098363d59bd3d159d26666fc418b/docs/extensions/import-export.md#export)
+returns file content, and the native map renderer is available inside panels.
+Use the observation CSV or collected-evidence JSON to plot recorded coordinates
+in a separate mapping tool. The old SVG choice is ignored on upgrade.
+The extension supplies content to Ham2K's normal save/share workflow.
 It does not create an ADIF contact or modify the log.
 
 ## What the report means
@@ -36,9 +39,8 @@ The report keeps bands and modes separate. SNR is most useful when compared
 at the same receiver, where antennas and noise are more consistent.
 
 A blank cell means no retained observation. It cannot establish that nobody
-heard you or that the band was closed. Maps connect estimated transmitter and
-receiver locations; the lines do not trace the ionospheric path or outline a
-coverage area. Current cached RBN directory grids take precedence over Vail's
+heard you or that the band was closed. Receiver distances and bearings use
+estimated transmitter and receiver locations. Current cached RBN directory grids take precedence over Vail's
 registered-address grids. The JSON retains the original provider grid when raw
 rows were archived and identifies the source of the displayed location. Cache
 snapshots retain only normalized coordinates; their original grids and provider
@@ -90,7 +92,7 @@ by the available collection interval. This is an approximate activation interval
 not an inferred CQ/PTT log. Undated operations can export a saved archive or
 rolling cache snapshot. Dated operations without observations offer a clearly
 empty report with guidance for future collection. Moving operation segments
-omit the single transmitter-origin map and distance summaries.
+omit measures from a single transmitter origin.
 
 All companion formats read one dataset, including cached directory coordinates,
 frozen when their options were offered, even if a visible panel or receiver
@@ -139,7 +141,7 @@ Their observations and contacts are
 synthetic and are labeled as such in every format. The complete fixture has
 39 observations at eight receivers; the partial fixture has fourteen
 observations and a failed historical retrieval. The sample generator explicitly
-requests every format, so every output folder includes all six formats.
+requests every format, so every output folder includes all five formats.
 A complete fixture demonstrates rendering and provenance; it does
 not claim that visible-panel recording produces complete activation evidence.
 
@@ -150,6 +152,3 @@ the SDK export workflow. Packaged sandbox tests cover hook registration and pane
 behavior. Browser previews can assess exported HTML separately from native
 Ham2K panels. Native Ham2K save/share, restart, background, and large-archive
 performance still need device acceptance.
-
-These runtime changes are confined to RBN and do not change release versions.
-No CWT or CQ WW behavior changes require an upstream backport.

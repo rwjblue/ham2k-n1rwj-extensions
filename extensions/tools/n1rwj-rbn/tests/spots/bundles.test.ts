@@ -334,7 +334,6 @@ it('offers one bundled reception report by default and persists only opted-in co
     'md',
     'csv',
     'json',
-    'svg',
     'qso.csv',
   ])
   for (const definition of definitions) {
@@ -348,7 +347,7 @@ it('offers one bundled reception report by default and persists only opted-in co
 it('rejects invalid companion-file preferences without changing bundled settings', async () => {
   const runtime = await harness({ 'extension_n1rwj-rbn': { unrelated: 42 } })
   const ctx = { online: false }
-  for (const value of ['json', ['zip'], ['html'], ['json', 42], null]) {
+  for (const value of ['json', ['zip'], ['svg'], ['html'], ['json', 42], null]) {
     const args = {
       panelKey: 'n1rwj-rbn',
       fieldKey: 'additionalExportFormats',

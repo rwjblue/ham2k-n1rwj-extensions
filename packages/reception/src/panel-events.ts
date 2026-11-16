@@ -1,4 +1,5 @@
 import type { PanelScene, PanelSceneEvent } from '@ham2k/extension-sdk'
+import { receptionMapId } from './map/native.ts'
 import type { PanelState } from './panel-state.ts'
 
 /** Bind only the controls actually rendered to this placement and identity. */
@@ -29,6 +30,15 @@ export function readPanelEvent(
   const prefix = `epoch:${state.epoch}:`
   if (!event.action.startsWith(prefix)) return
   const action = event.action.slice(prefix.length)
+  if (control.kind === 'map') {
+    const { gesture } = event
+    return event.phase === 'commit' &&
+      event.action === control.event &&
+      action === 'map:view' &&
+      (gesture === 'pan' || gesture === 'zoom' || gesture === 'reset')
+      ? { controlId: receptionMapId, action: `map:${gesture}` }
+      : undefined
+  }
   const nativeChoice = control.kind === 'nativeDropdown' || control.kind === 'nativeSegmented'
   let result: { controlId: string; action: string; strings?: Record<string, string> }
   if (nativeChoice) {

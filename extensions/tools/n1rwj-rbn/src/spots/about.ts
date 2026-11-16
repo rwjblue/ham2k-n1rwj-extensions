@@ -17,7 +17,7 @@ export function rbnAboutDefinition(): FormDefinition {
       { type: 'divider', title: 'Exports' },
       {
         type: 'markdown',
-        text: 'The HTML reception report includes maps, timelines, and contact context. By default it is the only RBN export. Select any additional export files in preferences, then reopen the operation’s Exports view to refresh the list. These choices apply across operations.',
+        text: 'The offline HTML reception report includes timelines, receiver summaries, and contact context. By default it is the only RBN export. Select any additional export files in preferences, then reopen the operation’s Exports view to refresh the list. These choices apply across operations.',
       },
       { type: 'divider', title: 'Spots — Who I might hear' },
       {

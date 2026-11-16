@@ -1,5 +1,7 @@
 import type { PanelRenderArgs, PanelScene, PanelSceneEvent } from '@ham2k/extension-sdk'
 import { describe, expect, it } from 'vitest'
+import { buildReceptionMap } from '../src/map/native.ts'
+import { receptionMapTheme } from '../src/map/theme.ts'
 import { bindPanelEvents, readPanelEvent } from '../src/panel-events.ts'
 import { applySceneEvent, createPanelStateStore } from '../src/panel-state.ts'
 
@@ -65,6 +67,58 @@ function scene(refreshKind: 'button' | 'nativeButton' = 'button'): PanelScene {
 }
 
 describe('placement scene events', () => {
+  it('uses current map gesture commits for camera state and rejects removed viewport events', () => {
+    const state = createPanelStateStore()(args)
+    const original = scene()
+    const mapOptions = {
+      context: 'all',
+      label: 'Reception map',
+      rectangle: { x: 0, y: 100, width: 500, height: 320 },
+      origin: { latitude: 41, longitude: -73 },
+      stations: [],
+      projection: 'regional' as const,
+      theme: receptionMapTheme('light'),
+    }
+    const initial = buildReceptionMap(mapOptions)
+    state.mapCamera = initial.camera
+    original.controls?.push(initial.control)
+    bindPanelEvents(state, original)
+    const pan: PanelSceneEvent = {
+      controlId: initial.control.id,
+      action: initial.control.event ?? '',
+      phase: 'commit',
+      gesture: 'pan',
+      sequence: 1,
+    }
+    expect(readPanelEvent(state, { ...pan, phase: 'activate' })).toBeUndefined()
+    expect(readPanelEvent(state, { ...pan, gesture: undefined })).toBeUndefined()
+    expect(readPanelEvent(state, { ...pan, controlId: 'band' })).toBeUndefined()
+    const first = readPanelEvent(state, pan)
+    if (!first) throw new Error('Missing committed map pan')
+    applySceneEvent(state, first.controlId, first.action)
+    expect(state.mapCamera?.moved).toBe(true)
+
+    const reset = readPanelEvent(state, { ...pan, gesture: 'reset', sequence: 2 })
+    if (!reset) throw new Error('Missing committed map reset')
+    applySceneEvent(state, reset.controlId, reset.action)
+    expect(state.mapCamera?.refit).toBe(true)
+    const remounted = buildReceptionMap({ ...mapOptions, previous: state.mapCamera })
+    expect(remounted.control.id).not.toBe(initial.control.id)
+    expect(remounted.camera.refit).toBeUndefined()
+    expect(remounted.camera.moved).toBeUndefined()
+    const replacement = scene()
+    replacement.controls?.push(remounted.control)
+    bindPanelEvents(state, replacement)
+    expect(readPanelEvent(state, pan)).toBeUndefined()
+    expect(
+      readPanelEvent(state, {
+        ...pan,
+        controlId: remounted.control.id,
+        action: remounted.control.event ?? '',
+      }),
+    ).toMatchObject({ controlId: 'reception-map', action: 'map:pan' })
+  })
+
   it('routes committed window strings to numeric placement state and rejects obsolete choices', () => {
     const stateFor = createPanelStateStore()
     const state = stateFor(args)

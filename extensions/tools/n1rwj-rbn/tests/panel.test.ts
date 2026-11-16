@@ -381,9 +381,7 @@ describe('RBN native panel integration', () => {
         )
       expect(sceneText(selected)).toContain('No 20m reports in this time window.')
       expect(sceneText(selected)).not.toContain('W1NT')
-      expect(
-        sceneState(selected).layers.some((layer) => layer.id.startsWith('reception-map-')),
-      ).toBe(false)
+      expect(sceneState(selected).controls?.some((control) => control.kind === 'map')).toBe(false)
       expect(getSnapshot).toHaveBeenLastCalledWith(
         { call: 'K8BTU', windowMinutes: 30 },
         { instanceId: args.instanceId, online: true, waitForRequest: false },
@@ -406,9 +404,7 @@ describe('RBN native panel integration', () => {
         view: 'both',
       })
       expect(sceneText(restored)).toContain('W1NT')
-      expect(
-        sceneState(restored).layers.some((layer) => layer.id.startsWith('reception-map-')),
-      ).toBe(true)
+      expect(sceneState(restored).controls?.some((control) => control.kind === 'map')).toBe(true)
       expect(phone.config).toEqual(args.config)
     },
   )
@@ -818,7 +814,18 @@ describe('RBN native panel integration', () => {
     await renderAt(45_000, 'config', { config: { ...args.config, view: 'list', band: '40m' } })
     // Placement/UI state can be recreated without losing the extension-wide client cache.
     panel = makePanel()
-    expect(await renderAt(59_999, 'initial', { instanceId: 'another-placement' })).toEqual(initial)
+    const reopened = await renderAt(59_999, 'initial', { instanceId: 'another-placement' })
+    expect(sceneText(reopened)).toBe(sceneText(initial))
+    const findMap = (content: typeof initial) =>
+      sceneState(content).controls?.find((control) => control.kind === 'map')
+    const initialMap = findMap(initial)
+    expect(initialMap).toBeDefined()
+    expect(findMap(reopened)).toMatchObject({
+      home: initialMap?.home,
+      zoom: initialMap?.zoom,
+      markers: initialMap?.markers,
+      lines: initialMap?.lines,
+    })
     expect(fetch).toHaveBeenCalledTimes(1)
     await renderAt(60_000, 'visible')
     expect(fetch).toHaveBeenCalledTimes(2)
@@ -865,9 +872,7 @@ describe('RBN native panel integration', () => {
     for (const extra of [{ environment: undefined }, { instanceId: undefined }]) {
       const result = await panel.render({ ...args, ...extra }, { online: true })
       expect(result.kind).toBe('markdown')
-      expect('content' in result && result.content).toContain(
-        'extension API 5 and native panel controls',
-      )
+      expect('content' in result && result.content).toContain('extension API 25')
     }
     expect(getSnapshot).not.toHaveBeenCalled()
   })

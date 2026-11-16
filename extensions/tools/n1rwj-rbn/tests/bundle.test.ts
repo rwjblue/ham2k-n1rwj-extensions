@@ -23,7 +23,7 @@ function required<T>(value: T | undefined): T {
 }
 
 it('automatically configures the live cluster feed and publishes spots from the bundle', async () => {
-  expect(manifest).toMatchObject({ api: 21, requiresClusterCommand: true })
+  expect(manifest).toMatchObject({ api: 25, requiresClusterCommand: true })
   const source = await readFile(new URL('../build/index.js', import.meta.url), 'utf8')
   const sharedModules = Object.fromEntries(
     await Promise.all(
@@ -271,7 +271,7 @@ it('restores reports and shared server backoff through the actual SDK settings b
   await settleHostCalls()
   const ready = await first.render(args(), { online: true })
   expect(JSON.stringify(ready)).toContain('W3LPL')
-  if (ready.kind !== 'scene') throw new Error('Expected API-5 reception scene')
+  if (ready.kind !== 'scene') throw new Error('Expected native reception scene')
   const band = required(ready.scene.controls?.find((control) => control.id === 'band'))
   expect(band).toMatchObject({ kind: 'nativeDropdown', value: 'band' })
   const choice = {
@@ -293,9 +293,10 @@ it('restores reports and shared server backoff through the actual SDK settings b
     strings: { band: '40m' },
   })
   const filtered = await first.render(args(), { online: true })
-  if (filtered.kind !== 'scene') throw new Error('Expected API-5 reception scene')
+  if (filtered.kind !== 'scene') throw new Error('Expected native reception scene')
   expect(filtered.scene.strings?.band).toBe('40m')
-  expect(JSON.stringify(filtered)).not.toContain('map-receiver-label:W3LPL')
+  const filteredMap = required(filtered.scene.controls?.find((control) => control.kind === 'map'))
+  expect(filteredMap.markers?.map((marker) => marker.id)).not.toContain('station:W3LPL')
   const remounted = {
     ...args(),
     event: {
@@ -311,7 +312,11 @@ it('restores reports and shared server backoff through the actual SDK settings b
     strings: { band: '20m' },
   })
   const restoredChoice = await first.render(args(), { online: true })
-  expect(JSON.stringify(restoredChoice)).toContain('map-receiver-label:W3LPL')
+  if (restoredChoice.kind !== 'scene') throw new Error('Expected native reception scene')
+  const restoredMap = required(
+    restoredChoice.scene.controls?.find((control) => control.kind === 'map'),
+  )
+  expect(restoredMap.markers?.map((marker) => marker.id)).toContain('station:W3LPL')
   expect(saved).not.toHaveProperty('band')
   expect(requests).toBe(1)
   clock += 1000
@@ -322,7 +327,7 @@ it('restores reports and shared server backoff through the actual SDK settings b
   limited = true
   const refresh = async (panel: PanelHook) => {
     const content = await panel.render(args(), { online: false })
-    if (content.kind !== 'scene') throw new Error('Expected API-5 reception scene')
+    if (content.kind !== 'scene') throw new Error('Expected native reception scene')
     const action = required(
       content.scene.controls?.find((control) => control.id === 'refresh')?.event,
     )
@@ -459,7 +464,11 @@ it('renders before a slow fetch settles and uses host timers without ambient tim
   await settleHostCalls()
   const completed = await hook.render(args(), { online: true })
   expect(completed?.triggers ?? []).not.toContain('tick:1')
-  expect(JSON.stringify(completed)).toContain('W3LPL')
+  if (completed?.kind !== 'scene') throw new Error('Expected native reception scene')
+  expect(completed.scene.controls?.find((control) => control.kind === 'map')).toMatchObject({
+    markers: expect.arrayContaining([expect.objectContaining({ id: 'station:W3LPL' })]),
+    lines: expect.arrayContaining([expect.objectContaining({ to: 'station:W3LPL' })]),
+  })
   expect(requests).toBe(1)
   // The built bundle refreshes at the remaining cooldown without a render or
   // advancing the sandbox's Date. Hiding cancels the next scheduled refresh.

@@ -6,7 +6,8 @@ import type {
   PanelTypography,
 } from '@ham2k/extension-sdk'
 import { receptionWindowMinutes } from '../config.ts'
-import { layoutReceptionMap } from '../map/index.ts'
+import type { ReceptionMapCamera } from '../map/camera.ts'
+import { buildReceptionMap, isMapLocation } from '../map/native.ts'
 import { receptionMapTheme } from '../map/theme.ts'
 import { type DetailsTab, layoutReceptionDetails, wrapInfoText } from './details.ts'
 import type { UiDirection, UiModel, UiReport, UiSort, UiView } from './types.ts'
@@ -26,6 +27,7 @@ export interface SceneSelection {
 export interface SceneResult {
   scene: PanelScene
   selection: SceneSelection
+  mapCamera?: ReceptionMapCamera
   bands: string[]
   pageCount: number
   pageSize: number
@@ -99,7 +101,7 @@ export function renderReceptionScene(
   model: UiModel,
   environment?: PanelEnvironment,
   requested: Partial<SceneSelection> = {},
-  options: { nativeControls?: boolean } = {},
+  options: { nativeControls?: boolean; mapCamera?: ReceptionMapCamera } = {},
 ): SceneResult {
   const native = options.nativeControls === true
   const source = model.presentation?.source ?? 'Reception'
@@ -210,6 +212,8 @@ export function renderReceptionScene(
   const result: SceneResult = {
     scene,
     selection,
+    // A map that disappears from the scene loses its local native viewport.
+    mapCamera: options.mapCamera && { ...options.mapCamera, refit: true },
     bands: availableBands,
     pageCount: 1,
     pageSize: 1,
@@ -814,7 +818,9 @@ export function renderReceptionScene(
             Math.min(Math.max(180, available * 0.42), Math.max(0, available - minimumList)),
           )
         : available
-    if (mapHeight >= 180 && mapWidth >= 220 && model.mapOptions) {
+    const mapFits = mapHeight >= 180 && mapWidth >= 220
+    const origin = model.mapOptions?.origin
+    if (mapFits && model.mapOptions && isMapLocation(origin)) {
       const calls = new Set(rows.map((row) => row.call))
       const receiverAges = new Map<string, number>()
       for (const row of rows) {
@@ -825,59 +831,66 @@ export function renderReceptionScene(
           )
         }
       }
-      const textScale = label.scaledFontSize / label.fontSize
-      const map = layoutReceptionMap({
-        ...model.mapOptions,
-        width: mapWidth,
-        height: mapHeight,
+      const projection = model.mapOptions.projection ?? 'regional'
+      const optionsForMap = {
+        context: JSON.stringify([
+          model.watchCall,
+          origin.latitude,
+          origin.longitude,
+          projection,
+          selection.band,
+          selection.windowMinutes,
+          selection.view,
+          model.mapOptions.filterKey,
+        ]),
+        label: model.watchCall ? `Reception map for ${model.watchCall}` : 'Reception map',
+        rectangle: { x: left, y, width: mapWidth, height: mapHeight },
+        origin,
+        projection,
         stations: model.mapOptions.stations
           .filter((receiver) => calls.has(receiver.key))
           .map((receiver) => {
             const ageMinutes = receiverAges.get(receiver.key)
             return ageMinutes === undefined ? receiver : { ...receiver, ageMinutes }
           }),
-        labelScale: textScale,
         theme: receptionMapTheme(dark ? 'dark' : 'light', raw?.accent),
-      })
-      for (const [index, svg] of map.svgLayers.entries())
-        layers.push({
-          id: `reception-map-${index}`,
-          x: left,
+        previous: options.mapCamera,
+      }
+      let map = buildReceptionMap(optionsForMap)
+      if (map.count === 0 && rows.length > 0 && mapHeight >= 180 + labelLine) {
+        text(
+          'map-unlocated',
+          'No report locations to show on this map.',
+          left,
           y,
-          width: map.width,
-          height: map.height,
-          svg,
-        })
-      for (const entry of map.labels) {
-        layers.push({
-          id: `map-${entry.key}`,
-          x: left + entry.x,
-          y: y + entry.y,
-          width: entry.width,
-          height: entry.height,
-          text: {
-            literal: entry.text,
-            size: entry.size,
-            fontFamily: label.fontFamily ?? undefined,
-            fontWeight: entry.weight,
-            lineHeight: label.lineHeight,
-            color: entry.color,
-            align: entry.align === 'left' ? 'start' : entry.align === 'right' ? 'end' : 'center',
+          mapWidth,
+          label,
+          colors.muted,
+        )
+        map = buildReceptionMap({
+          ...optionsForMap,
+          rectangle: {
+            ...optionsForMap.rectangle,
+            y: y + labelLine,
+            height: mapHeight - labelLine,
           },
         })
       }
-      if (!sideBySide) listY = y + map.height + 10
-    } else if (selection.view === 'map') {
+      controls.push(map.control)
+      result.mapCamera = map.camera
+      if (!sideBySide) listY = y + mapHeight + 10
+    } else if (mapFits && !isMapLocation(origin)) {
       text(
         'map-unavailable',
-        mapHeight < 180 || mapWidth < 220
-          ? 'Enlarge this panel to display the map.'
-          : 'Set your operation location to show the map.',
+        'Set your operation location or a map origin grid.',
         left,
         y,
-        w,
+        mapWidth,
         body,
       )
+      if (!sideBySide) listY += bodyLine + 8
+    } else if (selection.view === 'map') {
+      text('map-unavailable', 'Enlarge this panel to display the map.', left, y, w, body)
     } else if (!sideBySide) {
       text(
         'map-compact',

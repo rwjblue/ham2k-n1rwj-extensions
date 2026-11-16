@@ -3,8 +3,5 @@
   "version": "0.20.1",
   "private": true,
   "type": "module",
-  "license": "MPL-2.0",
-  "dependencies": {
-    "d3-geo": "3.1.1"
-  }
+  "license": "MPL-2.0"
 }

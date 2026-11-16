@@ -1,9 +1,11 @@
 #!/usr/bin/env -S node --experimental-strip-types
 //[MISE] description="Render deterministic PSK Reporter and RBN info-pane mockups from the real scene code"
 //[MISE] depends=["install", "local-tasks-npm-install"]
+//[USAGE] flag "--output <directory>" help="Output directory; defaults to docs/images/reception-info"
+//[USAGE] flag "--maps" help="Also export RBN and PSK SVG layout previews and native map scene JSON"
 
 import { mkdtemp, rm } from 'node:fs/promises'
-import { join } from 'node:path'
+import { join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { build } from 'esbuild'
 import {
@@ -34,7 +36,11 @@ try {
     outfile: bundle,
   })
   const runtime = (await import(pathToFileURL(bundle).href)) as ReceptionPreviewRuntime
-  await previewReceptionInfo(root, runtime)
+  await previewReceptionInfo(
+    resolve(root, process.env.usage_output ?? 'docs/images/reception-info'),
+    runtime,
+    process.env.usage_maps === 'true',
+  )
 } finally {
   await rm(temporary, { recursive: true, force: true })
 }

@@ -8,8 +8,7 @@ import { mkdir } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { build } from 'esbuild'
 
-// The SDK and map assets use bundler JSON imports, just like the shipped extension.
-// Bundle the sample runner instead of changing their runtime imports for Node.
+// Use the same bundled SDK imports as the shipped extension.
 const runner = resolve('dist/rbn-export-samples.cjs')
 await mkdir(resolve('dist'), { recursive: true })
 await build({

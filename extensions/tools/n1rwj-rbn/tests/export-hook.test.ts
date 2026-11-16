@@ -80,16 +80,14 @@ describe('RBN export workflow', () => {
       selectedByDefault: true,
     })
     const report = await hook.generateExport({ ...args, ...options[0] }, { online: false })
-    expect(report.content).toContain('<svg')
+    expect(report.content).toContain('Reception timeline')
+    expect(report.content).toContain('Receiver details')
+    expect(report.content).not.toContain('<svg')
     const types = await hook.getExportTypes?.({}, { online: false })
-    expect(types?.map((type) => type.format)).toEqual([
-      'html',
-      'md',
-      'csv',
-      'json',
-      'svg',
-      'qso.csv',
-    ])
+    expect(types?.map((type) => type.format)).toEqual(['html', 'md', 'csv', 'json', 'qso.csv'])
+    await expect(
+      hook.generateExport({ ...args, exportType: 'rbnReception-svg' }, { online: false }),
+    ).rejects.toThrow('Unknown RBN export format')
     for (const type of types ?? []) {
       const result = await hook.generateExport(
         { ...args, exportType: type.exportType },
@@ -100,7 +98,9 @@ describe('RBN export workflow', () => {
   })
 
   it('offers only chosen companions and honors already-offered files after the choice is cleared', async () => {
-    let settings: Record<string, unknown> = { additionalExportFormats: ['qso.csv', 'json', 'json'] }
+    let settings: Record<string, unknown> = {
+      additionalExportFormats: ['qso.csv', 'svg', 'json', 'json'],
+    }
     const readSettings = vi.fn(async () => settings)
     const hook = createRbnExportHook(
       createEvidenceArchive(),
@@ -126,8 +126,8 @@ describe('RBN export workflow', () => {
     expect(await hook.generateExport({ ...args, ...json }, { online: false })).toEqual(baseline)
   })
 
-  it.each([undefined, null, false, true, 'json', {}, ['pdf'], ['json', 'pdf'], [1]])(
-    'keeps extra files hidden for missing or malformed saved choices: %j',
+  it.each([undefined, null, false, true, 'json', {}, ['pdf'], ['json', 'pdf'], ['svg'], [1]])(
+    'keeps extra files hidden for missing, retired or malformed saved choices: %j',
     async (additional) => {
       const raw = { additionalExportFormats: additional }
       expect(additionalExportFormats(raw)).toEqual([])
@@ -150,14 +150,7 @@ describe('RBN export workflow', () => {
     )
     const hook = allFormatsHook(archive, () => NOW)
     const options = await preparedOptions(hook)
-    expect(options.map((option) => option.format)).toEqual([
-      'html',
-      'md',
-      'csv',
-      'json',
-      'svg',
-      'qso.csv',
-    ])
+    expect(options.map((option) => option.format)).toEqual(['html', 'md', 'csv', 'json', 'qso.csv'])
     for (const option of options) {
       // The published SDK currently strips title templates from non-ADIF types.
       expect(option.exportTitle).toBe('')
@@ -174,8 +167,6 @@ describe('RBN export workflow', () => {
           expect(result.content.split('\n')[0]).toBe(`# ${title}`)
         } else if (option.format === 'json') {
           expect(JSON.parse(result.content).exportMetadata.title).toBe(title)
-        } else if (option.format === 'svg') {
-          expect(result.content).toContain(`<title>${title}</title>`)
         } else {
           // Both CSV formats include the report title in each retained data row.
           expect(result.content.split('\r\n')[1]).toMatch(new RegExp(`^"${title}"`))
@@ -194,8 +185,8 @@ describe('RBN export workflow', () => {
     const hook = allFormatsHook(archive, () => now)
     const options = await preparedOptions(hook)
     expect(fetch).not.toHaveBeenCalled()
-    expect(options).toHaveLength(6)
-    expect(new Set(options?.map((option) => option.exportKey)).size).toBe(6)
+    expect(options).toHaveLength(5)
+    expect(new Set(options?.map((option) => option.exportKey)).size).toBe(5)
     expect(new Set(options.map((option) => option.exportData.rbnDatasetKey)).size).toBe(1)
     expect(
       options?.filter((option) => option.selectedByDefault).map((option) => option.format),
@@ -237,7 +228,7 @@ describe('RBN export workflow', () => {
         option.selectedByDefault ?? false,
       ]),
     )
-    expect(selected.size).toBe(6)
+    expect(selected.size).toBe(5)
     expect([...selected.values()].filter(Boolean)).toHaveLength(1)
     const html = options.find((option) => option.format === 'html')
     const csv = options.find((option) => option.format === 'csv')
@@ -305,7 +296,7 @@ describe('RBN export workflow', () => {
       first.map((option) => option.exportKey),
     )
     expect(filenames[0].filename).not.toBe(first[0].filename)
-    expect(selection.size).toBe(6)
+    expect(selection.size).toBe(5)
     expect([...selection].filter(([, checked]) => checked).map(([key]) => key)).toEqual([
       'N1RWJ|n1rwj-rbn:rbn:csv',
     ])
@@ -370,7 +361,7 @@ describe('RBN export workflow', () => {
       hook.generateExport({ ...args, exportType: option.exportType }, { online: true }),
     ).resolves.toMatchObject({ mimeType: 'application/json' })
   })
-  it('withholds precise operator location from maps and every archived attempt while retaining provider evidence', async () => {
+  it('withholds precise operator location from the HTML report and every archived attempt while retaining provider evidence', async () => {
     const fetch = vi.fn().mockResolvedValue({ status: 200, body: JSON.stringify(payload()) })
     const archive = createEvidenceRetriever({ fetch, timers, now: () => NOW })
     await archive.appendLive(
@@ -403,6 +394,15 @@ describe('RBN export workflow', () => {
       raw: { spotter_grid: 'FM19' },
     })
     expect(evidence.qsoContext[0].status).toBe('unmatched')
+    const html = await hook.generateExport(
+      { ...args, exportType: 'rbnReception-html' },
+      { online: false },
+    )
+    expect(html.content).toContain('<th>Initial bearing</th>')
+    expect(html.content).toContain('six-character grid precision')
+    expect(html.content).not.toContain(String(args.operation.lat))
+    expect(html.content).not.toContain(String(args.operation.lon))
+    expect(html.content).not.toContain('FN41aa12')
   })
   it('exports honest partial evidence offline and declines operations without dates or collection', async () => {
     const fetch = vi.fn()
@@ -427,7 +427,7 @@ describe('RBN export workflow', () => {
     const hook = allFormatsHook(createEvidenceArchive(), () => NOW, undefined, client.readSnapshots)
     const emptyLog = { ...args, qsos: [] }
     const options = await preparedOptions(hook, emptyLog)
-    expect(options).toHaveLength(6)
+    expect(options).toHaveLength(5)
     const option = options?.find((item) => item.format === 'json')
     if (!option) throw new Error('Missing cached reception export')
     const result = await hook.generateExport({ ...emptyLog, ...option }, { online: true })

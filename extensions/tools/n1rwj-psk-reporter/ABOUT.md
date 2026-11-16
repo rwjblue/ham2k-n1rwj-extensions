@@ -8,5 +8,6 @@ Enable PSK Reporter uploads in that software and enter its exact receiver ID in
 the panel settings if it differs from your operation’s callsign. Use **Band**
 and **Window** to narrow either view.
 
+The map requires Ham2K extension API 25 and uses HaLo’s offline geography.
 The panel uses the internet to get live reports through M0LTE’s feed and look
 up recent history when you open it. [PSK Reporter](https://pskreporter.info/) · [Live feed](https://www.mqtt.pskreporter.info/)

@@ -115,7 +115,7 @@ function gridPrecision(value: string): string {
   return `${value.length}-character grid center; actual position within the grid is unknown`
 }
 
-function receiverLocation(report: RbnEvidenceReport): Coordinates | null {
+export function receiverLocation(report: RbnEvidenceReport): Coordinates | null {
   return coordinates(report.receiverLatitude, report.receiverLongitude)
 }
 

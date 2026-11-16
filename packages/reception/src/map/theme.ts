@@ -36,8 +36,7 @@ function contrast(a: string, b: string): number {
 /** Geographic fills remain distinct even when the host uses identical surfaces. */
 export function receptionMapTheme(brightness: 'light' | 'dark', hostAccent?: string): MapTheme {
   const theme = { ...themes[brightness] }
-  // The accent also colors native call labels: require normal-text contrast on
-  // both geographic fills, not only the lower contrast required for a marker.
+  // Keep fresh report marks distinct from both geographic fills.
   if (
     hostAccent &&
     /^#[\da-f]{6}$/i.test(hostAccent) &&
