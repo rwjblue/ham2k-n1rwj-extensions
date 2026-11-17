@@ -6,7 +6,6 @@ import {
   receptionConfigFields,
   watchedCall,
 } from '../../../../packages/reception/src/config.ts'
-import { receptionMapTheme } from '../../../../packages/reception/src/map/theme.ts'
 import { bindPanelEvents, readPanelEvent } from '../../../../packages/reception/src/panel-events.ts'
 import {
   applySceneEvent,
@@ -157,6 +156,7 @@ export function pskPanelModel(
           title: 'Map and location',
           paragraphs: [
             'Paths connect the map origin to stations in this view; they are not a coverage boundary. Reported grids give approximate locations, distances, and bearings. Unlocated stations remain in the list.',
+            'The larger marker shows the origin. The report list gives station names. Drag to pan and zoom in to explore.',
             'Changing the watched callsign does not move the map origin. Set a matching origin grid in panel settings when observing another station.',
           ],
         },
@@ -182,13 +182,9 @@ export function pskPanelModel(
     bands: [...new Set([...receptionBands, ...view.rows.map((row) => row.band)])],
     rows: view.rows,
     mapOptions: {
-      width: 520,
-      height: 360,
       origin: origin ? { ...origin, label: call } : undefined,
       stations: view.stations,
-      stationLabel: incoming ? 'transmitter' : 'receiver',
       projection: config.projection,
-      theme: receptionMapTheme(args.environment?.brightness ?? 'light'),
     },
     defaultBand: config.band,
     defaultView: config.view,
@@ -218,8 +214,7 @@ export function createPskPanel(live: LiveReception): PanelHook {
       if (!args.environment || !args.instanceId)
         return {
           kind: 'markdown',
-          content:
-            'PSK Reporter requires a Ham2K version with extension API 5 and native panel controls.',
+          content: 'PSK Reporter requires a HaLo version with extension API 25.',
         }
       const state = stateFor(args, String(args.config.receptionDirection ?? 'outgoing'))
       const epoch = state.epoch
@@ -258,8 +253,9 @@ export function createPskPanel(live: LiveReception): PanelHook {
           band: state.selection.band ?? config.band,
           windowMinutes,
         },
-        { nativeControls: true },
+        { nativeControls: true, mapCamera: state.mapCamera },
       )
+      state.mapCamera = rendered.mapCamera
       state.selection = rendered.selection
       state.bands = rendered.bands
       bindPanelEvents(state, rendered.scene)

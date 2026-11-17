@@ -1,14 +1,10 @@
 import type { JSONValue } from '@ham2k/extension-sdk'
 import {
-  isMapLocation,
-  type MapStation,
-  renderReceptionMap,
-} from '../../../../../packages/reception/src/map/index.ts'
-import {
   buildReceptionAnalysis,
   type QsoReceptionContext,
   type ReceptionAnalysis,
   type ReceptionSummary,
+  receiverLocation,
 } from './analysis.ts'
 import type { RbnEvidence, RbnEvidenceReport } from './evidence.ts'
 
@@ -19,14 +15,6 @@ export interface EvidenceRenderOptions {
 }
 
 const quarterMs = 15 * 60_000
-const mapTheme = {
-  surface: '#eef4f7',
-  land: '#dce7e9',
-  text: '#173342',
-  muted: '#536e7c',
-  border: '#b5cbd3',
-  accent: '#007a7a',
-}
 const interpretation =
   'These are sampled reception observations, not contacts or a coverage boundary. Reported RBN SNR belongs to each receiver; antennas and noise differ. Compare the same receiver on the same band and mode. Missing reports do not prove that nobody heard the station.'
 
@@ -110,57 +98,8 @@ function groups(
   )
 }
 
-function mapStations(reports: readonly RbnEvidenceReport[]): MapStation[] {
-  const stations = new Map<string, MapStation>()
-  for (const report of [...reports].sort(
-    (a, b) => a.timeMs - b.timeMs || a.id.localeCompare(b.id),
-  )) {
-    if (report.receiverLatitude === null || report.receiverLongitude === null) continue
-    const station = {
-      key: report.receiver,
-      label: report.receiver,
-      latitude: report.receiverLatitude,
-      longitude: report.receiverLongitude,
-      ageMinutes: 0,
-    }
-    if (isMapLocation(station)) stations.set(report.receiver, station)
-  }
-  return [...stations.values()]
-}
-
-function mapSvg(
-  evidence: RbnEvidence,
-  reports: readonly RbnEvidenceReport[],
-  namespace = '',
-): string {
-  const rendered = renderReceptionMap({
-    width: 960,
-    height: 500,
-    theme: mapTheme,
-    origin: evidence.request.origin
-      ? { ...evidence.request.origin, label: evidence.request.call }
-      : undefined,
-    stations: mapStations(reports),
-    projection: 'regional',
-  })
-  // The map combines standalone geometry layers with an identical frame
-  // clipping definition in each layer. An exported document needs it once.
-  let frameDefined = false
-  const svg = rendered.replace(
-    /<defs><clipPath id="map-frame">[\s\S]*?<\/clipPath><\/defs>/g,
-    (definition) => {
-      if (frameDefined) return ''
-      frameDefined = true
-      return definition
-    },
-  )
-  // Several inline SVGs share a document. Their clipping definitions must
-  // stay local to their map even when every map comes from the same renderer.
-  return namespace
-    ? svg
-        .replace(/id="([^"]+)"/g, `id="${namespace}$1"`)
-        .replace(/url\(#([^)]+)\)/g, `url(#${namespace}$1)`)
-    : svg
+function locatedReceivers(reports: readonly RbnEvidenceReport[]): number {
+  return new Set(reports.filter(receiverLocation).map((report) => report.receiver)).size
 }
 
 function collectionStatus(evidence: RbnEvidence): string {
@@ -299,10 +238,10 @@ function receiverTableHtml(summaries: readonly ReceptionSummary[]): string {
   const rows = summaries
     .map(
       (summary) =>
-        `<tr><th scope="row">${escapeHtml(summary.receiver)}</th><td>${escapeHtml(summary.receiverGrid ?? 'Unknown')}</td><td>${summary.count}</td><td>${number(summary.medianSnrDb, ' dB')}</td><td>${summary.snrCount ? `${number(summary.minSnrDb)}–${number(summary.maxSnrDb)} dB` : 'Unknown'}</td><td>${summary.count - summary.snrCount}</td><td>${number(summary.distanceKm, ' km')}</td><td>${escapeHtml(iso(summary.latest.timeMs))}</td></tr>`,
+        `<tr><th scope="row">${escapeHtml(summary.receiver)}</th><td>${escapeHtml(summary.receiverGrid ?? 'Unknown')}</td><td>${summary.count}</td><td>${number(summary.medianSnrDb, ' dB')}</td><td>${summary.snrCount ? `${number(summary.minSnrDb)}–${number(summary.maxSnrDb)} dB` : 'Unknown'}</td><td>${summary.count - summary.snrCount}</td><td>${number(summary.distanceKm, ' km')}</td><td>${number(summary.bearingDegrees, '°')}</td><td>${escapeHtml(iso(summary.latest.timeMs))}</td></tr>`,
     )
     .join('')
-  return `<div class="scroll"><table><caption>Receiver summaries across the requested interval. Distance is estimated from the supplied station origin.</caption><thead><tr><th>Receiver</th><th>Grid</th><th>Reports</th><th>Median SNR</th><th>Range</th><th>Unknown SNR</th><th>Distance</th><th>Latest UTC</th></tr></thead><tbody>${rows}</tbody></table></div>`
+  return `<div class="scroll"><table><caption>Receiver summaries across the requested interval. Distance and initial bearing are estimated from the supplied station origin.</caption><thead><tr><th>Receiver</th><th>Grid</th><th>Reports</th><th>Median SNR</th><th>Range</th><th>Unknown SNR</th><th>Distance</th><th>Initial bearing</th><th>Latest UTC</th></tr></thead><tbody>${rows}</tbody></table></div>`
 }
 
 function qsoTableHtml(context: readonly QsoReceptionContext[]): string {
@@ -334,7 +273,7 @@ function collectionJournalHtml(evidence: RbnEvidence): string {
   return `<details><summary>Collection journal (${evidence.attempts.length} retained attempts)</summary><div class="scroll"><table><caption>A failure, an empty successful response, and a time with no collection are different states. Historical recovery does not erase earlier interruptions.</caption><thead><tr><th>Attempt UTC</th><th>Source</th><th>Requested UTC range</th><th>Pages</th><th>Accepted rows</th><th>Result</th><th>Errors</th></tr></thead><tbody>${rows}</tbody></table></div></details>`
 }
 
-const styles = `:root{color-scheme:light;font-family:system-ui,-apple-system,sans-serif;color:#173342;background:#f3f7f9}*{box-sizing:border-box}body{margin:0}main{max-width:1120px;margin:auto;padding:32px 24px}header{padding:28px;background:#173342;color:white;border-radius:16px}h1{margin:4px 0 12px;font-size:clamp(26px,4vw,42px)}h2{font-size:24px}h3{font-size:18px}.eyebrow{font-size:12px;letter-spacing:.1em;text-transform:uppercase}p{line-height:1.55}section{background:white;margin-top:24px;padding:24px;border:1px solid #d8e3e9;border-radius:14px}.status{padding:14px 18px;border-left:4px solid #007a7a;background:#e6f3f1}.status.partial{border-color:#9a6000;background:#fff4dc}.metrics{display:flex;gap:12px;flex-wrap:wrap;margin-top:18px}.metric{flex:1;min-width:160px;padding:14px;background:#ffffff18;border-radius:8px}.metric strong{display:block;font-size:28px}.metric span{font-size:13px}.map svg{display:block;width:100%;height:auto}.scroll{overflow:auto;margin-top:16px}table{width:100%;border-collapse:collapse;font-size:13px}th,td{border-bottom:1px solid #d8e3e9;text-align:left;padding:10px;vertical-align:top}thead th{background:#eef4f7}caption{text-align:left;color:#536e7c;font-size:12px;line-height:1.5;padding-bottom:10px}.timeline th,.timeline td{min-width:105px;border:1px solid #d8e3e9;text-align:center}.timeline th:first-child{position:sticky;left:0;background:#eef4f7;z-index:1;text-align:left}.timeline th span{display:block;font-size:10px;color:#536e7c}.timeline small{display:block;font-size:11px;margin-top:4px}.empty{color:#728995}.note{color:#536e7c;font-size:13px}.synthetic{font-weight:700;color:#ffdb8a}li{line-height:1.5;margin:6px 0}footer{color:#536e7c;font-size:12px;padding:20px 0}@media print{body{background:white}main{max-width:none;padding:0}header,section{break-inside:avoid;border-radius:0}section{padding:12px}.scroll{overflow:visible}table{font-size:10px}.timeline th,.timeline td{min-width:0;padding:4px}.timeline th:first-child{position:static}header{color:#173342;background:white;border-bottom:2px solid #173342}.metric{background:#eef4f7}.synthetic{color:#8b5900}}`
+const styles = `:root{color-scheme:light;font-family:system-ui,-apple-system,sans-serif;color:#173342;background:#f3f7f9}*{box-sizing:border-box}body{margin:0}main{max-width:1120px;margin:auto;padding:32px 24px}header{padding:28px;background:#173342;color:white;border-radius:16px}h1{margin:4px 0 12px;font-size:clamp(26px,4vw,42px)}h2{font-size:24px}h3{font-size:18px}.eyebrow{font-size:12px;letter-spacing:.1em;text-transform:uppercase}p{line-height:1.55}section{background:white;margin-top:24px;padding:24px;border:1px solid #d8e3e9;border-radius:14px}.status{padding:14px 18px;border-left:4px solid #007a7a;background:#e6f3f1}.status.partial{border-color:#9a6000;background:#fff4dc}.metrics{display:flex;gap:12px;flex-wrap:wrap;margin-top:18px}.metric{flex:1;min-width:160px;padding:14px;background:#ffffff18;border-radius:8px}.metric strong{display:block;font-size:28px}.metric span{font-size:13px}.scroll{overflow:auto;margin-top:16px}table{width:100%;border-collapse:collapse;font-size:13px}th,td{border-bottom:1px solid #d8e3e9;text-align:left;padding:10px;vertical-align:top}thead th{background:#eef4f7}caption{text-align:left;color:#536e7c;font-size:12px;line-height:1.5;padding-bottom:10px}.timeline th,.timeline td{min-width:105px;border:1px solid #d8e3e9;text-align:center}.timeline th:first-child{position:sticky;left:0;background:#eef4f7;z-index:1;text-align:left}.timeline th span{display:block;font-size:10px;color:#536e7c}.timeline small{display:block;font-size:11px;margin-top:4px}.empty{color:#728995}.note{color:#536e7c;font-size:13px}.synthetic{font-weight:700;color:#ffdb8a}li{line-height:1.5;margin:6px 0}footer{color:#536e7c;font-size:12px;padding:20px 0}@media print{body{background:white}main{max-width:none;padding:0}header,section{break-inside:avoid;border-radius:0}section{padding:12px}.scroll{overflow:visible}table{font-size:10px}.timeline th,.timeline td{min-width:0;padding:4px}.timeline th:first-child{position:static}header{color:#173342;background:white;border-bottom:2px solid #173342}.metric{background:#eef4f7}.synthetic{color:#8b5900}}`
 
 export function renderEvidenceHtml(
   evidence: RbnEvidence,
@@ -343,20 +282,20 @@ export function renderEvidenceHtml(
   const analysis = buildReceptionAnalysis(evidence, options.qsos)
   const notes = warnings(evidence, analysis)
   const sections = groups(analysis)
-    .map((group, index) => {
+    .map((group) => {
       const reports = analysis.reports.filter(
         (report) => report.band === group.band && report.mode === group.mode,
       )
-      const mapped = mapStations(reports).length
+      const located = locatedReceivers(reports)
       const receivers = new Set(reports.map((report) => report.receiver)).size
-      const unlocated = receivers - mapped
-      return `<section><h2>${escapeHtml(group.band)} · ${escapeHtml(group.mode)}</h2><div class="map">${mapSvg(evidence, reports, `rbn-map-${index}-`)}</div><p class="note">${mapped} located reporting receivers; ${unlocated} receiver${unlocated === 1 ? ' lacks' : 's lack'} usable coordinates. Maps use the latest retained location per receiver. Paths connect recorded endpoints; they do not measure the ionospheric path or imply coverage between sites.</p><h3>Reception timeline</h3>${timelineHtml(evidence, analysis, group.band, group.mode)}<h3>Receiver details</h3>${receiverTableHtml(group.summaries)}</section>`
+      const unlocated = receivers - located
+      return `<section><h2>${escapeHtml(group.band)} · ${escapeHtml(group.mode)}</h2><p class="note">${located} located reporting receivers; ${unlocated} receiver${unlocated === 1 ? ' lacks' : 's lack'} usable coordinates.</p><h3>Reception timeline</h3>${timelineHtml(evidence, analysis, group.band, group.mode)}<h3>Receiver details</h3>${receiverTableHtml(group.summaries)}</section>`
     })
     .join('')
   const empty = analysis.reports.length
     ? ''
     : '<section><h2>No retained observations</h2><p>The retrieval produced no retained exact-call observations in this interval. This does not establish that the station was unheard.</p></section>'
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:; base-uri 'none'; form-action 'none'"><title>${escapeHtml(title(evidence, options))}</title><style>${styles}</style></head><body><main><header><div class="eyebrow">RBN via Vail · Reception observations</div><h1>${escapeHtml(title(evidence, options))}</h1>${isSynthetic(options) ? '<p class="synthetic">SYNTHETIC EXAMPLE — invented observations, not an actual activation.</p>' : ''}<p>${escapeHtml(evidence.request.call)} · ${escapeHtml(iso(evidence.request.startMs))} to ${escapeHtml(iso(evidence.request.endMs))}</p><div class="metrics"><div class="metric"><strong>${analysis.counts.observations}</strong><span>Distinct observations</span></div><div class="metric"><strong>${analysis.counts.receivers}</strong><span>Reporting receivers</span></div><div class="metric"><strong>${analysis.counts.unknownSnr}</strong><span>Observations with unknown SNR</span></div><div class="metric"><strong>${analysis.counts.unlocated}</strong><span>Observations without receiver coordinates</span></div></div></header><section><h2>Collection and interpretation</h2><p class="status${evidence.complete ? '' : ' partial'}">${escapeHtml(collectionStatus(evidence))}</p><p>${interpretation}</p><p class="note">Data retrieved ${escapeHtml(iso(evidence.retrievedAtMs))}. Observation timestamps determine the windows; retrieval time does not. First report: ${escapeHtml(iso(analysis.firstObservationMs))}; last report: ${escapeHtml(iso(analysis.lastObservationMs))}.</p>${notes.length ? `<ul>${notes.map((warning) => `<li>${escapeHtml(warning)}</li>`).join('')}</ul>` : ''}${collectionJournalHtml(evidence)}</section>${sections}${empty}${qsoTableHtml(analysis.qsoContext)}<footer>Offline report. Geographic outlines: Natural Earth via the shared reception map. Keep the CSV or JSON companion for individual observations, provider rows and retrieval details.</footer></main></body></html>\n`
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'"><title>${escapeHtml(title(evidence, options))}</title><style>${styles}</style></head><body><main><header><div class="eyebrow">RBN via Vail · Reception observations</div><h1>${escapeHtml(title(evidence, options))}</h1>${isSynthetic(options) ? '<p class="synthetic">SYNTHETIC EXAMPLE — invented observations, not an actual activation.</p>' : ''}<p>${escapeHtml(evidence.request.call)} · ${escapeHtml(iso(evidence.request.startMs))} to ${escapeHtml(iso(evidence.request.endMs))}</p><div class="metrics"><div class="metric"><strong>${analysis.counts.observations}</strong><span>Distinct observations</span></div><div class="metric"><strong>${analysis.counts.receivers}</strong><span>Reporting receivers</span></div><div class="metric"><strong>${analysis.counts.unknownSnr}</strong><span>Observations with unknown SNR</span></div><div class="metric"><strong>${analysis.counts.unlocated}</strong><span>Observations without receiver coordinates</span></div></div></header><section><h2>Collection and interpretation</h2><p class="status${evidence.complete ? '' : ' partial'}">${escapeHtml(collectionStatus(evidence))}</p><p>${interpretation}</p><p class="note">Data retrieved ${escapeHtml(iso(evidence.retrievedAtMs))}. Observation timestamps determine the windows; retrieval time does not. First report: ${escapeHtml(iso(analysis.firstObservationMs))}; last report: ${escapeHtml(iso(analysis.lastObservationMs))}.</p>${notes.length ? `<ul>${notes.map((warning) => `<li>${escapeHtml(warning)}</li>`).join('')}</ul>` : ''}${collectionJournalHtml(evidence)}</section>${sections}${empty}${qsoTableHtml(analysis.qsoContext)}<footer>Offline report. Keep the CSV or JSON companion for individual observations, provider rows and retrieval details.</footer></main></body></html>\n`
 }
 
 export function renderEvidenceMarkdown(
@@ -388,12 +327,12 @@ export function renderEvidenceMarkdown(
     const reports = analysis.reports.filter(
       (report) => report.band === group.band && report.mode === group.mode,
     )
-    const mapped = mapStations(reports).length
+    const located = locatedReceivers(reports)
     const receivers = new Set(reports.map((report) => report.receiver)).size
     lines.push(
       `## ${escapeMarkdown(group.band)} · ${escapeMarkdown(group.mode)}`,
       '',
-      `${reports.length} observations; ${mapped} located receivers; ${receivers - mapped} receivers without usable coordinates.`,
+      `${reports.length} observations; ${located} located receivers; ${receivers - located} receivers without usable coordinates.`,
       '',
       ...timelineMarkdown(analysis, group.band, group.mode),
       '### Receiver details',
@@ -426,7 +365,7 @@ export function renderEvidenceMarkdown(
       '',
     )
   lines.push(
-    'Keep the HTML timeline, observation CSV or detailed JSON companion for the full evidence. Maps show sampled receiver sites, not a coverage area.',
+    'Keep the HTML timeline, observation CSV or detailed JSON companion for the full evidence.',
     '',
   )
   return lines.join('\n')
@@ -558,17 +497,4 @@ export function renderEvidenceJson(
 ): string {
   const analysis = buildReceptionAnalysis(evidence, options.qsos)
   return `${JSON.stringify({ ...evidence, exportMetadata: { title: title(evidence, options), synthetic: isSynthetic(options) }, interpretation, qsoContext: analysis.qsoContext }, null, 2)}\n`
-}
-
-export function renderEvidenceMap(
-  evidence: RbnEvidence,
-  options: EvidenceRenderOptions = {},
-): string {
-  const analysis = buildReceptionAnalysis(evidence, options.qsos)
-  const synthetic =
-    isSynthetic(options) && !/^SYNTHETIC EXAMPLE\b/i.test(title(evidence, options))
-      ? 'SYNTHETIC EXAMPLE — '
-      : ''
-  const description = `${synthetic}${title(evidence, options)}. ${collectionStatus(evidence)} ${interpretation}`
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="960" height="620" viewBox="0 0 960 620" role="img"><title>${escapeHtml(title(evidence, options))}</title><desc>${escapeHtml(description)}</desc><rect width="960" height="620" fill="${mapTheme.surface}"/><text x="20" y="30" font-family="sans-serif" font-size="20" fill="${mapTheme.text}">${escapeHtml(`${synthetic}${title(evidence, options)}`.slice(0, 95))}</text><text x="20" y="56" font-family="sans-serif" font-size="13" fill="${mapTheme.muted}">All retained bands and modes · ${analysis.counts.observations} observations · ${analysis.counts.receivers} receivers</text><text x="20" y="78" font-family="sans-serif" font-size="12" fill="${mapTheme.muted}">${escapeHtml(evidence.complete ? 'Service interval retrieved; sampled reception sites, not global coverage.' : 'Partial collection; sampled reception sites, not global coverage.')}</text><g transform="translate(0 94)">${mapSvg(evidence, analysis.reports)}</g><text x="20" y="612" font-family="sans-serif" font-size="11" fill="${mapTheme.muted}">Paths connect receiver locations. SNR is not aggregated across bands or modes. Unlocated observations remain in the archive.</text></svg>\n`
 }

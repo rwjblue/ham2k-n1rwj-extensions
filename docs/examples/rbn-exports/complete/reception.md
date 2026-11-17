@@ -70,4 +70,4 @@ UTC fifteen-minute windows [start, end); only populated windows are shown. Cells
 
 Contact context: 3 of 4 contacts have nearby preceding receiver evidence. Receiver SNR is not the contact station's SNR. See the JSON or contact-context CSV for matches and explicit unmatched reasons.
 
-Keep the HTML timeline, observation CSV or detailed JSON companion for the full evidence. Maps show sampled receiver sites, not a coverage area.
+Keep the HTML timeline, observation CSV or detailed JSON companion for the full evidence.

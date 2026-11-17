@@ -1,5 +1,5 @@
 #!/usr/bin/env -S node --experimental-strip-types
-//[MISE] description="Build an isolated API-2 PSK development package against a candidate SDK/tools"
+//[MISE] description="Build an isolated PSK development package against a candidate SDK and tools"
 //[MISE] depends=["build", "local-tasks-npm-install"]
 //[USAGE] flag "--sdk <directory>" help="SDK package directory with built dist; defaults to installed SDK"
 //[USAGE] flag "--tools <directory>" help="Tools package directory; defaults to installed tools"
@@ -60,12 +60,14 @@ try {
     recursive: true,
   })
   const filename = `${manifest.key}-${manifest.version}-development.h2kext`
-  // The selected official packer must accept API 2 and its socket grant.
+  // Use the selected packer to check the manifest and the bundled scene API.
   await format.pack(staged, { outPath: join(scratch, filename) })
   await verifyPskBundle(join(staged, 'index.js'), manifest)
   await mkdir(output, { recursive: true })
   await copyFile(join(scratch, filename), join(output, filename))
-  await cp(staged, join(output, 'build'), { recursive: true })
+  const outputBuild = join(output, 'build')
+  await rm(outputBuild, { recursive: true, force: true })
+  await cp(staged, outputBuild, { recursive: true })
   await writeFile(
     join(output, 'toolchain.json'),
     `${JSON.stringify(

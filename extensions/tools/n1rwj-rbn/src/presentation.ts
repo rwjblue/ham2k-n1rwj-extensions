@@ -18,6 +18,7 @@ export const rbnDetailsSections: NonNullable<UiModel['details']>['sections'] = [
     title: 'Map and location',
     paragraphs: [
       'Paths show reported reception, not a coverage boundary. Locations and countries use the cached RBN receiver directory, falling back to HamDB registered grids from Vail ReRBN. Distances and bearings are estimates; unlocated receivers remain in the list.',
+      'The larger marker shows the origin. The receiver list gives station names. Drag to pan and zoom in to explore.',
       'Changing the watched callsign does not move the map origin. Set a matching origin grid in panel settings when observing another station. Refresh the receiver directory in Data Files settings.',
     ],
   },

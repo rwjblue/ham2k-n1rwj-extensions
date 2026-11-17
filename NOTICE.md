@@ -20,10 +20,9 @@ Source and build instructions are available at
 See [provenance](https://github.com/rwjblue/ham2k-n1rwj-extensions/blob/main/docs/PROVENANCE.md)
 for exact upstream sources and the original archive checksum.
 
-The RBN extension and PSK Reporter preview also bundle Natural Earth map data and projection libraries.
-See their shared [map attribution](https://github.com/rwjblue/ham2k-n1rwj-extensions/blob/main/packages/reception/assets/MAP_ATTRIBUTION.md)
-for sources and licenses. Each reception bundle includes that attribution and the
-corresponding library notices under `assets/`.
+RBN and PSK Reporter use HaLo's native map control. Earlier reception bundles
+included Natural Earth data and projection libraries with their
+[original attribution and notices](https://github.com/rwjblue/ham2k-n1rwj-extensions/blob/v0.20.1/packages/reception/assets/MAP_ATTRIBUTION.md).
 
 The independent Contest Calendar extension downloads the ContestClock catalog
 by Joe Leone, W4GGJ, licensed under Creative Commons Attribution 4.0

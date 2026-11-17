@@ -4,7 +4,7 @@ See where the [Reverse Beacon Network](https://www.reversebeacon.net/) has
 heard your CW, RTTY, FT8, and FT4 signals, with a reception map and sortable
 receiver reports. The app's DX cluster supplies live spots and
 [Vail ReRBN](https://vailrerbn.com/) supplies recent reports and history.
-This build requires Ham2K extension API 21.
+This build requires Ham2K extension API 25.
 The panel automatically follows your operation's station callsign and location.
 It is read-only: it does not transmit, spot a station, post to POTA, or create
 contacts.
@@ -51,8 +51,8 @@ or combined. Recorded evidence and historical exports use Vail reports.
 ## Export an activation reception report
 
 Open the operation's **Exports** view for one offline HTML report containing
-receiver maps, fifteen-minute UTC SNR timelines, and contact context. To add
-Markdown, individual-observation CSV, collected-evidence JSON, SVG map, or
+receiver tables, fifteen-minute UTC SNR timelines, and contact context. To add
+Markdown, individual-observation CSV, collected-evidence JSON, or
 contact-context CSV, choose the files you need in **Settings → Spotting → RBN → Exports →
 Additional export files**, then reopen **Exports**. No companion files are shown
 by default. Your choices persist across restarts and apply across operations.
@@ -224,7 +224,7 @@ these results.
 
 ## Install and open the panel
 
-1. Use a Ham2K version supporting extension API 21. The catalog offers older
+1. Use a Ham2K version supporting extension API 25. The catalog offers older
    compatible versions to older hosts.
 2. Install **N1RWJ RBN** from **Settings → Extensions & Features**.
    [Catalog listing](https://catalog.ham2k.net/extensions/n1rwj-rbn?channel=stable)
@@ -234,7 +234,7 @@ these results.
 4. Leave **Watch callsign** and **Map origin grid** blank to follow the operation.
    Reports load automatically when the panel is visible.
 
-No build tools, map accounts, or custom Ham2K build are required.
+The map uses the geography included with Ham2K.
 
 The native **Details** button beside **Refresh** opens **Status** for the watched callsign,
 window, latest report on the selected band, and last successful service check.
@@ -325,16 +325,15 @@ the first page.
 
 ## Map and receiver list
 
-The map marks your station with a diamond and reporting receivers with circles.
-Reception paths show where your signal was heard. Regional maps include
-state/province boundaries and sparse country labels; light and dark colors keep
-land and water distinct. Labels adapt to the available space, with receiver
-callsigns taking priority over geographic captions.
+The larger marker shows your station. Other markers show reporting receivers,
+and the list identifies them by callsign. HaLo draws great-circle reception
+paths, coastlines, and boundaries on its offline map.
 Choose **Fit reporting receivers** in panel settings for a north-up map that
-fits nearby and distant reports while keeping continent shapes recognizable, or
+fits the reports, or
 **From my station · distance rings** for a view centered on your station.
-Distance rings appear only in the station-centered view. The fitted map uses
-Natural Earth 1 and keeps reports near the date line together.
+The fitted map keeps reports near the date line together. Drag to pan, and
+pinch or scroll to zoom. Routine refreshes preserve your view. Use the map's
+reset control to frame the latest reports again.
 The map includes the selected band's located receivers across all list pages.
 Receiver positions come from RBN node grids, with registered grids as a fallback, and may differ from the actual
 skimmer location. Receivers without a valid grid remain in the list.
@@ -463,9 +462,7 @@ A successful check with no reports
 is different from a failed check. **Checked** and **Heard** show when data was
 fetched and when your signal was last reported.
 
-The simplified world geography is bundled in the package, so the map needs no
-tile downloads or internet connection. New reception reports need internet
-access. See [map attribution and licenses](../../../packages/reception/assets/MAP_ATTRIBUTION.md).
+HaLo supplies the basemap offline. New reception reports need internet access.
 
 History and fallback reports come from the documented [Vail ReRBN HTTP API](https://vailrerbn.com/docs/endpoints)
 at `https://vailrerbn.com/api/v1/spots`. Vail ReRBN receives both RBN streams:
@@ -522,9 +519,8 @@ its mode, speed, skimmer, continent, grid-region, and distance filters.
    logging fictitious contacts or using spot/CQ posting controls.
 
 The examples are placeholders; choose a station active at the time of testing.
-For building from source, static previews, native acceptance steps and the
-earlier HTML investigation, see the
-[development and migration notes](../../../docs/RBN-SVG-MIGRATION.md).
+For development previews and native acceptance steps, see the
+[native reception map notes](../../../docs/NATIVE-RECEPTION-MAPS.md).
 
 
 Restart/resume behavior is covered by deterministic tests and isolated SDK bundle

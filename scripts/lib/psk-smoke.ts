@@ -91,7 +91,7 @@ export async function verifyPskBundle(path: string, manifest: Manifest) {
         return clock
       }
     },
-    __polo: {
+    __halo: {
       sharedModules,
       defineExtension: (definition: ExtensionDefinition) => definitions.push(definition),
       registerSocket: (callback: typeof listener) => {
@@ -108,7 +108,8 @@ export async function verifyPskBundle(path: string, manifest: Manifest) {
   runInContext(await readFile(path, 'utf8'), sandbox, { timeout: 5000 })
   assert.equal(definitions.length, 1)
   assert.ok('api' in definitions[0])
-  assert.equal(definitions[0].api, 5)
+  assert.equal(definitions[0].api, manifest.api)
+  assert.ok(typeof manifest.api === 'number' && manifest.api >= 25)
   definitions[0].onActivation({
     timers: timers.api,
     registerHook: (category, registration) => {
@@ -187,11 +188,17 @@ export async function verifyPskBundle(path: string, manifest: Manifest) {
   } while (remaining)
   receive([0x30, ...length, ...body])
   const content = await panel.render(args, { online: true })
-  assert.equal(content.kind, 'scene')
-  if (content.kind !== 'scene') throw new Error('Expected API-5 reception scene')
+  assert.equal(content.kind, 'scene', 'Expected a reception scene')
   const rendered = JSON.stringify(content)
   assert.ok(rendered.includes('Live reception'))
   assert.ok(rendered.includes('CU3AT'))
+  const map = content.scene.controls?.find((control) => control.kind === 'map')
+  const receiver = map?.markers?.find(({ lat, lon }) => lat === 38.5 && lon === -27)
+  assert.ok(receiver, 'MQTT report locator HM68 becomes a native map marker')
+  assert.ok(
+    map?.lines?.some((line) => line.to === receiver.id),
+    'Report has its native map path',
+  )
   const band = content.scene.controls?.find((control) => control.id === 'band')
   assert.equal(band?.kind, 'nativeDropdown')
   assert.ok(band?.event)
@@ -265,6 +272,6 @@ export async function verifyPskBundle(path: string, manifest: Manifest) {
   for (const name of ['setTimeout', 'setInterval', 'WebSocket', 'fetch', 'Buffer', 'process'])
     assert.equal(runInContext(`typeof ${name}`, sandbox), 'undefined')
   console.log(
-    'Candidate SDK bundle smoke passed: socket grant, MQTT handshake, binary report, HTTP history, force reload, persistent settings, native scene, host timers, silent lease expiry, hide teardown.',
+    'Candidate SDK bundle smoke passed: socket grant, MQTT handshake, binary report, HTTP history, force reload, persistent settings, native reception map, host timers, silent lease expiry, hide teardown.',
   )
 }

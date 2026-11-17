@@ -13,8 +13,8 @@ function required<T>(value: T | undefined): T {
   return value
 }
 
-it('loads the API-5 bundle with binary MQTT and host timers through the published SDK', async () => {
-  expect(manifest.api).toBe(5)
+it('loads the API-25 bundle with binary MQTT and host timers through the published SDK', async () => {
+  expect(manifest.api).toBe(25)
   expect(manifest.webSockets).toEqual(['mqtt.pskreporter.info'])
   expect(manifest.domains).toEqual(['retrieve.pskreporter.info'])
   await verifyPskBundle(fileURLToPath(new URL('../build/index.js', import.meta.url)), manifest)
@@ -120,10 +120,10 @@ it('keeps initial and manual history requests outside rendering with only SDK ti
   expect(completed.triggers).toBeUndefined()
   expect(JSON.stringify(completed)).toContain('US-E-015')
   if (completed.kind !== 'scene') throw new Error('Expected native reception scene')
-  expect(
-    completed.scene.layers.find((layer) => layer.id === 'map-receiver-label:US-E-015')?.text
-      ?.literal,
-  ).toBe('US-E-015')
+  expect(completed.scene.controls?.find((control) => control.kind === 'map')).toMatchObject({
+    markers: expect.arrayContaining([expect.objectContaining({ id: 'station:US-E-015' })]),
+    lines: expect.arrayContaining([expect.objectContaining({ to: 'station:US-E-015' })]),
+  })
   expect((await hook.getPanels({}, { online: true }))[0].on).toEqual(['operation', 'tick:5'])
   const band = required(completed.scene.controls?.find((control) => control.id === 'band'))
   expect(band).toMatchObject({ kind: 'nativeDropdown', value: 'band' })
@@ -212,22 +212,15 @@ it('keeps initial and manual history requests outside rendering with only SDK ti
   await required(definition).onHide?.()
 })
 
-it.each(['n1rwj-rbn', 'n1rwj-psk-reporter'])('preserves shared map notices in %s', async (key) => {
-  for (const path of [
-    'MAP_ATTRIBUTION.md',
-    'licenses/d3-geo-ISC.txt',
-    'licenses/d3-array-ISC.txt',
-    'licenses/internmap-ISC.txt',
-    'licenses/atlas-MIT.txt',
-  ]) {
-    const bundled = await readFile(
-      new URL(`../../${key}/build/assets/${path}`, import.meta.url),
-      'utf8',
+it.each(['n1rwj-rbn', 'n1rwj-psk-reporter'])(
+  'omits bundled cartography assets from %s',
+  async (key) => {
+    const assets = new URL(`../../${key}/build/assets/`, import.meta.url)
+    await expect(readFile(new URL('LICENSE', assets), 'utf8')).resolves.toContain(
+      'Mozilla Public License',
     )
-    const shared = await readFile(
-      new URL(`../../../../packages/reception/assets/${path}`, import.meta.url),
-      'utf8',
-    )
-    expect(bundled).toBe(shared)
-  }
-})
+    await expect(readFile(new URL('MAP_ATTRIBUTION.md', assets), 'utf8')).rejects.toMatchObject({
+      code: 'ENOENT',
+    })
+  },
+)

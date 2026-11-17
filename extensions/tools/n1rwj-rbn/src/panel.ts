@@ -1,6 +1,5 @@
 import type { JSONValue, PanelHook, PanelRenderArgs } from '@ham2k/extension-sdk'
 import { host } from '@ham2k/extension-sdk'
-import type { MapTheme } from '../../../../packages/reception/src/map/index.ts'
 import { bindPanelEvents, readPanelEvent } from '../../../../packages/reception/src/panel-events.ts'
 import {
   applySceneEvent,
@@ -28,15 +27,6 @@ const slowLeaseMs = 75_000
 interface ClusterDisplay {
   status: 'Off' | 'Offline' | 'Connecting' | 'Connected' | 'Reconnecting' | 'Unavailable'
   hasReports: boolean
-}
-
-const mapTheme: MapTheme = {
-  surface: '#ffffff',
-  land: '#f3f6f8',
-  text: '#172832',
-  muted: '#526876',
-  border: '#cbd8df',
-  accent: '#086f63',
 }
 
 function refreshDetails(snapshot: RbnSnapshot): string[] {
@@ -154,12 +144,6 @@ export function panelModel(
   )
   const bands = [...new Set([...rbnBands, ...reports.map((report) => report.band), config.band])]
   const view = receptionView(reports.map(toReceptionReport), snapshot.call, 'outgoing', now, origin)
-  const frameOptions = {
-    origin: origin ? { ...origin, label: snapshot.call } : undefined,
-    stations: view.stations,
-    projection: config.projection,
-    theme: mapTheme,
-  }
   const test = String(args.operation?.stationCall ?? '')
     .toUpperCase()
     .split(/[/,]/)
@@ -268,7 +252,12 @@ export function panelModel(
     },
     warnings,
     bands,
-    mapOptions: { ...frameOptions, width: 520, height: 360 },
+    mapOptions: {
+      origin: origin ? { ...origin, label: snapshot.call } : undefined,
+      stations: view.stations,
+      projection: config.projection,
+      filterKey: config.minSnrDb === null ? undefined : String(config.minSnrDb),
+    },
     rows: view.rows,
     defaultBand: config.band,
     defaultSort: config.sort,
@@ -318,7 +307,7 @@ export function createRbnPanel(
           kind: 'markdown',
           title: 'RBN · App update needed',
           content:
-            '**My Signal requires extension API 5 and native panel controls.**\n\nThis app build does not supply the panel environment and placement identity. Update Ham2K to use the reception map and sortable receiver list. No RBN request was made.',
+            '**My Signal requires a HaLo version with extension API 25.**\n\nThis app build does not supply the panel environment and placement identity. Update Ham2K to use the reception map and sortable receiver list. No RBN request was made.',
         }
       }
       const config = readConfig(args.config)
@@ -399,8 +388,9 @@ export function createRbnPanel(
           band: state.selection.band ?? config.band,
           windowMinutes,
         },
-        { nativeControls: true },
+        { nativeControls: true, mapCamera: state.mapCamera },
       )
+      state.mapCamera = rendered.mapCamera
       state.selection = rendered.selection
       state.bands = rendered.bands
       bindPanelEvents(state, rendered.scene)

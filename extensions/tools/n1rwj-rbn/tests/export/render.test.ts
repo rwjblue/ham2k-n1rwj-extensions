@@ -5,7 +5,6 @@ import {
   renderEvidenceCsv,
   renderEvidenceHtml,
   renderEvidenceJson,
-  renderEvidenceMap,
   renderEvidenceMarkdown,
   renderEvidenceQsoCsv,
 } from '../../src/export/render.ts'
@@ -83,11 +82,10 @@ describe('RBN export rendering', () => {
     expect(html).toContain('1 receiver lacks usable coordinates')
     expect(html).toContain('Compare the same receiver on the same band and mode')
     expect(html).toContain('no retained observation, not no reception')
-    expect(html).toContain('id="rbn-map-0-map-frame"')
-    expect(html.match(/id="rbn-map-0-map-frame"/g)).toHaveLength(1)
-    expect(html).toContain('url(#rbn-map-0-map-frame)')
-    expect(html).toContain('id="rbn-map-1-map-frame"')
-    expect(html).not.toMatch(/<script|<link|<img|(?:src|href)="https?:\/\//)
+    expect(html).toContain('<th>Initial bearing</th>')
+    expect(html).toMatch(/<td>\d+(?:\.\d+)? km<\/td><td>\d+(?:\.\d+)?°<\/td>/)
+    expect(html).toContain("default-src 'none'")
+    expect(html).not.toMatch(/<svg|<script|<link|<img|(?:src|href)="https?:\/\//)
     const markdown = renderEvidenceMarkdown(data)
     expect(markdown).toContain('### Reception timeline')
     expect(markdown).toContain('| Receiver | 2026-10-05 14:00 | 2026-10-05 14:15 |')
@@ -165,16 +163,13 @@ describe('RBN export rendering', () => {
     expect(html).not.toContain('band closed')
   })
 
-  it('escapes provider and operator text in HTML, Markdown, and SVG', () => {
+  it('escapes provider and operator text in HTML and Markdown', () => {
     const unsafe = '<script>alert("danger")</script>'
     const data = evidence([report({ receiver: unsafe, country: unsafe })], { warnings: [unsafe] })
     if (data.request.origin) data.request.origin.label = unsafe
     const html = renderEvidenceHtml(data, { title: unsafe })
     expect(html).not.toContain('<script>')
     expect(html).toContain('&lt;script&gt;alert(&quot;danger&quot;)&lt;/script&gt;')
-    const svg = renderEvidenceMap(data, { title: unsafe })
-    expect(svg).not.toContain('<script>')
-    expect(svg).toContain('&lt;script&gt;')
     const markdown = renderEvidenceMarkdown(data, { title: 'a | b\n<c>' })
     expect(markdown).toContain('a \\| b &lt;c&gt;')
     expect(markdown).not.toContain('<script>')
@@ -237,8 +232,6 @@ describe('RBN export rendering', () => {
       'invented observations, not an actual activation',
     )
     expect(renderEvidenceMarkdown(data, options)).toContain('**SYNTHETIC EXAMPLE')
-    expect(renderEvidenceMap(data, options)).toContain('SYNTHETIC EXAMPLE')
-    expect(renderEvidenceMap(data, options)).not.toContain('SYNTHETIC EXAMPLE — SYNTHETIC EXAMPLE')
     expect(renderEvidenceCsv(data, options)).toContain('"true"')
     expect(JSON.parse(renderEvidenceJson(data, options)).exportMetadata).toEqual({
       title: options.title,

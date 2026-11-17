@@ -1,5 +1,7 @@
 import type { PanelRenderArgs, PanelSceneControl } from '@ham2k/extension-sdk'
 import { type PanelConfig, readConfig, receptionBands, receptionWindowMinutes } from './config.ts'
+import type { ReceptionMapCamera } from './map/camera.ts'
+import { receptionMapId } from './map/native.ts'
 import type { SceneSelection } from './ui/scene.ts'
 
 export interface PanelState {
@@ -10,6 +12,7 @@ export interface PanelState {
   signature: string
   config: PanelConfig
   selection: Partial<SceneSelection>
+  mapCamera?: ReceptionMapCamera
   bands?: readonly string[]
   reportPage?: number
 }
@@ -25,7 +28,15 @@ export function createPanelStateStore() {
     let state = selections.get(key)
     if (!state || state.signature !== signature) {
       if (state) state.active = false
-      state = { active: true, epoch: ++epoch, renderVersion: 0, signature, config, selection: {} }
+      state = {
+        active: true,
+        epoch: ++epoch,
+        renderVersion: 0,
+        signature,
+        config,
+        selection: {},
+        mapCamera: state?.mapCamera && { ...state.mapCamera, refit: true },
+      }
       selections.delete(key)
       selections.set(key, state)
       if (selections.size > 32) {
@@ -56,7 +67,11 @@ export function applySceneEvent(
 ): void {
   const [prefix, value] = action.split(':')
   if (action !== `${prefix}:${value}`) return
-  if (
+  if (controlId === receptionMapId && state.mapCamera) {
+    if (action === 'map:reset') state.mapCamera = { ...state.mapCamera, refit: true }
+    else if (action === 'map:pan' || action === 'map:zoom')
+      state.mapCamera = { ...state.mapCamera, moved: true }
+  } else if (
     controlId === 'band' &&
     prefix === 'band' &&
     (state.bands ?? receptionBands).includes(value)

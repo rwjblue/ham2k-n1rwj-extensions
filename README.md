@@ -20,9 +20,8 @@ your signal is heard. Published extensions are available as ready-to-install
 | [Zombie Shuffle](extensions/contests/n1rwj-zombie/README.md) (`n1rwj-zombie`) | Friendly graveyard scene, per-band rebirth watch, spooky visitor book, 2026 CW exchanges, scoring, and exports |
 
 The [PSK Reporter extension](extensions/tools/n1rwj-psk-reporter/README.md)
-now builds with live MQTT reception using the published SDK and tools. It shares
-the reception map/UI with RBN and requires Ham2K build 171 or newer. Native app
-testing remains pending; see the [verification record](docs/VERIFICATION.md).
+uses live MQTT reception and shares the native reception panel with RBN.
+Both extensions require Ham2K extension API 25.
 
 ## Install
 
@@ -124,7 +123,7 @@ distance limit in miles from your chosen grid. RBN ignores **Station filter**
 selections saved by earlier versions. Filtering by the current operation's
 contest or roster awaits native HaLo support.
 
-RBN 0.20.0 requires Ham2K extension API 21. Live updates use the node
+RBN requires Ham2K extension API 25. Live updates use the node
 selected in **Settings → DX Cluster** when it forwards RBN skimmer spots.
 See the [verification record](docs/VERIFICATION.md) for tested builds.
 
@@ -142,8 +141,8 @@ Use panel settings (the tune icon) to choose **View** and **Band**. Use the
 panel controls to sort reports, page through receivers, and refresh manually.
 Wide panes show a table; narrow panes use receiver cards.
 Explicit callsign/grid overrides stay with that panel placement until cleared,
-so leave them blank for normal operation. The map geography is bundled; new
-RBN reports come from the DX cluster and Vail ReRBN and need internet access. Receiver positions
+so leave them blank for normal operation. HaLo draws its bundled offline map.
+New reports from the DX cluster and Vail ReRBN require internet access. Receiver positions
 use cached RBN node grids, with registered grids as a fallback, so map paths,
 distances, and bearings are estimates. Refresh the **RBN receiver directory**
 in **Settings → Data Files** when needed; it becomes eligible for automatic
@@ -279,7 +278,7 @@ extensions/contests/n1rwj-randomgram/  Issued code groups, exchange pane, and su
 extensions/tools/n1rwj-rbn/     RBN feed, receiver directory, Spots, and panel adapter
 extensions/tools/n1rwj-psk-reporter/  Live MQTT reception maps and transport
 extensions/tools/n1rwj-contest-calendar/  Upcoming contest feed, cache, and optional panel
-packages/reception/             Shared reception model, map, UI, and geography
+packages/reception/             Shared reception model, native map control, and UI
 packages/n1mm/                 Generic N1MM parsing and callsigns
 packages/contest-history/      Shared CWT/MST/SST operation-history adapter
 packages/mini-contest/          Shared MST/SST/WRT/NS hooks, history, scoring, and tests
@@ -407,6 +406,4 @@ extension. Its MPL-2.0 license and copyright notices are retained. See
 [provenance](docs/PROVENANCE.md), [license](LICENSE), and [notices](NOTICE.md)
 for source history and attribution.
 
-The RBN map bundles Natural Earth geometry and projection libraries with
-their notices. See its [map attribution](packages/reception/assets/MAP_ATTRIBUTION.md)
-for the data source and licenses.
+RBN and PSK Reporter use [HaLo's native maps](https://github.com/ham2k/halo/blob/83f5a1a77639098363d59bd3d159d26666fc418b/docs/extensions/scenes.md#map).

@@ -38,8 +38,6 @@ const model: UiModel = {
   bands: ['all', '20m', '40m'],
   rows,
   mapOptions: {
-    width: 520,
-    height: 360,
     origin: { latitude: 40.9, longitude: -74.2, label: 'KG2GL' },
     stations: rows.slice(0, 23).map((row, index) => ({
       key: row.call,
@@ -48,14 +46,6 @@ const model: UiModel = {
       longitude: -90 + index,
       ageMinutes: index,
     })),
-    theme: {
-      surface: '#ffffff',
-      land: '#f1f5f7',
-      text: '#172832',
-      muted: '#526876',
-      border: '#cbd8df',
-      accent: '#086f63',
-    },
   },
 }
 
@@ -67,6 +57,13 @@ function layer(scene: SvgScene, id: string): SvgSceneLayer {
   const found = scene.layers.find((item) => item.id === id)
   if (!found) throw new Error(`Missing scene layer ${id}`)
   return found
+}
+
+function mapControl(scene: SvgScene) {
+  const map = scene.controls?.find((control) => control.kind === 'map')
+  if (!map) throw new Error('Missing reception map')
+  assertFixedSceneRect(map)
+  return map
 }
 
 function assertSceneBounds(scene: SvgScene): void {
@@ -132,7 +129,7 @@ describe('RBN native scene', () => {
         expect(summary.x + summary.width).toBeLessThan(refresh.x)
       }
       // Preserve the compact layout's 50px header budget and full-width map.
-      expect(layer(scene, 'reception-map-0')).toMatchObject({
+      expect(mapControl(scene)).toMatchObject({
         x: 12,
         y: 58,
         width: width - 24,
@@ -182,9 +179,9 @@ describe('RBN native scene', () => {
       const original = renderReceptionScene(model, environment(width, 900, scale), {
         view: 'map',
       }).scene
-      expect(layer(scene, 'reception-map-0')).toMatchObject({
-        y: layer(original, 'reception-map-0').y,
-        height: layer(original, 'reception-map-0').height,
+      expect(mapControl(scene)).toMatchObject({
+        y: mapControl(original).y,
+        height: mapControl(original).height,
       })
       assertSceneBounds(scene)
     }
@@ -250,7 +247,7 @@ describe('RBN native scene', () => {
 
   it('renders a map beside a receiver table at desktop sizes with native readable text', () => {
     const { scene, pageSize } = renderReceptionScene(model, environment())
-    const map = layer(scene, 'reception-map-0')
+    const map = mapControl(scene)
     const row = layer(scene, 'row-0-background')
     expect(map.x + map.width).toBeLessThan(row.x)
     expect(scene.layers.some((layer) => layer.id === 'column-0')).toBe(true)
@@ -320,13 +317,8 @@ describe('RBN native scene', () => {
     }
     const fresh = renderReceptionScene(source, environment(390, 844), { view: 'map', band: '20m' })
     const old = renderReceptionScene(source, environment(390, 844), { view: 'map', band: '40m' })
-    const geometry = (scene: SvgScene) =>
-      scene.layers
-        .filter((layer) => layer.id.startsWith('reception-map-'))
-        .map((layer) => layer.svg)
-        .join('')
     const markerOpacity = (scene: SvgScene) =>
-      Number(geometry(scene).match(/<circle[^>]+r="4\.5"[^>]+fill-opacity="([\d.]+)"/)?.[1])
+      Number.parseInt(mapControl(scene).markers?.[0].fill?.slice(1, 3) ?? '', 16) / 255
     expect(markerOpacity(fresh.scene)).toBe(1)
     expect(markerOpacity(old.scene)).toBeCloseTo(1 / 3, 2)
   })
@@ -339,9 +331,14 @@ describe('RBN native scene', () => {
     'gives the map the panel height after a compact header and footer at %ix%i',
     (width, height) => {
       const { scene } = renderReceptionScene(model, environment(width, height), { view: 'map' })
-      const map = layer(scene, 'reception-map-0')
+      const map = mapControl(scene)
       expect(map.height).toBeGreaterThanOrEqual(height - 100)
-      expect(scene.controls?.map((control) => control.id)).toEqual(['band', 'refresh', 'details'])
+      expect(scene.controls?.map((control) => control.id)).toEqual([
+        'band',
+        'refresh',
+        'details',
+        'reception-map',
+      ])
       expect(layer(scene, 'summary').y + layer(scene, 'summary').height).toBeLessThan(map.y)
       expect(map.y + map.height).toBeLessThan(layer(scene, 'source').y)
       assertSceneBounds(scene)
@@ -370,7 +367,8 @@ describe('RBN native scene', () => {
     }
     const { scene, pageCount } = renderReceptionScene(source, environment())
     expect(pageCount).toBeGreaterThan(60)
-    expect(scene.layers.filter((layer) => layer.id.startsWith('reception-map-'))).toHaveLength(3)
+    expect(mapControl(scene).markers).toHaveLength(501)
+    expect(mapControl(scene).lines).toHaveLength(500)
     assertSceneBounds(scene)
   })
 
@@ -494,7 +492,7 @@ describe('RBN native scene', () => {
       expect(lastLine.y + lastLine.height).toBeLessThanOrEqual(row.y + row.height)
       expect(row.y + row.height).toBeLessThan(pager.y)
       expect(text(scene)).not.toContain('Enlarge this panel to display receiver reports.')
-      if (!scene.layers.some((item) => item.id.startsWith('reception-map-'))) {
+      if (!scene.controls?.some((control) => control.kind === 'map')) {
         expect(text(scene)).toContain('Choose Map in panel settings for a larger map.')
       }
       assertSceneBounds(scene)
@@ -514,7 +512,7 @@ describe('RBN native scene', () => {
           { view: 'map' },
           { nativeControls },
         )
-        expect(scene.layers.some((item) => item.id.startsWith('reception-map-'))).toBe(false)
+        expect(scene.controls?.some((control) => control.kind === 'map')).toBe(false)
         expect(layer(scene, 'map-unavailable').text?.literal).toBe(
           'Enlarge this panel to display the map.',
         )
@@ -533,9 +531,9 @@ describe('RBN native scene', () => {
         { view: 'map' },
         { nativeControls },
       )
-      expect(scene.layers.some((item) => item.id.startsWith('reception-map-'))).toBe(false)
+      expect(scene.controls?.some((control) => control.kind === 'map')).toBe(false)
       expect(layer(scene, 'map-unavailable').text?.literal).toBe(
-        'Set your operation location to show the map.',
+        'Set your operation location or a map origin grid.',
       )
       assertSceneBounds(scene)
     },

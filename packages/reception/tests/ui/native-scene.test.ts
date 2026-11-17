@@ -18,18 +18,8 @@ const model: UiModel = {
   bands: ['all', '20m', '40m'],
   rows: [{ call: 'W1NT', band: '20m', mode: 'CW', age: '1 min ago', timeMs: 1000 }],
   mapOptions: {
-    width: 520,
-    height: 360,
     origin: { latitude: 41, longitude: -73, label: 'N1RWJ' },
     stations: [{ key: 'W1NT', label: 'W1NT', latitude: 43, longitude: -71, ageMinutes: 1 }],
-    theme: {
-      surface: '#ffffff',
-      land: '#f1f5f7',
-      text: '#172832',
-      muted: '#526876',
-      border: '#cbd8df',
-      accent: '#086f63',
-    },
   },
   warnings: ['Reports can be incomplete.'],
   details: {
@@ -105,7 +95,7 @@ describe('native reception choices', () => {
       { view: 'both' },
       { nativeControls: true },
     )
-    expect(scene.layers.some((layer) => layer.id === 'reception-map-0')).toBe(false)
+    expect(scene.controls?.some((control) => control.kind === 'map')).toBe(false)
     expect(scene.layers.find((layer) => layer.id === 'map-compact')?.text?.literal).toBe(
       'Choose Map above for a larger map.',
     )
@@ -131,7 +121,7 @@ describe('native reception choices', () => {
         { view: 'both' },
         { nativeControls },
       )
-      expect(scene.layers.some((layer) => layer.id === 'reception-map-0')).toBe(false)
+      expect(scene.controls?.some((control) => control.kind === 'map')).toBe(false)
       expect(scene.layers.find((layer) => layer.id === 'map-compact')?.text?.literal).toBe(
         'Choose Map in panel settings for a larger map.',
       )
@@ -314,7 +304,7 @@ describe('native reception choices', () => {
         const band = scene.controls?.find((control) => control.id === 'band')
         const window = scene.controls?.find((control) => control.id === 'window')
         const viewControl = scene.controls?.find((control) => control.id === 'view')
-        const map = scene.layers.find((layer) => layer.id === 'reception-map-0')
+        const map = scene.controls?.find((control) => control.kind === 'map')
         if (!band || !window || !viewControl || !map)
           throw new Error('Missing narrow selected-band layout')
         assertFixedSceneRect(band)
@@ -374,7 +364,7 @@ describe('native reception choices', () => {
       expect(scene.strings).toEqual({ band: 'all', window: '15', view: 'map' })
       // The preceding dropdown/segmented toolbar put every phone map at y=205.
       // Even the narrow header with wrapped status now recovers 75px of map.
-      expect(scene.layers.find((layer) => layer.id === 'reception-map-0')).toMatchObject({
+      expect(scene.controls?.find((control) => control.kind === 'map')).toMatchObject({
         x: 12,
         y: mapY,
         width: width - 24,
@@ -414,7 +404,7 @@ describe('native reception choices', () => {
     expect(refresh.label).toBe('Refresh')
     expect(details.label).toBe('Details')
     const view = scene.controls?.find((control) => control.id === 'view')
-    const map = scene.layers.find((layer) => layer.id === 'reception-map-0')
+    const map = scene.controls?.find((control) => control.kind === 'map')
     if (!view || !map) throw new Error('Missing large-text view menu or map')
     assertFixedSceneRect(view)
     assertFixedSceneRect(map)
@@ -441,7 +431,7 @@ describe('native reception choices', () => {
         { view: 'map' },
         { nativeControls: true },
       )
-      expect(scene.layers.find((layer) => layer.id === 'reception-map-0')).toMatchObject({
+      expect(scene.controls?.find((control) => control.kind === 'map')).toMatchObject({
         y: mapY,
         width: width - 24,
         height: mapHeight,
@@ -481,7 +471,7 @@ describe('native reception choices', () => {
     expect(wide.controls?.find((control) => control.id === 'band')?.kind).toBe('nativeDropdown')
     expect(wide.controls?.find((control) => control.id === 'window')?.kind).toBe('nativeDropdown')
     expect(wide.controls?.find((control) => control.id === 'view')?.kind).toBe('nativeSegmented')
-    const map = narrow.layers.find((layer) => layer.id === 'reception-map-0')
+    const map = narrow.controls?.find((control) => control.kind === 'map')
     expect(map?.y).toBeGreaterThanOrEqual(view.y + view.height + 8)
     expect(map?.width).toBe(296)
     expect(narrow.width).toBe(320)
@@ -544,7 +534,7 @@ describe('native reception choices', () => {
     )
     expect(scene.controls?.find((control) => control.id === 'band')?.kind).toBe('nativeButton')
     expect(scene.controls?.find((control) => control.id === 'window')?.kind).toBe('nativeButton')
-    expect(scene.layers.find((layer) => layer.id === 'reception-map-0')).toMatchObject({
+    expect(scene.controls?.find((control) => control.kind === 'map')).toMatchObject({
       y: mapY,
       width: width - 24,
       height: mapHeight,

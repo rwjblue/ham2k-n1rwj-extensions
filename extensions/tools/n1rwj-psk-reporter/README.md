@@ -1,8 +1,8 @@
 # N1RWJ PSK Reporter
 
-Live PSK Reporter reception maps for Ham2K with **extension API 5** and native
-panel controls. The regular package uses the published `@ham2k/extension-sdk`
-**0.12.0** and `@ham2k/extension-tools` **0.8.0**, with a WebSocket permission
+Live PSK Reporter reception maps for Ham2K with **extension API 25** and native
+maps and panel controls. The package uses the published SDK and build tools
+with a WebSocket permission
 for `mqtt.pskreporter.info`, and HTTPS access to `retrieve.pskreporter.info`
 for recent history.
 
@@ -12,7 +12,7 @@ for recent history.
 mise run pack n1rwj-psk-reporter
 ```
 
-Install `dist/n1rwj-psk-reporter-0.7.6.h2kext` through Ham2K's extension installer,
+Install the generated `dist/n1rwj-psk-reporter-<version>.h2kext` through Ham2K's extension installer,
 allow its declared network hosts, and add **PSK Reporter** to an operation's layout.
 It follows the operation's station callsign and location unless overridden.
 Choose **Who hears me** for outgoing reception or **Who I hear** for reports
@@ -32,9 +32,9 @@ The implementation first passed against upstream source commit
 [17b15fdcafdd](https://github.com/ham2k/halo/commit/17b15fdcafdd), then passed the
 same contract, build, packer and binary bridge checks against the published
 SDK 0.6.0/tools 0.5.0. Timer support is checked against SDK 0.12.0/tools 0.8.0.
-The panel uses the API-5 `scene` payload with native Band, Window, Sort and
-Status/About choices and Refresh/Details/Back buttons. Cartography and paginated
-report/details text stay in the shared renderer.
+The API-25 scene uses HaLo's offline basemap and native pan and zoom, alongside
+the shared paginated report list and the native Band, Window, Sort, Status/About,
+Refresh, and Details/Back controls.
 The code uses the SDK's socket and timer types and regular entry point; no SDK
 implementation is copied into this repository.
 
@@ -86,11 +86,12 @@ history subject to the existing cooldown, without changing the MQTT subscription
 or using the manual Refresh bypass. Smaller windows reuse cached reports.
 
 - The shared [reception workspace](../../../packages/reception/README.md)
-  supplies RBN's map, SVG renderer, settings, and panel state. Settings offer
+  supplies the native map control, settings, and panel state. Settings offer
   **Who hears me** and **Who I hear**, map/list layouts, band/window selection,
-  projection and sorting. The default fitted map is north-up (Natural Earth 1)
-  and keeps distant continents recognizable; the optional station-centered
-  view supplies distance rings. Callsign and location follow the operation unless
+  projection and sorting. The default north-up view fits the reports and keeps
+  reports near the date line together. The station-centered view supplies distance
+  rings. Drag to pan, and pinch or scroll to zoom. Routine report updates preserve
+  that view. Callsign and location follow the operation unless
   overridden. SNR belongs to the receiver; reported grids are never replaced
   with callsign-prefix guesses.
 - `src/transport/mqtt.ts` implements the needed MQTT 3.1.1 clean-session QoS-0
@@ -196,8 +197,7 @@ persistent extension settings. The host's `kvGet`/`kvSet` are memory-only and ar
 not used for persistence. Timers service visible subscriptions, eligible history
 work and pending cache writes; they do not renew visibility themselves.
 
-Before publishing, install on a host supporting extension API 5 and native panel
-panels, and test both directions,
+Before publishing, install on a host supporting extension API 25 and test both directions,
 multiple placements, callsign/operation changes, hidden tabs, app backgrounding,
 panel removal, sleep/resume, disconnects, denied grants and extension reload.
 Check native binary delivery and UI on each intended platform.
@@ -211,4 +211,4 @@ Reports originate at [PSK Reporter](https://pskreporter.info/); the MQTT distrib
 is operated by M0LTE ([feed schema and topics](https://www.mqtt.pskreporter.info/)).
 The packet implementation follows [MQTT 3.1.1](https://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html).
 Reception reports are not QSOs, confirmations or proof of coverage. The extension
-neither submits spots nor logs contacts. See [shared map attribution](../../../packages/reception/assets/MAP_ATTRIBUTION.md).
+neither submits spots nor logs contacts.

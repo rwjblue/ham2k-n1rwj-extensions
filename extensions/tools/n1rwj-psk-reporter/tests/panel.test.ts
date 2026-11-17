@@ -737,7 +737,7 @@ it('commits Status and About tabs while retaining the configured view and reject
   const reports = await s.render('one', false)
   expect(sceneState(reports).strings?.band).toBe('20m')
   expect(sceneState(reports).controls?.some((control) => control.id === 'view')).toBe(false)
-  expect(sceneState(reports).layers.some((layer) => layer.id.startsWith('map-'))).toBe(false)
+  expect(sceneState(reports).controls?.some((control) => control.kind === 'map')).toBe(false)
   s.stop()
 })
 

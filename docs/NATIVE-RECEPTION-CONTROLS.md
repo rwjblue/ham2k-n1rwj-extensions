@@ -1,5 +1,8 @@
 # Native reception controls
 
+> The API-5 rollout described here preceded
+> [native reception maps](NATIVE-RECEPTION-MAPS.md), which require API 25.
+
 RBN and PSK Reporter use `PanelContent.kind: 'scene'` and declare extension API 5.
 The installed SDK 0.12.0 supplies `PanelScene`, string state and native choices;
 extension-tools 0.8.0 validates and packages API 5 with the same shared libraries.
