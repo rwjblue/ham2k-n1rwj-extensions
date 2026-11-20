@@ -40,7 +40,9 @@ export async function buildExtensions(root: string, key?: string): Promise<void>
       // Extension notices and static files accompany the bundle, without
       // replacing the repository's copyright and adaptation provenance.
       for (const entry of await readdir(extensionAssetsDir)) {
-        await cp(join(extensionAssetsDir, entry), join(assetsDir, entry), {
+        // Bundle the importable CW set with the same bytes used by the JS entry point.
+        const filename = entry.endsWith('.h2kset.json') ? entry.slice(0, -'.json'.length) : entry
+        await cp(join(extensionAssetsDir, entry), join(assetsDir, filename), {
           recursive: true,
           force: false,
           errorOnExist: true,

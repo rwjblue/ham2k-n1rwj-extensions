@@ -65,6 +65,18 @@ These native macOS screenshots use a **Testing** operation with synthetic
 contacts. See the [screenshot record](../../../docs/images/README.md) for
 capture versions; the dates and exchanges shown are examples.
 
+### CW keyer set
+
+The embedded set requires Extension API 21.
+Choose **SST CW** under **Extensions → N1RWJ K1USN SST** in the CW
+Keyer's **Sets** picker. To import a standalone copy, save the
+[preset file](assets/SST.h2kset.json) as `SST.h2kset` and open it in Ham2K.
+The same set works for Run and Search & Pounce, using F1–F8 directly or
+with Enter Sends Messages. F2 and F6 send the name and location from your
+SST activity setup. Confirm the received exchange before logging, even if
+Ham2K filled it in. Keep your keyer at 20 WPM or slower and match the other
+operator's speed when needed.
+
 ## Which location to send
 
 Stations in the lower 48 US states send their two-letter state abbreviation;
@@ -83,7 +95,7 @@ could otherwise be mistaken for Ontario.
 
 The source is the public
 [N1MM call-history collection](https://n1mmwp.hamdocs.com/mmfiles/categories/callhistory/).
-Ham2K (extension API 11 or newer) discovers the latest listed `K1USNSST-*.txt` file and uses its
+Ham2K discovers the latest listed `K1USNSST-*.txt` file and uses its
 names and locations. See N1MM's
 [call-history explanation](https://n1mmwp.hamdocs.com/setup/call-history/)
 for background on these community-maintained files. They are suggestions,

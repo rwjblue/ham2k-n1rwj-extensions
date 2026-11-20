@@ -69,7 +69,7 @@ capture versions; the dates and exchanges shown are examples.
 
 The default source is the public
 [N1MM call-history collection](https://n1mmwp.hamdocs.com/mmfiles/categories/callhistory/).
-Ham2K (extension API 11 or newer) discovers the latest listed `CWOPS_*.txt` file, which contains
+Ham2K discovers the latest listed `CWOPS_*.txt` file, which contains
 names and known CWT exchanges. See N1MM's
 [call-history explanation](https://n1mmwp.hamdocs.com/setup/call-history/)
 for background on these community-maintained files. They are suggestions,
@@ -134,6 +134,14 @@ That is only a location guess: a missing file entry or member number does
 not establish that someone is a nonmember. Check what they send. A suggestion
 is saved if you leave it unchanged; clearing or correcting it is respected.
 For the full matching rules, see [call-history details](../../../docs/CALL-HISTORY.md).
+
+## CW keyer
+
+The embedded set requires Extension API 21.
+In **CW Keyer → Sets → Extensions → N1RWJ CWT**, choose **CWT CW**.
+F2 sends the first name and member number, QTH, or `CWA` from the CWT
+operation setup. The same set supports manual keying and Enter Sends Messages
+in Run or S&P. [Key assignments and standalone import](../../../docs/CONTEST-KEYER-PRESETS.md)
 
 ## How scoring works
 

@@ -7,13 +7,14 @@
   "category": "contest",
   "icon": "clock-fast",
   "accentColor": "#1565C0",
-  "api": 11,
+  "api": 21,
   "keywords": ["contest", "sst", "cw", "mini-test", "cabrillo", "call-history"],
   "hooks": [
     "activity",
     "adifFields",
     "dataFile",
     "export",
+    "keyerSets",
     "ref:sst",
     "scoring",
     "spotCallFilter:v1"
