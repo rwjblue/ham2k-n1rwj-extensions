@@ -1,5 +1,7 @@
+import type { KeyerSetsHook } from '@ham2k/extension-sdk'
 import { contestScorer, defineExtension } from '@ham2k/extension-sdk'
 import { callFilterCategory } from '../../../../packages/spot-filters/src/index.ts'
+import keyerSet from '../assets/CWT.h2kset.json'
 import manifest from '../manifest.json'
 import { AdifFieldsHook, CWTScorer, ExportHook, RefHandler } from './cwt/index.ts'
 import { DataFile, fileCache } from './data/hooks.ts'
@@ -19,6 +21,14 @@ defineExtension({
       hook: prefill.scoring(contestScorer(CWTScorer, { scope: { refTypes: ['cwt'] } })),
     })
     registerHook('lookup', { hook: prefill.lookup })
+    registerHook('keyerSets', {
+      hook: {
+        async getSets() {
+          const { name, messages, labels } = keyerSet
+          return [{ kind: 'cw', id: 'cwt-cw', name, messages, labels }]
+        },
+      } satisfies KeyerSetsHook,
+    })
     registerHook('dataFile', { key: DataFile.key, hook: DataFile })
     registerHook(callFilterCategory, { hook: callFilter })
   },

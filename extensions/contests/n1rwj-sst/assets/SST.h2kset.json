@@ -1,0 +1,25 @@
+{
+  "ham2k-set": 1,
+  "kind": "cw-messages",
+  "name": "SST CW",
+  "messages": [
+    "{% assign first_call = op.stations | first %}{% assign call = qso.our.call | default: first_call | strip | upcase %}{% if call != blank %}CQ SST {{ call }}{% endif %}",
+    "{% assign sst = op.refs | where: 'type', 'sst' | first %}{% assign name = sst.ourName | strip | split: ' ' | first | upcase %}{% assign location = sst.ourLocation | strip | upcase %}{% if name != blank and location != blank %}{{ name }} {{ location }}{% endif %}",
+    "{% assign first_call = op.stations | first %}{% assign call = qso.our.call | default: first_call | strip | upcase %}{% if call != blank %}TU {{ call }} SST{% endif %}",
+    "{% assign first_call = op.stations | first %}{{ qso.our.call | default: first_call | strip | upcase }}",
+    "{{ qso.call }}",
+    "{{ keyer.msg2 }}",
+    "QRS PSE",
+    "AGN?"
+  ],
+  "labels": [
+    "CQ SST",
+    "Exchange",
+    "TU",
+    "My call",
+    "Their call",
+    "Repeat exchange",
+    "Slow down",
+    "Again?"
+  ]
+}

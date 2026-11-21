@@ -60,6 +60,18 @@ These native macOS screenshots use a **Testing** operation with synthetic
 contacts. See the [screenshot record](../../../docs/images/README.md) for
 capture versions; the dates and exchanges shown are examples.
 
+### CW keyer set
+
+The embedded set requires Extension API 21.
+Choose **MST CW** under **Extensions → N1RWJ ICWC MST** in the CW
+Keyer's **Sets** picker. To import a standalone copy, save the
+[preset file](assets/MST.h2kset.json) as `MST.h2kset` and open it in Ham2K.
+The same set works for Run and Search & Pounce, using F1–F8 directly or
+with Enter Sends Messages. F2 and F6 send the current **Sent #** in full
+digits followed by the name from your MST activity setup. Confirm the
+received exchange before logging, even if Ham2K suggested the name. Aim
+for 20–25 WPM and slow down on request.
+
 ## How serial numbers work
 
 Ham2K starts **Sent #** at **1 for a new operation** and uses one sequence
@@ -82,7 +94,7 @@ call history, earlier contacts, or CWops member numbers. Always copy it on air.
 
 The source is the public
 [N1MM call-history collection](https://n1mmwp.hamdocs.com/mmfiles/categories/callhistory/).
-Ham2K (extension API 11 or newer) discovers the latest listed `ICWC-MST-*.txt` file and uses its
+Ham2K discovers the latest listed `ICWC-MST-*.txt` file and uses its
 names. See N1MM's [call-history explanation](https://n1mmwp.hamdocs.com/setup/call-history/)
 for background on these community-maintained files. They do not provide
 received MST serial numbers.

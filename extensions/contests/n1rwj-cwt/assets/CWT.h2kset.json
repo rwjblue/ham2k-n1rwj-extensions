@@ -1,0 +1,25 @@
+{
+  "ham2k-set": 1,
+  "kind": "cw-messages",
+  "name": "CWT CW",
+  "messages": [
+    "{% assign first_call = op.stations | first %}{% assign call = qso.our.call | default: first_call | strip | upcase %}{% if call != blank %}CQ CWT {{ call }}{% endif %}",
+    "{% assign contest = op.refs | where: 'type', 'cwt' | first %}{% assign our_name = contest.ourName | strip | split: ' ' | first | upcase %}{% assign our_number = contest.ourNumber | strip | upcase %}{% if our_name != blank and our_number != blank %}{{ our_name }} {{ our_number }}{% endif %}",
+    "{% assign first_call = op.stations | first %}{% assign call = qso.our.call | default: first_call | strip | upcase %}{% if call != blank %}TU {{ call }} CWT{% endif %}",
+    "{% assign first_call = op.stations | first %}{{ qso.our.call | default: first_call | strip | upcase }}",
+    "{{ qso.call }}",
+    "{{ keyer.msg2 }}",
+    "QRS PSE",
+    "AGN?"
+  ],
+  "labels": [
+    "CQ CWT",
+    "Exchange",
+    "TU",
+    "My call",
+    "Their call",
+    "Repeat exchange",
+    "Slow down",
+    "Again?"
+  ]
+}

@@ -1,6 +1,8 @@
+import type { KeyerSetsHook } from '@ham2k/extension-sdk'
 import { defineExtension } from '@ham2k/extension-sdk'
 import { createMiniContest } from '../../../../packages/mini-contest/src/index.ts'
 import { callFilterCategory } from '../../../../packages/spot-filters/src/index.ts'
+import keyerSet from '../assets/MST.h2kset.json'
 import manifest from '../manifest.json'
 import { config } from './config.ts'
 
@@ -15,5 +17,13 @@ defineExtension({
     registerHook('export', { hook: hooks.exports })
     registerHook('scoring', { hook: hooks.scoring })
     registerHook('dataFile', { key: hooks.dataFile.key, hook: hooks.dataFile })
+    registerHook('keyerSets', {
+      hook: {
+        async getSets() {
+          const { name, messages, labels } = keyerSet
+          return [{ kind: 'cw', id: 'mst-cw', name, messages, labels }]
+        },
+      } satisfies KeyerSetsHook,
+    })
   },
 })
