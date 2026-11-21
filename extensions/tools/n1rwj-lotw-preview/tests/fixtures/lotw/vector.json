@@ -1,0 +1,24 @@
+{
+  "description": "Synthetic RSA SHA-1 vector; generated certificate has no ARRL authority",
+  "station": {
+    "callsign": "W1AW",
+    "dxcc": 291,
+    "grid": "FN31pr",
+    "state": "CT",
+    "county": "Tolland",
+    "cqZone": 5,
+    "ituZone": 8
+  },
+  "contact": {
+    "id": "synthetic-1",
+    "generation": "1",
+    "call": "K1ABC",
+    "band": "20m",
+    "mode": "FT8",
+    "date": "2026-10-22",
+    "time": "12:34:56Z",
+    "frequencyMHz": "14.074"
+  },
+  "canonical": "5FN31PR8TOLLANDCT20MK1ABC14.074FT82026-10-2212:34:56Z",
+  "signatureBase64": "Qu9QXJEhorYxQAt7L62s/SnpIkDHvMI2ZVICMqgWD8mulAD7UtQWCyV49mMeKi2NwE0DkFayPqtpH+WXG8yFrQB/vsZHDtgY8G1PXlMhT/QvpFKindKNB2BpIYlYQOffWtrrtJoUdHhRrxpldIaIneX7WVbilvM1UtP0HCpFItSd5dDukTUt54TijataXaFe0pjDdPwDmNjQuo23ov/fuVwHSyBmRuuhgVpinzwUqjXCqJBfLYavA8cvPkDoC156uoNk3HAca1fjo60W3Kdon6iAKUrhuMxydFAW7UzMtoRFC4B8+XArjtqqm2KKX2gq0t/6vXt8fZrd0dhwT9Aifw=="
+}

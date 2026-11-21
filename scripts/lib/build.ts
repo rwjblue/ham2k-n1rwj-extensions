@@ -1,8 +1,25 @@
 import { copyFile, cp, mkdir, readdir, rm } from 'node:fs/promises'
 import { basename, join } from 'node:path'
 import { buildExtension } from '@ham2k/extension-tools'
-import { build } from 'esbuild'
+import { build, type Plugin } from 'esbuild'
 import { readJson, selectExtensions } from './extensions.ts'
+
+// The neutral preset ignores Forge's browser map. Apply its crypto exclusion
+// only to Forge itself. Signing gets its entropy from the extension host.
+const forgeSandbox: Plugin = {
+  name: 'forge-sandbox',
+  setup(builder) {
+    builder.onResolve({ filter: /^crypto$/ }, ({ importer }) => {
+      if (/(?:^|[/\\])node-forge[/\\]lib[/\\]/.test(importer)) {
+        return { path: 'crypto', namespace: 'forge-sandbox' }
+      }
+    })
+    builder.onLoad({ filter: /^crypto$/, namespace: 'forge-sandbox' }, () => ({
+      contents: 'throw new Error("Forge cannot use Node crypto inside HaLo")',
+      loader: 'js',
+    }))
+  },
+}
 
 /** Declared local workspaces may supply notices/assets bundled by every consumer. */
 async function workspaceAssets(root: string, dependencies: Record<string, unknown>) {
@@ -26,7 +43,12 @@ async function workspaceAssets(root: string, dependencies: Record<string, unknow
 export async function buildExtensions(root: string, key?: string): Promise<void> {
   for (const extension of await selectExtensions(root, key)) {
     await rm(join(extension.dir, 'build'), { recursive: true, force: true })
-    const result = await buildExtension(build, { dir: extension.dir })
+    const result = await buildExtension(build, {
+      dir: extension.dir,
+      ...(extension.manifest.key === 'n1rwj-lotw-preview'
+        ? { plugins: [forgeSandbox], define: { self: 'globalThis' } }
+        : {}),
+    })
     // Copyright and adaptation provenance travel with every installable bundle.
     const assetsDir = join(result.outDir, 'assets')
     await mkdir(assetsDir, { recursive: true })

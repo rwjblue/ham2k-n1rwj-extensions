@@ -1,0 +1,28 @@
+{
+  "key": "n1rwj-lotw-preview",
+  "name": "N1RWJ LoTW Upload Preview",
+  "shortName": "LoTW Preview",
+  "version": "0.21.0",
+  "description": "Temporary personal LoTW upload preview using HaLo’s transfer workflow.",
+  "category": "exports",
+  "icon": "cloud-upload-outline",
+  "api": 29,
+  "keywords": ["lotw", "logbook", "transfer", "tq8", "upload", "preview"],
+  "hooks": ["account", "transfer", "settingsPanel"],
+  "settings": {
+    "section": "exports",
+    "sidebar": false
+  },
+  "domains": ["lotw.arrl.org"],
+  "sharedDependencies": {
+    "@ham2k/lib-callsigns": "^1.0.2",
+    "@ham2k/lib-country-files": "^1.0.202605301",
+    "@ham2k/lib-dxcc-data": "^1.0.1",
+    "@ham2k/lib-format-tools": "^1.2.0",
+    "@ham2k/lib-geo-tools": "^1.1.1",
+    "@ham2k/lib-operation-data": "^1.1.3",
+    "@ham2k/lib-qson-cabrillo": "^1.2.0",
+    "i18next": "^23.16.8",
+    "liquidjs": "^10.28.0"
+  }
+}
