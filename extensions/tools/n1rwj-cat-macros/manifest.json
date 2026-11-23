@@ -1,7 +1,7 @@
 {
   "key": "n1rwj-cat-macros",
   "name": "N1RWJ CAT Macros",
-  "version": "0.22.0",
+  "version": "0.23.0",
   "shortName": "CAT Macros",
   "description": "Put your own CAT commands on a dockable button panel and run them from keyboard shortcuts.",
   "category": "dashboard",
@@ -10,7 +10,10 @@
   "keywords": ["CAT", "radio", "macro", "shortcut"],
   "hooks": ["panel", "command", "settingsPanel"],
   "requiresRadioRaw": true,
-  "settings": { "section": "radio", "sidebar": false },
+  "settings": {
+    "section": "radio",
+    "sidebar": false
+  },
   "sharedDependencies": {
     "@ham2k/lib-callsigns": "^1.0.2",
     "@ham2k/lib-country-files": "^1.0.202605301",
