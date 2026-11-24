@@ -1,0 +1,12 @@
+{
+  "name": "n1rwj-operation-location-us",
+  "version": "0.23.0",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "preview": true,
+  "devDependencies": {
+    "@ham2k/extension-sdk": "1.31.1",
+    "@ham2k/extension-tools": "1.31.1"
+  }
+}

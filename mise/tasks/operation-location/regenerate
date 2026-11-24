@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+#MISE description="Regenerate the downloadable U.S. operation location boundaries"
+#MISE tools={uv="0.13.8"}
+#USAGE flag "--check" help="Verify the dataset and source notice without changing them"
+#USAGE flag "--cache <directory>" help="Reuse pinned source files from this directory"
+
+set -euo pipefail
+exec uv run data/us-operation-location/generate.py "$@"
