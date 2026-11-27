@@ -1,9 +1,8 @@
 # N1RWJ NCCC Sprint CW for Ham2K
 
 Log the **NCCC Sprint CW (NS)** and individual NS Ladder sessions with outgoing
-serials, N1MM name/QTH prefills, CQ/S&P QSY reminders, per-band duplicate checks
-and multipliers, and ADIF/Cabrillo exports. Requires extension API 11 or newer
-for the host's native call-history downloader.
+serials, name/QTH suggestions, CQ/S&P QSY reminders, per-band duplicate checks
+and multipliers, and ADIF/Cabrillo exports. Requires extension API 11 or newer.
 
 ## The contest at a glance
 
@@ -31,9 +30,9 @@ session rather than accumulating a season's best weeks.
    This new extension has not yet been published to GitHub or the catalog.
 2. Create a **new operation for each session**, add **NS** or **NCCC Sprint**,
    and choose the correct Friday UTC session. Set your name, sent QTH and power.
-3. Refresh **NS N1MM call history** under **Accounts, Services & Data Sources**
-   (Data Files on older hosts). Add the optional **NS Sprint guide** panel in
-   Layout Setup for detailed QSY reminders.
+3. In the desktop or mobile app, refresh **NS call history** under **Accounts,
+   Services & Data Sources** (Data Files on older hosts). Add the optional
+   **NS Sprint guide** panel in Layout Setup for detailed QSY reminders.
 4. Choose **Operating mode**: **CQ / I solicited**, **S&P / I answered**, or
    **Unknown**. It describes this contact; it does not key the radio or change
    the host's keyer mode. Then enter one callsign at a time. Send the displayed **Sent #**, your name and
@@ -53,23 +52,22 @@ the host allocates later sent serials after the exchange projection hook.
 ## Exchanges and suggestions
 
 Your edits and deliberate clearing remain authoritative. Untouched names and
-QTHs are suggested in this order: NS contacts in this operation, the cached
-N1MM file, older NS contacts, and ordinary host lookups. Names may fall back to an unambiguous base call;
+QTHs come from NS contacts in this operation, then the cached call-history
+file, older NS contacts, and ordinary host lookups. Names may fall back to an unambiguous base call;
 portable stations do not inherit a base call's old QTH. Received serials are
 always copied for the current contact and are never suggested from history.
 
-The host automatically discovers the latest
-[SPRINTNS.txt](https://n1mmwp.hamdocs.com/mmfiles/sprintns-txt-3/) download in
-N1MM's public call-history collection. This is a shared Sprint/NAQP dataset;
-[SPRINTLADD.txt](https://n1mmwp.hamdocs.com/mmfiles/sprintladd-txt-3/) is another
-published entry for that family. Source discovery stays in code, with no URL
-override settings. The native data-file cache survives restarts and failed
-refreshes; a refresh failure retains the last valid parsed data.
+Ham2K downloads Super Check History's NAQP CW file for shared name and QTH
+hints. DXLog's NCCC Sprint module also uses NAQP data for these fields.
+The native app keeps the last successful file across restarts and failed
+refreshes. Web refresh requires cross-origin access from the provider.
+[Super Check History NAQP CW file](https://supercheckhistory.com/downloads/N1MM/NAQP-CW.txt) ·
+[DXLog NCCC Sprint definition](https://dxlog.net/sw/files/download/contest/NCCCSprint.txt)
 
 Name/QTH lookup uses that in-memory index and bounded local-history reads. It
 does not download a file or read the full log on every keystroke. The static
 dataset supplies no current activity or frequencies and is never registered
-as a spotting filter. N1MM's State column preserves NS's AK/HI and country
+as a spotting filter. The State column preserves NS's AK/HI and country
 exchanges; unsupported or numeric location hints are omitted while usable
 names are retained. Always verify a suggestion against the actual exchange.
 

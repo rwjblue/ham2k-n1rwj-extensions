@@ -34,7 +34,7 @@ export function createHistoryData(config: DownloadedContestConfig, manifest: Con
   }
   const dataFile: DataFileDefinition = {
     key: `${manifest.key}_history`,
-    name: `${config.shortName} N1MM call history`,
+    name: `${config.shortName} call history`,
     description:
       config.exchange === 'serial-name-location'
         ? 'Name and QTH suggestions only. Received serials must always be copied on the air.'
@@ -44,7 +44,7 @@ export function createHistoryData(config: DownloadedContestConfig, manifest: Con
     category: manifest.key,
     fetchType: 'raw',
     maxAgeInDays: 1,
-    url: `n1mm-history:${config.historyStem}`,
+    url: config.historyUrl,
     async rawToJSONData({ body, url }) {
       const snapshot: Snapshot = { schema: 1, body, url, fetchedAt: new Date().toISOString() }
       accept(snapshot)

@@ -29,7 +29,7 @@ export interface ContestConfig {
   guidance: string
 }
 export interface DownloadedContestConfig extends ContestConfig {
-  historyStem: string
+  historyUrl: string
   historyAliases: string[]
   historyLocation?: (value: string, call: string) => string
 }

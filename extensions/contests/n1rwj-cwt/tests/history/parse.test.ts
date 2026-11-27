@@ -112,7 +112,7 @@ KE6K,John,1427,Welch,K,AZ,
     expect(parseCallHistory('# QSOParty PA\nK1ABC,Pat').usable).toBe(false)
   })
 
-  it.each(['ICWC-MST', 'K1USNSST', 'K1USN-SST'])(
+  it.each(['ICWC-MST', 'K1USNSST', 'K1USN-SST', 'NAQP-CW'])(
     'rejects the actual %s association rather than interpreting its exchange as CWT',
     (contest) => {
       const parsed = parseCallHistory(`# ${contest}\n!!Order!!,Call,Name,Exch1\nK1ABC,Pat,123`)

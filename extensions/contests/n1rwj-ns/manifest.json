@@ -2,15 +2,15 @@
   "key": "n1rwj-ns",
   "name": "N1RWJ NCCC Sprint CW",
   "shortName": "NS",
-  "version": "0.23.0",
-  "description": "NCCC Sprint CW with N1MM prefills, CQ/S&P QSY reminders, serial/name/QTH exchanges, per-band multipliers and exports.",
+  "version": "0.24.0",
+  "description": "NCCC Sprint CW with name/QTH suggestions, CQ/S&P QSY reminders, serial exchanges, per-band multipliers and exports.",
   "category": "contest",
   "icon": "clock-fast",
   "accentColor": "#5E35B1",
   "api": 11,
   "keywords": ["contest", "ns", "nccc", "sprint", "cw", "ladder", "cabrillo"],
   "hooks": ["activity", "adifFields", "dataFile", "export", "panel", "ref:ns", "scoring"],
-  "domains": [],
+  "domains": ["supercheckhistory.com"],
   "relevance": {
     "interests": ["cw"]
   },

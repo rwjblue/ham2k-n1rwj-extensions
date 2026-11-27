@@ -39,10 +39,9 @@ commit-message-default: auto
 - Preserve explicit operator corrections and clearing. Missing CWops data
   never proves nonmembership; a location guess must never become a member
   number. Do not fetch data or read a full log per keystroke.
-- CWT, MST and SST discover their N1MM call-history sources automatically.
-  Keep source URLs and discovery rules in code; do not add settings pages
-  solely for source overrides. Retain native `dataFile` controls for refresh
-  and offline cache management.
+- CWT, MST, NS, SST and WRT use direct downloads from Super Check History.
+  Keep source URLs in code and use native `dataFile` controls for refresh and
+  offline cache management. Avoid settings pages solely for source overrides.
 - Group each extension's global settings into one native `settingsPanel`, using
   headers for related controls and an About row that opens a separate read-only
   dialog for longer guidance and links. Keep operation and per-panel options in

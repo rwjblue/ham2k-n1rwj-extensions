@@ -1,7 +1,7 @@
 {
   "key": "n1rwj-cat-macros",
   "name": "N1RWJ CAT Macros",
-  "version": "0.23.0",
+  "version": "0.24.0",
   "shortName": "CAT Macros",
   "description": "Put your own CAT commands on a dockable button panel and run them from keyboard shortcuts.",
   "category": "dashboard",

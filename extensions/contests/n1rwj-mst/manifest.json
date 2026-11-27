@@ -2,8 +2,8 @@
   "key": "n1rwj-mst",
   "name": "N1RWJ ICWC MST",
   "shortName": "MST",
-  "version": "0.23.0",
-  "description": "ICWC Medium Speed Test with serial exchanges, weekly sessions, scoring and N1MM name history.",
+  "version": "0.24.0",
+  "description": "ICWC Medium Speed Test with serial exchanges, weekly sessions, scoring and call-history name suggestions.",
   "category": "contest",
   "icon": "clock-fast",
   "accentColor": "#00695C",
@@ -22,6 +22,7 @@
   "relevance": {
     "interests": ["cw"]
   },
+  "domains": ["supercheckhistory.com"],
   "sharedDependencies": {
     "@ham2k/lib-callsigns": "^1.0.2",
     "@ham2k/lib-country-files": "^1.0.202605301",

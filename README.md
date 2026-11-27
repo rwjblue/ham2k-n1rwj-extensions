@@ -167,9 +167,10 @@ Previously published releases remain available as historical archives.
    references, so enabling both creates duplicate handlers. The personal key,
    saved CWT references, settings, and data-file identity remain compatible
    with previous releases of this repository.
-2. Refresh the extension's call-history entry under **Settings → Accounts,
-   Services & Data Sources**. Ham2K API 11 or newer discovers and downloads the current contest-specific
-   file automatically; no source URL setting is needed.
+2. In the desktop or mobile app, refresh the extension's call-history entry
+   under **Settings → Accounts, Services & Data Sources**. Ham2K downloads and
+   caches the contest's file from Super Check History. Web refresh requires
+   cross-origin access from the provider.
 3. Add the desired session to an operation, configure your sent exchange,
    and log contacts. Always copy and verify the exchange actually sent.
 
@@ -221,8 +222,8 @@ automated checks from tests performed in the native Ham2K app.
 (Thursday evening in North America) on 160, 80, 40, 20 and 15 meters, at
 100 W maximum. It combines outgoing serials with name/QTH entry, NS-specific
 state/province/country multipliers per band, and ADIF/Cabrillo exports.
-Native N1MM call history, local NS contacts and host lookups supply name/QTH
-suggestions; copy each received serial on air. CQ/S&P/Unknown entry and the
+Super Check History's NAQP CW file, local NS contacts and host lookups supply
+name/QTH suggestions. Copy each received serial on air. CQ/S&P/Unknown entry and the
 optional NS Sprint guide provide advisory QSY reminders without changing scores.
 NS requires extension API 11. Observe the 1 kHz Sprint QSY rule and
 disable RBN/packet assistance. Build with `mise run pack n1rwj-ns`. Native
@@ -237,9 +238,9 @@ session, with one contact per station per band. Select QRP (5 W) or low power
 (100 W), configure your sent exchange, and report your summary on 3830 Scores.
 
 Install `n1rwj-wrt` or build it locally with `mise run pack n1rwj-wrt`.
-WRT suggests exchanges from previous WRT contacts and ordinary host lookups.
-It has no downloadable history file or history-file spot filter. Its guide
-covers RTTY mode selection, prefix handling, exports, and verification limits.
+In the desktop or mobile app, refresh **WRT call history** under **Settings →
+Accounts, Services & Data Sources** to download names and QTHs for offline
+suggestions. WRT also uses previous WRT contacts and ordinary host lookups.
 
 ## Develop
 

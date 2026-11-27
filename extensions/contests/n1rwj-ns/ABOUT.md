@@ -3,5 +3,5 @@ Mark each contact as CQ or S&P and the optional **NS Sprint guide** can remind
 you when to move and when you can return to a frequency.
 
 Ham2K advances your outgoing serial and can suggest names and locations from
-past Sprint contacts and N1MM call history. Review your score by band and use
+past Sprint contacts and Super Check History. Review your score by band and use
 **Exports** for ADIF or Cabrillo.

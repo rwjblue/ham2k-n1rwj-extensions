@@ -22,7 +22,7 @@ export const config: DownloadedContestConfig = {
     { day: 1, hour: 0 },
     { day: 5, hour: 20 },
   ],
-  historyStem: 'K1USNSST',
+  historyUrl: 'https://supercheckhistory.com/downloads/N1MM/K1USNSST.txt',
   historyAliases: ['K1USNSST', 'K1USN-SST', 'SST'],
   exchange: 'name-location',
   setupLocationSuggestions,
