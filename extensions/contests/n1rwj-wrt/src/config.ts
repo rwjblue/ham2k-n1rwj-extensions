@@ -1,7 +1,10 @@
-import { type ContestConfig, POWER_CLASSES } from '../../../../packages/mini-contest/src/model.ts'
+import {
+  type DownloadedContestConfig,
+  POWER_CLASSES,
+} from '../../../../packages/mini-contest/src/model.ts'
 import { guessedQth, QTH_PATTERN, validQth } from './exchange.ts'
 
-export const config: ContestConfig = {
+export const config: DownloadedContestConfig = {
   type: 'wrt',
   name: 'Weekly RTTY Test',
   shortName: 'WRT',
@@ -17,6 +20,10 @@ export const config: ContestConfig = {
   powerClasses: POWER_CLASSES.filter(({ value }) => value !== 'HP'),
   multiplier: 'callsign',
   exchange: 'name-location',
+  historyUrl: 'https://supercheckhistory.com/downloads/N1MM/WRT.txt',
+  historyAliases: ['WRT'],
+  // WRT uses the reported state or country prefix, including AK, HI and PR.
+  historyLocation: (value) => value,
   locationInput: {
     label: 'State / province / country prefix',
     placeholder: 'RI, ON or DL',

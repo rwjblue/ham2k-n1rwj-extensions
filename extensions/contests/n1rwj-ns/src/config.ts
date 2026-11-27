@@ -27,9 +27,9 @@ export const config: DownloadedContestConfig = {
   multiplier: nsMultiplier,
   ineligibleReason,
   exchange: 'serial-name-location',
-  historyStem: 'SPRINTNS',
-  // The sponsor-specific N1MM download deliberately shares one name/State
-  // dataset with the NAQP and Sprint modules (checked 2026-10-29).
+  historyUrl: 'https://supercheckhistory.com/downloads/N1MM/NAQP-CW.txt',
+  // NS uses a shared name and QTH dataset. The cache can also hold Sprint files
+  // whose headers list the events that use them.
   historyAliases: [
     'SPRINTNS',
     'SPRINTLADD',
@@ -40,6 +40,7 @@ export const config: DownloadedContestConfig = {
     'NSLADDER',
     'NSRTTY',
     'NAQP',
+    'NAQP-CW',
     'NAQPCW',
     'NAQPRTTY',
     'NAQPSSB',

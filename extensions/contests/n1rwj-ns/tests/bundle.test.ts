@@ -13,7 +13,7 @@ import { expect, it } from 'vitest'
 import manifest from '../manifest.json'
 import { contact, ctx, operation } from './fixtures.ts'
 
-it('activates with cached native history, QSY guidance and no network calls or spotting hooks', async () => {
+it('activates with host-managed call history and QSY guidance without spotting hooks', async () => {
   const source = await readFile(new URL('../build/index.js', import.meta.url), 'utf8')
   const sharedModules = Object.fromEntries(
     await Promise.all(
@@ -45,12 +45,13 @@ it('activates with cached native history, QSY guidance and no network calls or s
     },
   })
   expect([...registered.keys()].sort()).toEqual([...manifest.hooks].sort())
-  expect(manifest.domains).toEqual([])
+  const historyUrl = 'https://supercheckhistory.com/downloads/N1MM/NAQP-CW.txt'
+  expect(manifest.domains).toEqual([new URL(historyUrl).hostname])
   expect(manifest.api).toBe(11)
   expect(registered.has('spots')).toBe(false)
   expect(registered.has('spotCallFilter:v1')).toBe(false)
   const data = registered.get('dataFile')?.hook as DataFileDefinition
-  expect(data.url).toBe('n1mm-history:SPRINTNS')
+  expect(data).toMatchObject({ name: 'NS call history', url: historyUrl })
   data.onLoadRawData?.({
     schema: 1,
     body: '# NS\n!!Order!!,Call,Name,State\nW8ABC,ANN,MI\n',

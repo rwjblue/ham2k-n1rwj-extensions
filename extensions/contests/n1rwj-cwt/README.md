@@ -38,8 +38,9 @@ for special sessions or schedule changes.
 3. Create an operation for the session, add CWT, and select the correct UTC
    date/time. Set your sent first name, member number or location (or eligible
    `CWA` exchange), and power class.
-4. Under **Settings → Accounts, Services & Data Sources**, refresh
-   **CWops CWT call history (N1RWJ)** before operating.
+4. In the desktop or mobile app, refresh **N1RWJ CWT call history (Super Check
+   History)** under **Settings → Accounts, Services & Data Sources** before
+   operating.
 5. Enter a callsign, listen to the exchange, and confirm or correct the
    suggested **Name** and **Nr** values before saving.
 
@@ -67,33 +68,23 @@ capture versions; the dates and exchanges shown are examples.
 
 ## Where the call history comes from
 
-The default source is the public
-[N1MM call-history collection](https://n1mmwp.hamdocs.com/mmfiles/categories/callhistory/).
-Ham2K discovers the latest listed `CWOPS_*.txt` file, which contains
-names and known CWT exchanges. See N1MM's
-[call-history explanation](https://n1mmwp.hamdocs.com/setup/call-history/)
-for background on these community-maintained files. They are suggestions,
-not a live membership check or a guarantee of today's exchange.
+Ham2K downloads the N1MM-format CWOPS file from Super Check History to suggest
+names and CWT exchanges. Confirm the exchange you copy on air.
+[Super Check History](https://supercheckhistory.com/)
 
-Ham2K checks the data when it loads the extension and when it reconnects,
-downloading a missing file or refreshing one older than 24 hours. You can
-also refresh it manually under **Settings → Accounts, Services & Data Sources**
-(called **Data Files** in earlier app builds). The extension always discovers
-the latest CWOPS file from N1MM automatically; no source URL configuration is
-needed. Earlier saved source overrides are ignored. Lookup notes show the
-file date and download time alongside known exchange suggestions.
+On desktop and mobile, Ham2K checks for the file when it loads the extension
+and when it reconnects. A missing file or one older than 24 hours is eligible
+for refresh. To refresh or remove **N1RWJ CWT call history (Super Check
+History)** manually, use **Settings → Accounts, Services & Data Sources**
+(**Data Files** in earlier builds). The web app currently cannot download the
+file because the provider restricts cross-origin requests. Local CWT contacts
+also supply suggestions.
 
-The host handles N1MM discovery, pagination, download forms and freshness
-checks. A failed refresh retains the previous valid native data-file cache.
-The extension validates the received text and keeps a parsed index in memory;
-it does not store the dataset in the host’s size-limited key-value storage.
-
-Typing a callsign uses the downloaded data and your local history; it does
-not download the N1MM file for every contact. The native app keeps the last
-successful file across restarts and failed refreshes, so cached suggestions
-remain available without a new download. See the
-[verification record](../../../docs/VERIFICATION.md) for tested offline/cache
-behavior and its limits.
+The native app keeps the last successful file across restarts and failed
+refreshes, including data from before the source changed. The extension
+validates the downloaded text and looks up callsigns in an in-memory index.
+Lookup notes show the date of the source data and the download date.
+[Offline and cache verification record](../../../docs/VERIFICATION.md)
 
 ## CWT in Spots
 
@@ -120,7 +111,7 @@ Your edits, including deliberately cleared fields, take priority. For each
 untouched field, the extension looks for a value in this order:
 
 1. CWT contacts already saved in this operation.
-2. The downloaded N1MM CWT file.
+2. The downloaded CWT call-history file.
 3. Your older CWT contacts.
 4. Ham2K's ordinary name or location suggestion.
 

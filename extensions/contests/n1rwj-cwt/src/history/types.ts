@@ -16,7 +16,7 @@ export interface ParsedCallHistory {
   records: Record<string, CallHistoryRecord>
   issues: ParseIssue[]
   associations: string[]
-  /** ISO calendar date declared by the file's LastEdit comment, when present. */
+  /** ISO calendar date declared by the source data. */
   sourceUpdatedAt?: string
   /** False means the caller must retain the previous good cache. */
   usable: boolean

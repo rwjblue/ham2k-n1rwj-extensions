@@ -6,4 +6,4 @@ Message Set → Extensions → N1RWJ ICWC MST**.
 
 Ham2K advances your outgoing serial with each contact, even when you switch
 bands. It can suggest the other operator’s name from past MST contacts and
-N1MM call history. Use **Exports** for an ADIF or Cabrillo copy of the log.
+Super Check History. Use **Exports** for an ADIF or Cabrillo copy of the log.

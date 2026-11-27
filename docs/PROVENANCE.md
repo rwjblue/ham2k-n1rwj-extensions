@@ -205,14 +205,12 @@ CQ/S&P/Unknown role and frequencies. Frequency-only checks remain advisory;
 no QSY check changes the score. Assistance restrictions are documented without
 changing other extensions. Recorded QSO start time approximates the response cutoff.
 
-Native API-11 file discovery uses the code-defined `SPRINTNS` stem. The
-[SPRINTNS download](https://n1mmwp.hamdocs.com/mmfiles/sprintns-txt-3/) checked
-October 29, 2026 has 4,723 contact rows, `Call,Name,State,UserText` columns and
-shared NAQP/Sprint association comments (last edit August 20, 2026).
-The extension accepts those associations deliberately, retains NS-specific
-locations and omits serial hints. No roster is bundled; deterministic test
-rows are synthetic. The source's shared headers explain why requiring only
-an NS comment would incorrectly reject this compatible dataset.
+The host downloads the
+[Super Check History NAQP CW file](https://supercheckhistory.com/downloads/N1MM/NAQP-CW.txt)
+for name and QTH hints. The [DXLog NCCC Sprint definition](https://dxlog.net/sw/files/download/contest/NCCCSprint.txt)
+also uses a shared NAQP database for those fields. The extension accepts the
+older Sprint/NAQP associations in cached files, retains NS-specific locations,
+and omits serial hints. Test rows are synthetic.
 
 Other loggers' official documentation provides Sprint workflow aids:
 [N1MM](https://n1mmwp.hamdocs.com/manual-supported/contests-setup/setup-hf-contests/)

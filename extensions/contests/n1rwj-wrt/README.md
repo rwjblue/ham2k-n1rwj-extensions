@@ -1,6 +1,6 @@
 # N1RWJ Weekly RTTY Test
 
-WRT adds half-hour RTTY sessions, name/QTH exchange controls, scoring, and
+WRT adds half-hour RTTY sessions, name/QTH exchange suggestions, scoring, and
 exports to Ham2K. It is an independently installable extension with key
 `n1rwj-wrt` and activity type `wrt`.
 
@@ -11,16 +11,17 @@ The [sponsor rules](https://radiosport.world/wrt.html) specify Friday
 in UTC through daylight-saving changes. Calendar suggestions follow the
 regular weekly schedule; sponsor cancellations or exceptions are not tracked.
 
-1. Download `n1rwj-wrt-0.6.0.h2kext` from
-   [v0.6.0](https://github.com/rwjblue/ham2k-n1rwj-extensions/releases/tag/v0.6.0)
-   and install it using **Settings → Features & Extensions → Install from file**.
+1. Install the `n1rwj-wrt` bundle using **Settings → Features & Extensions →
+   Install from file**.
    To build locally, run `mise run pack n1rwj-wrt` and use the bundle in `dist/`.
 2. Create a separate operation for each session, add **WRT**, and choose the
    session's UTC date. Enter your exchange name, state/province or country
    prefix, and power class: QRP (up to 5 W) or low power (up to 100 W).
 3. Select **RTTY** as the logging mode. Explicit rig variants RTTY-LSB,
    RTTY-USB and RTTY-R are recognized; generic DATA, DATA-USB and FT8 are not.
-4. Log one callsign at a time, checking **Name** and **State / province /
+4. In the desktop or mobile app, refresh **WRT call history** under
+   **Settings → Accounts, Services & Data Sources**.
+5. Log one callsign at a time, checking **Name** and **State / province /
    country prefix** against the exchange actually received. The radio/modem
    handles RTTY decoding and transmission.
 
@@ -36,20 +37,23 @@ The short sponsor rules do not explain Alaska/Hawaii treatment explicitly.
 Enter the exchange actually sent. Both state and prefix forms are accepted,
 but lookup-based QTH suggestions for those entities are left blank.
 
-Suggestions use current-operation WRT contacts, then older WRT contacts, then
-ordinary host name/location hints. Exact callsigns take precedence; a base
-call can suggest a portable station's name but never its previous location.
-US/Canadian location hints require a recognized subdivision; foreign hints
-use the country prefix. Country-prefix validation checks syntax, not a
-callsign-derived country whitelist.
+Suggestions use WRT contacts in the current operation, the cached WRT
+call-history file, older WRT contacts, then ordinary host name and location
+hints. Exact callsigns take precedence. For a portable station, a base call
+can supply the name, and location hints from history require an exact match.
+Host lookups use recognized subdivisions for US and Canadian location hints
+and use country prefixes for foreign stations. Country-prefix validation
+checks the exchange format.
 
 Operator edits and intentional clearing take priority through Ham2K's native
 exchange controls. Use **Wipe** between contacts to reset touched fields.
-This extension has no downloadable WRT call-history dataset, associated spot filter,
-or extension network request. Older history uses targeted WRT queries;
-operation membership may require a bounded full-log refresh after scoring
-resumes, rather than reading the log on every keystroke. Older hosts that
-ignore contest history filtering can miss WRT contacts behind newer activity.
+
+HaLo downloads WRT call history from Super Check History. On desktop and
+mobile, the file stays available offline, and a failed refresh retains the
+last valid copy. The web app currently cannot download the file because the
+provider restricts cross-origin requests. The extension skips generic `DX`
+values so HaLo can suggest a country prefix.
+[Super Check History](https://supercheckhistory.com/)
 
 ## Score and report
 

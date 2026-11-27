@@ -34,8 +34,8 @@ regular weekly schedule; it does not track sponsor schedule exceptions.
 2. **Create a new operation for each session**, add MST, and select the
    correct UTC date/time. Set your first name and power class: QRP (up to
    5 W), low power (up to 100 W), or high power (over 100 W).
-3. Under **Settings → Accounts, Services & Data Sources**, refresh
-   **MST N1MM call history** before operating.
+3. In the desktop or mobile app, refresh **MST call history** under
+   **Settings → Accounts, Services & Data Sources** before operating.
 4. Enter a callsign. Send the displayed **Sent #** and your name, copy the
    other station's **Received #**, and confirm or correct **Name** before saving.
 
@@ -92,30 +92,20 @@ call history, earlier contacts, or CWops member numbers. Always copy it on air.
 
 ## Where the call history comes from
 
-The source is the public
-[N1MM call-history collection](https://n1mmwp.hamdocs.com/mmfiles/categories/callhistory/).
-Ham2K discovers the latest listed `ICWC-MST-*.txt` file and uses its
-names. See N1MM's [call-history explanation](https://n1mmwp.hamdocs.com/setup/call-history/)
-for background on these community-maintained files. They do not provide
-received MST serial numbers.
+Ham2K downloads the contest's N1MM-format file from Super Check History and
+uses it to suggest names. [Super Check History](https://supercheckhistory.com/)
 
-Ham2K checks the data when it loads the extension and when it reconnects,
-downloading a missing file or refreshing one older than 24 hours. You can
-also refresh **MST N1MM call history** manually under
+On desktop and mobile, Ham2K checks for the file when it loads the extension
+and when it reconnects. A missing file or one older than 24 hours is eligible
+for refresh. You can refresh **MST call history** manually under
 **Settings → Accounts, Services & Data Sources** (Data Files on older hosts).
-File discovery is automatic; there is no source URL setting.
+The web app currently cannot download the file because the provider restricts
+cross-origin requests. Name suggestions also use your local MST contacts.
 
-The host handles N1MM discovery, pagination, download forms and freshness
-checks. A failed refresh retains the previous valid native data-file cache.
-The extension validates the received text and keeps a parsed index in memory;
-it does not store the dataset in the host’s size-limited key-value storage.
-
-Typing a callsign uses the downloaded data and your local history; it does
-not download the N1MM file for every contact. The native app keeps the last
-successful file across restarts and failed refreshes, so cached suggestions
-remain available without a new download. See the
-[verification record](../../../docs/VERIFICATION.md) for tested offline/cache
-behavior and its limits.
+The native app keeps the last successful file across restarts and failed
+refreshes, so cached suggestions remain available offline. The extension
+validates the downloaded text and uses an in-memory index when you type a
+callsign. [Offline and cache verification record](../../../docs/VERIFICATION.md)
 
 ## How exchange suggestions work
 
@@ -123,7 +113,7 @@ Your edits, including deliberately cleared fields, take priority. For an
 untouched name, the extension looks for a value in this order:
 
 1. MST contacts already saved in this operation.
-2. The downloaded N1MM MST file.
+2. The downloaded MST call-history file.
 3. Your older MST contacts.
 4. Ham2K's ordinary name suggestion.
 

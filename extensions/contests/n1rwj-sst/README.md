@@ -37,7 +37,7 @@ sponsor schedule exceptions.
    UTC date/time. Set your first name, state/province/`DX`, and power class:
    QRP (up to 5 W), low power (up to 100 W), or high power (over 100 W).
 3. Under **Settings → Accounts, Services & Data Sources**, refresh
-   **SST N1MM call history** before operating.
+   **SST call history** before operating in the desktop or mobile app.
 4. Enter a callsign, listen to the exchange, and confirm or correct
    **Name** and **State / province / DX** before saving.
 
@@ -93,13 +93,9 @@ could otherwise be mistaken for Ontario.
 
 ## Where the call history comes from
 
-The source is the public
-[N1MM call-history collection](https://n1mmwp.hamdocs.com/mmfiles/categories/callhistory/).
-Ham2K discovers the latest listed `K1USNSST-*.txt` file and uses its
-names and locations. See N1MM's
-[call-history explanation](https://n1mmwp.hamdocs.com/setup/call-history/)
-for background on these community-maintained files. They are suggestions,
-not a guarantee of where a station is operating today.
+Ham2K downloads the weekly SST file from Super Check History and uses its names
+and locations as exchange suggestions. Confirm the exchange on the air.
+[Super Check History SST file](https://supercheckhistory.com/downloads/N1MM/K1USNSST.txt)
 
 The importer omits unsupported location values and counts them as parser
 warnings, while keeping their callsigns and names. The remaining usable
@@ -107,21 +103,14 @@ records load normally. Unsupported values are never converted to `DX`.
 
 Ham2K checks the data when it loads the extension and when it reconnects,
 downloading a missing file or refreshing one older than 24 hours. You can
-also refresh **SST N1MM call history** manually under
-**Settings → Accounts, Services & Data Sources** (Data Files on older hosts).
-File discovery is automatic; there is no source URL setting.
+also refresh **SST call history** manually under **Settings → Accounts, Services
+& Data Sources** (Data Files on older hosts). Downloads work in the desktop
+and mobile apps. Web refresh requires cross-origin access from the provider.
 
-The host handles N1MM discovery, pagination, download forms and freshness
-checks. A failed refresh retains the previous valid native data-file cache.
-The extension validates the received text and keeps a parsed index in memory;
-it does not store the dataset in the host’s size-limited key-value storage.
-
-Typing a callsign uses the downloaded data and your local history; it does
-not download the N1MM file for every contact. The native app keeps the last
-successful file across restarts and failed refreshes, so cached suggestions
-remain available without a new download. See the
-[verification record](../../../docs/VERIFICATION.md) for tested offline/cache
-behavior and its limits.
+The native app keeps the last successful file across restarts and failed
+refreshes. Typing a callsign uses the cached file and your local history, so
+suggestions remain available offline.
+[Offline and cache verification record](../../../docs/VERIFICATION.md)
 
 ## How exchange suggestions work
 
@@ -129,7 +118,7 @@ Your edits, including deliberately cleared fields, take priority. For each
 untouched field, the extension looks for a value in this order:
 
 1. SST contacts already saved in this operation.
-2. The downloaded N1MM SST file.
+2. The downloaded SST call-history file.
 3. Your older SST contacts.
 4. Ham2K's ordinary name or location suggestion.
 

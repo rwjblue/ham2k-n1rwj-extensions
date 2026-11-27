@@ -13,17 +13,18 @@ beforeEach(async () => {
 })
 afterEach(() => vi.restoreAllMocks())
 
-it('localizes automatic discovery while retaining the personal data-file identity', async () => {
+it('localizes the Super Check History download while retaining the data-file identity', async () => {
   expect(DataFile.key).toBe('n1rwj-cwt_history')
+  expect(DataFile.url).toBe('https://supercheckhistory.com/downloads/N1MM/CWOPS.txt')
   expect(host.kvSet).not.toHaveBeenCalled()
   if (typeof DataFile.name !== 'function' || typeof DataFile.description !== 'function')
     throw new Error('Expected localized data-file metadata')
   for (const [locale, name, description] of [
-    ['en', 'CWops CWT call history (N1RWJ)', 'Automatically discovers the latest N1MM CWOPS file'],
+    ['en', 'N1RWJ CWT call history (Super Check History)', 'Downloads CWops CWT data'],
     [
       'es',
-      'Historial de indicativos CWT de CWops (N1RWJ)',
-      'Busca automáticamente el archivo CWOPS más reciente de N1MM',
+      'Historial de indicativos CWT de N1RWJ (Super Check History)',
+      'Descarga datos del CWT de CWops',
     ],
   ]) {
     const context = { ...ctx, locale }
@@ -33,7 +34,7 @@ it('localizes automatic discovery while retaining the personal data-file identit
 })
 
 it.each(['https://n1mmwp.hamdocs.com/mmfiles/cwops_3992-aaa-txt/', '/tmp/old-file.txt', ''])(
-  'uses automatic discovery regardless of a legacy source setting (%s)',
+  'uses Super Check History regardless of a legacy source setting (%s)',
   async (source) => {
     vi.mocked(host.getSettings).mockResolvedValue({
       extensions: { 'extension_n1rwj-cwt': { source } },

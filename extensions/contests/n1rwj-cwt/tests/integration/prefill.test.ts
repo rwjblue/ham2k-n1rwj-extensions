@@ -392,11 +392,11 @@ describe('prefill to saved/exported CWT exchange', () => {
     for (const [locale, expected] of [
       [
         'en',
-        'CWT: name AL (selected file); exchange 9876 (current operation); file date unknown, downloaded 2026-09-19',
+        'CWT: name AL (selected file); exchange 9876 (current operation); source data undated, downloaded 2026-09-19',
       ],
       [
         'es',
-        'CWT: nombre AL (archivo seleccionado); intercambio 9876 (operación actual); archivo fecha desconocida, descargado 2026-09-19',
+        'CWT: nombre AL (archivo seleccionado); intercambio 9876 (operación actual); datos de origen sin fecha, descarga 2026-09-19',
       ],
     ]) {
       const notes = await prefill.lookup.lookupCall(

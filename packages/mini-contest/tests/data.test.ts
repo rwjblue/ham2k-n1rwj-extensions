@@ -10,13 +10,13 @@ afterEach(() => vi.restoreAllMocks())
 describe.each([
   { config: mst, manifest: mstManifest },
   { config: sst, manifest: sstManifest },
-])('$config.shortName native N1MM history', ({ config, manifest }) => {
+])('$config.shortName native call history', ({ config, manifest }) => {
   const body = `# ${config.historyAliases[0]}\n!!Order!!,Call,Name,Exch1\nK1ABC,BOB,MA\n`
   it('delegates download to the host, persists JSON, replays offline, and removes data', async () => {
     const fetch = vi.spyOn(host, 'fetch')
     const kv = vi.spyOn(host, 'kvSet')
     const { dataFile, current } = createHistoryData(config, manifest)
-    const url = `n1mm-history:${config.historyStem}`
+    const url = config.historyUrl
     expect(dataFile).toMatchObject({
       key: `${manifest.key}_history`,
       url,
@@ -40,7 +40,7 @@ describe.each([
   })
   it('retains history when a refresh or native replay is invalid or older', async () => {
     const { dataFile, current } = createHistoryData(config, manifest)
-    const url = `n1mm-history:${config.historyStem}`
+    const url = config.historyUrl
     const snapshot = { schema: 1, body, url, fetchedAt: '2026-10-29T12:00:00Z' }
     dataFile.onLoadRawData?.(snapshot)
     const previous = current()

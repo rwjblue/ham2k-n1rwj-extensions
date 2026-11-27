@@ -156,6 +156,7 @@ describe('the installable bundle with a simulated host bridge', () => {
     expect([...runtime.registered.keys()].sort()).toEqual([...manifest.hooks].sort())
     expect(runtime.registered.has('settingsPanel')).toBe(false)
     expect(runtime.registered.get('dataFile')?.key).toBe('n1rwj-cwt_history')
+    expect(manifest.domains).toEqual(['supercheckhistory.com'])
     expect(runtime.hook('scoring').scope).toEqual({ refTypes: ['cwt'] })
   })
 
@@ -165,7 +166,7 @@ describe('the installable bundle with a simulated host bridge', () => {
     if (!data.rawToJSONData) throw new Error('Missing raw parser')
     const snapshot = await data.rawToJSONData({
       body,
-      url: 'https://n1mm.hamdocs.com/cwops.txt',
+      url: DEFAULT_SOURCE,
       options: {},
     })
     data.onLoadRawData?.(snapshot)
@@ -206,7 +207,7 @@ describe('the installable bundle with a simulated host bridge', () => {
       const dataFile = first.hook('dataFile')
       const snapshot = await dataFile.rawToJSONData?.({
         body,
-        url: 'https://n1mm.hamdocs.com/cwops.txt',
+        url: DEFAULT_SOURCE,
         options: {},
       })
       // DataFileManager writes the disk cache only after conversion succeeds.
@@ -237,7 +238,7 @@ describe('the installable bundle with a simulated host bridge', () => {
     const snapshot = {
       schema: 1,
       body,
-      url: DEFAULT_SOURCE,
+      url: 'n1mm-history:CWOPS',
       fetchedAt: '2026-09-19T15:33:12.600Z',
     }
     dataFile.onLoadRawData?.(snapshot)

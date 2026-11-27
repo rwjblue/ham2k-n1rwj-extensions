@@ -5,7 +5,7 @@ For F1–F8 CW memories, choose **CWT CW** under **CW Keyer Messages →
 Message Set → Extensions → N1RWJ CWT**.
 
 Enter a callsign and Ham2K can suggest a name and exchange from past CWT
-contacts and N1MM call history. Check what you copy and edit or clear the
+contacts and Super Check History. Check what you copy and edit or clear the
 suggestion as needed.
 
 Use **Exports** to save an ADIF or Cabrillo log for the session.

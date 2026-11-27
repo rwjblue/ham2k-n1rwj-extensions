@@ -11,8 +11,8 @@ const header =
   '!!Order!!,Call,Name,State,UserText,\n# NAQPCW\n# NAQPRTTY\n# NAQPSSB\n# NSRTTYDUPE\n# SPRINTCW\n# SPRINTLADD\n# SPRINTNS\n'
 const body = `${header}K1ABC,ANN,MA,\nKL7ABC,AL,AK,\nKH6ABC,HAL,HI,\nKP4ABC,PAT,KP4,\n9Y4ABC,TOM,9Y,\nVE3ABC,LEE,NL,\n`
 
-describe('NS N1MM prefills', () => {
-  it('accepts the shared Sprint/NAQP header and preserves NS states and country prefixes', () => {
+describe('NS call history', () => {
+  it('accepts a cached Sprint/NAQP file and preserves NS states and country prefixes', () => {
     const file = parseHistory(config, body)
     expect(file.count).toBe(6)
     expect(file.warnings).toBe(0)
@@ -38,11 +38,12 @@ describe('NS N1MM prefills', () => {
     expect(file.records.KP4ABC?.location).toBe('KP4')
     expect(file.records.KP2ABC?.location).toBe('KP2')
   })
-  it('uses native automatic discovery and retains the last valid offline cache after bad refreshes', async () => {
+  it('refreshes from the shared NAQP file and retains the last valid offline cache after bad refreshes', async () => {
     const data = createHistoryData(config, manifest)
+    const url = 'https://supercheckhistory.com/downloads/N1MM/NAQP-CW.txt'
     expect(data.dataFile).toMatchObject({
       key: 'n1rwj-ns_history',
-      url: 'n1mm-history:SPRINTNS',
+      url,
       fetchType: 'raw',
       maxAgeInDays: 1,
     })
@@ -54,12 +55,18 @@ describe('NS N1MM prefills', () => {
     }
     data.dataFile.onLoadRawData?.(snapshot)
     expect(data.current()?.count).toBe(6)
+    await data.dataFile.rawToJSONData?.({
+      body: '# NAQP-CW\n!!Order!!,Call,Name,State,UserText\nK1ABC,ANN,CT,\nKL7ABC,AL,AK,\n',
+      url,
+      options: {},
+    })
+    expect(data.current()?.records.K1ABC?.location).toBe('CT')
     await expect(
-      data.dataFile.rawToJSONData?.({ body: '<html>error</html>', url: snapshot.url, options: {} }),
+      data.dataFile.rawToJSONData?.({ body: '<html>error</html>', url, options: {} }),
     ).rejects.toThrow('Invalid')
     expect(data.current()?.records.KL7ABC?.location).toBe('AK')
     data.dataFile.onLoadRawData?.({ ...snapshot, body: 'invalid file' })
-    expect(data.current()?.count).toBe(6)
+    expect(data.current()?.count).toBe(2)
     await data.dataFile.onRemoveRawData?.()
     expect(data.current()).toBeUndefined()
   })
