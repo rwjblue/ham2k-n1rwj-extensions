@@ -1,4 +1,5 @@
 import { readFile } from 'node:fs/promises'
+import { performance } from 'node:perf_hooks'
 import { setImmediate as settleHostCalls } from 'node:timers/promises'
 import { createContext, runInContext } from 'node:vm'
 import type {
@@ -50,6 +51,7 @@ it('automatically configures the live cluster feed and publishes spots from the 
   runInContext(
     source,
     createContext({
+      performance,
       Date: class extends Date {
         static now() {
           return clock

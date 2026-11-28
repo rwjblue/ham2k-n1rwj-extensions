@@ -2,9 +2,14 @@ import type { Spot } from '@ham2k/extension-sdk'
 import { createTimerSlot, type TimerDriver } from '../../../../../packages/reception/src/timers.ts'
 import type { RbnCluster } from '../cluster/index.ts'
 
+declare const performance: { now(): number }
+
 const spotLeaseMs = 150_000
 const silenceMs = 300_000
 const publishDelayMs = 250
+// HaLo allows timers 10% of elapsed time. Use at most about half of that for
+// board delivery so the cluster's housekeeping and other RBN timers have room.
+const publishCooldownMultiplier = 20
 export const maxLiveBoardSpots = 5000
 
 interface SpotDemand {
@@ -31,11 +36,36 @@ export function createLiveSpots(
   let running = false
   let queued = false
   let lastDelivery: string | undefined
+  let nextDeliveryAt = 0
+
+  function scheduleDelivery() {
+    const delay = Math.max(publishDelayMs, nextDeliveryAt - performance.now())
+    delivery.schedule(Math.ceil(delay), () => void deliver())
+  }
 
   function queueDelivery() {
     if (!demand || queued) return
     queued = true
-    if (!running) delivery.schedule(publishDelayMs, () => void deliver())
+    if (!running) scheduleDelivery()
+  }
+
+  function publishBoard(active: SpotDemand) {
+    const startedAt = performance.now()
+    try {
+      const spots = active.render()
+      if (!spots) return
+      const signature = JSON.stringify(spots)
+      if (signature === lastDelivery) return
+      return publish(spots).then(() => {
+        lastDelivery = signature
+      })
+    } finally {
+      // Sending to the host serializes synchronously. Its asynchronous reply
+      // costs no timer time, so measure before waiting for it.
+      const finishedAt = performance.now()
+      const cost = finishedAt - startedAt + 1 // HaLo's per-wake charge.
+      nextDeliveryAt = finishedAt + cost * publishCooldownMultiplier
+    }
   }
 
   async function deliver() {
@@ -44,18 +74,13 @@ export function createLiveSpots(
     if (!active) return
     running = true
     try {
-      const spots = active.render()
-      if (!spots) return
-      const signature = JSON.stringify(spots)
-      if (signature !== lastDelivery) {
-        await publish(spots)
-        lastDelivery = signature
-      }
+      const pending = publishBoard(active)
+      if (pending) await pending
     } catch {
       // The next board fetch can restore the snapshot if the host refused a push.
     } finally {
       running = false
-      if (queued && demand) delivery.schedule(publishDelayMs, () => void deliver())
+      if (queued && demand) scheduleDelivery()
     }
   }
 

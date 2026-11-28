@@ -244,8 +244,9 @@ export function createRbnSpots(options: Options) {
       options.lookup,
       now(),
       distanceUnits,
+      live ? maxLiveBoardSpots : undefined,
     )
-    return (live ? selected.slice(0, maxLiveBoardSpots) : selected).map((spot) =>
+    return selected.map((spot) =>
       allowSpotMerging(raw)
         ? { ...spot, refs: spot.refs?.filter((ref) => ref.type !== 'rbn') }
         : spot,

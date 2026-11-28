@@ -109,6 +109,7 @@ export function selectSpots(
   lookup: ReceiverLookup,
   now: number,
   distanceUnits?: string,
+  limit?: number,
 ): Spot[] {
   const selected = new Map<
     string,
@@ -183,14 +184,16 @@ export function selectSpots(
     }
     selected.set(key, { report, grid, receiverKm, unknownCwSpeed })
   }
-  return [...selected.values()]
-    .sort((a, b) => b.report.spot.timeInMillis - a.report.spot.timeInMillis)
-    .map(({ report, grid, receiverKm, unknownCwSpeed }) => ({
-      ...report,
-      spot: {
-        ...report.spot,
-        label: spotLabel(report.spot.sourceInfo?.snr, receiverKm, distanceUnits, unknownCwSpeed),
-        sourceInfo: { ...report.spot.sourceInfo, spotterGrid: grid },
-      },
-    }))
+  const ranked = [...selected.values()].sort(
+    (a, b) => b.report.spot.timeInMillis - a.report.spot.timeInMillis,
+  )
+  if (limit !== undefined && ranked.length > limit) ranked.length = limit
+  return ranked.map(({ report, grid, receiverKm, unknownCwSpeed }) => ({
+    ...report,
+    spot: {
+      ...report.spot,
+      label: spotLabel(report.spot.sourceInfo?.snr, receiverKm, distanceUnits, unknownCwSpeed),
+      sourceInfo: { ...report.spot.sourceInfo, spotterGrid: grid },
+    },
+  }))
 }

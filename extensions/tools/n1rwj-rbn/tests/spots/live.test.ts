@@ -377,3 +377,31 @@ it('corrects an older publication that finishes after settings change', async ()
   await vi.advanceTimersByTimeAsync(300)
   expect(s.publishSpots.mock.lastCall?.[0][0]?.their.call).toBe('W1AW')
 })
+
+it('gives costly pushes time to recover and coalesces cluster updates while waiting', async () => {
+  const s = fixture()
+  const realNow = performance.now.bind(performance)
+  let work = 0
+  const clock = vi.spyOn(performance, 'now').mockImplementation(() => realNow() + work)
+  try {
+    s.publishSpots.mockImplementation(async () => {
+      work += 300 // Sending a large board spends time before awaiting the host.
+    })
+    s.update({ state: 'connected', lastReportAt: { CW: start }, reports: [s.report()] })
+    await s.fetchBoard()
+    await vi.advanceTimersByTimeAsync(250)
+    expect(s.publishSpots).toHaveBeenCalledTimes(1)
+
+    s.update({ reports: [s.report({ call: 'W2AW' })] })
+    for (let second = 0; second < 6; second++) {
+      await vi.advanceTimersByTimeAsync(1000)
+      s.update({ reports: [s.report({ call: 'W3AW' })] })
+      expect(s.publishSpots).toHaveBeenCalledTimes(1)
+    }
+    await vi.advanceTimersByTimeAsync(250)
+    expect(s.publishSpots).toHaveBeenCalledTimes(2)
+    expect(s.publishSpots.mock.lastCall?.[0][0]?.their.call).toBe('W3AW')
+  } finally {
+    clock.mockRestore()
+  }
+})
