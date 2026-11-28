@@ -1,10 +1,10 @@
 /*!
 Generated from Ham2K Cluster Spots. DO NOT EDIT.
-Regenerate with: mise run rbn:vendor-cluster-spots 832b8bb1e0363ca7ff98da9c6023910be1bd12d7
-Upstream commit: 832b8bb1e0363ca7ff98da9c6023910be1bd12d7
-Parser: https://github.com/ham2k/extensions/blob/832b8bb1e0363ca7ff98da9c6023910be1bd12d7/extensions/spots/ham2k-cluster-spots/src/parse.ts
-Parser SHA-256: d2afe28c029ff37e8a2d278ff3f3f8f045b5430f4f8b765d27fbf1c820087866
-Command table: https://github.com/ham2k/extensions/blob/832b8bb1e0363ca7ff98da9c6023910be1bd12d7/extensions/spots/ham2k-cluster-spots/src/index.ts
+Regenerate with: mise run rbn:vendor-cluster-spots 2b7c67231ddf3f222566feeb3671dcd8a3b42448
+Upstream commit: 2b7c67231ddf3f222566feeb3671dcd8a3b42448
+Parser: https://github.com/ham2k/extensions/blob/2b7c67231ddf3f222566feeb3671dcd8a3b42448/extensions/spots/ham2k-cluster-spots/src/parse.ts
+Parser SHA-256: bad7702abfd8a5370b8503b1d6fc9d44c67e084bf8fa1300771a8d3a3e929593
+Command table: https://github.com/ham2k/extensions/blob/2b7c67231ddf3f222566feeb3671dcd8a3b42448/extensions/spots/ham2k-cluster-spots/src/index.ts
 Command table SHA-256: c759e5bbb8fb51dbf925a93915a3177a8eb206fdca0d64ec2582006367a36652
 
 Copyright © 2026 Sebastian Delmont <sd@ham2k.com>

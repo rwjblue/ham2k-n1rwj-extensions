@@ -2,7 +2,7 @@
   "key": "n1rwj-ns",
   "name": "N1RWJ NCCC Sprint CW",
   "shortName": "NS",
-  "version": "0.24.0",
+  "version": "0.24.1",
   "description": "NCCC Sprint CW with name/QTH suggestions, CQ/S&P QSY reminders, serial exchanges, per-band multipliers and exports.",
   "category": "contest",
   "icon": "clock-fast",
