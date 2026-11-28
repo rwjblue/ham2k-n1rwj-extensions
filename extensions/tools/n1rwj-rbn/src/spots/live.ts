@@ -12,6 +12,12 @@ const publishDelayMs = 250
 const publishCooldownMultiplier = 20
 export const maxLiveBoardSpots = 5000
 
+export interface SpotPublisher {
+  replace(spots: Spot[]): Promise<void>
+  put(spots: Spot[]): Promise<void>
+  remove(keys: string[]): Promise<void>
+}
+
 interface SpotDemand {
   enabled: boolean
   mode: string
@@ -20,11 +26,21 @@ interface SpotDemand {
   nextVailRequestAt(): number
 }
 
+interface PublishedSpot {
+  spot: Spot
+  signature?: string
+}
+
+function signatureOf(entry: PublishedSpot): string {
+  entry.signature ??= JSON.stringify(entry.spot)
+  return entry.signature
+}
+
 export function createLiveSpots(
   cluster: RbnCluster,
   timers: TimerDriver,
   now: () => number,
-  publish: (spots: Spot[]) => Promise<void>,
+  publisher: SpotPublisher,
 ) {
   const lease = createTimerSlot(timers)
   const silence = createTimerSlot(timers)
@@ -35,7 +51,9 @@ export function createLiveSpots(
   let fresh = false
   let running = false
   let queued = false
-  let lastDelivery: string | undefined
+  let published: Map<string, PublishedSpot> | undefined
+  let publication: Promise<void> | undefined
+  let lifecycle = 0
   let nextDeliveryAt = 0
 
   function scheduleDelivery() {
@@ -49,19 +67,71 @@ export function createLiveSpots(
     if (!running) scheduleDelivery()
   }
 
+  async function serialize(write: () => Promise<void>) {
+    const previous = publication
+    let release!: () => void
+    const completion = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    publication = completion
+    try {
+      if (previous) await previous
+      await write()
+    } finally {
+      if (publication === completion) publication = undefined
+      release()
+    }
+  }
+
+  function snapshotOf(spots: Spot[]) {
+    const snapshot = new Map<string, PublishedSpot>()
+    for (const spot of spots) {
+      const key = spot.key
+      // An unkeyed or ambiguous snapshot can only be replaced as a whole.
+      if (!key || snapshot.has(key)) return undefined
+      const previous = published?.get(key)
+      snapshot.set(key, previous?.spot === spot ? previous : { spot })
+    }
+    return snapshot
+  }
+
+  async function publish(spots: Spot[], replace = false) {
+    const started = lifecycle
+    const before = published
+    const after = snapshotOf(spots)
+    try {
+      if (replace || !before || !after) {
+        await publisher.replace(spots)
+      } else {
+        const remove = [...before.keys()].filter((key) => !after.has(key))
+        const put: Spot[] = []
+        for (const [key, entry] of after) {
+          const previous = before.get(key)
+          if (!previous || (previous !== entry && signatureOf(previous) !== signatureOf(entry))) {
+            put.push(entry.spot)
+          }
+        }
+        // Make room before adding rows: each host call enforces the source cap.
+        if (remove.length) await publisher.remove(remove)
+        if (started !== lifecycle) return
+        if (put.length) await publisher.put(put)
+      }
+      if (started === lifecycle) published = after
+    } catch (error) {
+      // An earlier part of the delta may have landed. Replace on the next write.
+      published = undefined
+      throw error
+    }
+  }
+
   function publishBoard(active: SpotDemand) {
     const startedAt = performance.now()
     try {
       const spots = active.render()
-      if (!spots) return
-      const signature = JSON.stringify(spots)
-      if (signature === lastDelivery) return
-      return publish(spots).then(() => {
-        lastDelivery = signature
-      })
+      if (spots) return publish(spots)
     } finally {
-      // Sending to the host serializes synchronously. Its asynchronous reply
-      // costs no timer time, so measure before waiting for it.
+      // Measure rendering, diffing and the sync part of the first host call.
+      // Work after the host reply runs outside the timer callback.
       const finishedAt = performance.now()
       const cost = finishedAt - startedAt + 1 // HaLo's per-wake charge.
       nextDeliveryAt = finishedAt + cost * publishCooldownMultiplier
@@ -69,13 +139,12 @@ export function createLiveSpots(
   }
 
   async function deliver() {
-    const active = demand
-    queued = false
-    if (!active) return
     running = true
     try {
-      const pending = publishBoard(active)
-      if (pending) await pending
+      await serialize(async () => {
+        queued = false
+        if (demand) await publishBoard(demand)
+      })
     } catch {
       // The next board fetch can restore the snapshot if the host refused a push.
     } finally {
@@ -120,13 +189,13 @@ export function createLiveSpots(
   cluster.observe(observe)
 
   function pause() {
-    if (!demand) return
-    const enabled = demand.enabled
+    const enabled = demand?.enabled
     demand = undefined
     latest = undefined
     fresh = false
     queued = false
-    lastDelivery = undefined
+    lifecycle++
+    published = undefined
     lease.cancel()
     silence.cancel()
     delivery.cancel()
@@ -151,8 +220,6 @@ export function createLiveSpots(
 
   return {
     renew(active: SpotDemand) {
-      // The board's refresh replaces this source's previous publication.
-      lastDelivery = undefined
       leaseEnd = now() + spotLeaseMs
       lease.schedule(spotLeaseMs, pause)
       configure(active, spotLeaseMs)
@@ -161,6 +228,14 @@ export function createLiveSpots(
       if (!demand) return
       configure(active, Math.max(1, leaseEnd - now()))
       queueDelivery()
+    },
+    syncSnapshot(spots: Spot[]) {
+      const requested = lifecycle
+      // HaLo replays pushes that land during its fetch. Replace before returning
+      // the same snapshot there so it cannot replay older deltas onto new rows.
+      return serialize(async () => {
+        if (requested === lifecycle) await publish(spots, true)
+      })
     },
     pause,
     queueDelivery,

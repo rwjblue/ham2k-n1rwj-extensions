@@ -12,14 +12,22 @@ import type {
 import { host } from '@ham2k/extension-sdk'
 import type { TimerDriver } from '../../../../../packages/reception/src/timers.ts'
 import manifest from '../../manifest.json'
-import type { RbnCluster } from '../cluster/index.ts'
+import type { RbnCluster, RbnClusterChange } from '../cluster/index.ts'
 import { liveClusterEnabled } from '../cluster-settings.ts'
 import type { Continent } from '../data/continents.ts'
+import type { RbnReport } from '../model.ts'
 import { rbnAboutDefinition } from './about.ts'
 import { createSpotFeed } from './feed.ts'
 import { createHealthCheck } from './health.ts'
-import { createLiveSpots, maxLiveBoardSpots } from './live.ts'
-import { bands, maxAgeMs, type ReceiverLookup, selectSpots } from './model.ts'
+import { createLiveSpots, maxLiveBoardSpots, type SpotPublisher } from './live.ts'
+import {
+  bands,
+  type KeyedSpot,
+  maxAgeMs,
+  type ReceiverLookup,
+  selectSpots,
+  spotKey,
+} from './model.ts'
 import {
   allowSpotMerging,
   ownSettings,
@@ -39,6 +47,7 @@ interface Options {
   fetch(url: string, options?: FetchOptions): Promise<FetchResponse>
   lookup: ReceiverLookup
   receiverEntries?: () => readonly ReceiverQueryEntry[]
+  receiverRevision?: () => number
   now?: () => number
   healthTimers?: TimerDriver
   getSettings?: typeof host.getSettings
@@ -47,7 +56,7 @@ interface Options {
   showForm?: typeof host.showForm
   continentNear?: (location: DeviceLocation) => Continent | null
   cluster?: RbnCluster
-  publishSpots?: (spots: Spot[]) => Promise<void>
+  publishSpots?: SpotPublisher
 }
 
 interface FeedEntry {
@@ -65,6 +74,24 @@ interface BoardView {
   distanceUnits?: string
   clusterEnabled: boolean
   loading: boolean
+  projectionKey: string
+  projection?: BoardProjection
+}
+
+interface BoardProjection {
+  at: number
+  receiverRevision?: number
+  vailByKey: Map<string, Spot[]>
+  winners: Map<string, KeyedSpot>
+  dirty: Set<string>
+  future: Map<string, number>
+  visible: Spot[]
+}
+
+function compareBoardSpots(a: KeyedSpot, b: KeyedSpot): number {
+  const newestFirst = b.spot.timeInMillis - a.spot.timeInMillis
+  if (newestFirst || a.key === b.key) return newestFirst
+  return a.key < b.key ? -1 : 1
 }
 
 export function createRbnSpots(options: Options) {
@@ -75,18 +102,27 @@ export function createRbnSpots(options: Options) {
   // Cache by receiver query as well as mode: changing skimmers or loading the
   // directory must not reuse a worldwide snapshot missing the chosen receivers.
   const feeds = new Map<string, FeedEntry>()
+  let board: BoardView | undefined
+  let boardLifecycle = 0
+  options.cluster?.observe((change?: RbnClusterChange) => {
+    if (!change || !board?.projection) return
+    if ('reset' in change) {
+      board.projection = undefined
+    } else {
+      for (const key of change.keys) board.projection.dirty.add(key)
+    }
+  })
   const live =
     options.cluster && options.publishSpots
       ? createLiveSpots(options.cluster, options.healthTimers ?? host, now, options.publishSpots)
       : undefined
-  let board: BoardView | undefined
-  let boardLifecycle = 0
   function pruneFeeds() {
     let count = [...feeds.values()].reduce((sum, entry) => sum + entry.reports.length, 0)
     for (const [key, entry] of feeds) {
       if (feeds.size <= maxCachedFeeds && count <= maxCachedReports) break
       count -= entry.reports.length
       feeds.delete(key)
+      if (board?.preferences.mode === entry.mode) board.projection = undefined
     }
   }
   function cachedReports(mode: string): Spot[] {
@@ -175,14 +211,23 @@ export function createRbnSpots(options: Options) {
       feeds.set(key, entry)
       pruneFeeds()
     }
+    const clusterEnabled = Boolean(live && liveClusterEnabled(raw))
+    const projectionKey = JSON.stringify([preferences, allowSpotMerging(raw), distanceUnits])
     return {
       raw,
       preferences,
       entry,
       online,
       distanceUnits,
-      clusterEnabled: Boolean(live && liveClusterEnabled(raw)),
+      clusterEnabled,
       loading: false,
+      projectionKey,
+      projection:
+        board?.projectionKey === projectionKey &&
+        board.entry === entry &&
+        board.clusterEnabled === clusterEnabled
+          ? board.projection
+          : undefined,
     }
   }
 
@@ -200,20 +245,17 @@ export function createRbnSpots(options: Options) {
     } finally {
       entry.attempted = true
       view.loading = false
+      view.projection = undefined
+      if (board?.preferences.mode === entry.mode) board.projection = undefined
       if (publish) live?.queueDelivery()
     }
   }
 
-  function* boardReports(view: BoardView): Iterable<Spot> {
-    const { preferences, entry } = view
-    const reports =
-      entry?.attempted && !entry.feed.getStatus() ? entry.reports : cachedReports(preferences.mode)
-    yield* reports
-    if (!view.clusterEnabled) return
-    for (const report of options.cluster?.getSnapshot(undefined, maxAgeMs).reports ?? []) {
+  function* clusterSpots(view: BoardView, reports: Iterable<RbnReport>): Iterable<Spot> {
+    for (const report of reports) {
       if (
         !spotBands.has(report.band) ||
-        (preferences.mode !== 'all' && preferences.mode !== report.mode)
+        (view.preferences.mode !== 'all' && view.preferences.mode !== report.mode)
       )
         continue
       yield {
@@ -236,21 +278,107 @@ export function createRbnSpots(options: Options) {
     }
   }
 
-  function select(view: BoardView): Spot[] {
-    const { raw, preferences, distanceUnits } = view
+  function vailSpots(view: BoardView) {
+    const { preferences, entry } = view
+    return entry?.attempted && !entry.feed.getStatus()
+      ? entry.reports
+      : cachedReports(preferences.mode)
+  }
+
+  function selectReports(view: BoardView, reports: Iterable<Spot>, at: number, limit?: number) {
     const selected = selectSpots(
-      boardReports(view),
-      preferences,
+      reports,
+      view.preferences,
       options.lookup,
-      now(),
-      distanceUnits,
-      live ? maxLiveBoardSpots : undefined,
+      at,
+      view.distanceUnits,
+      limit,
     )
     return selected.map((spot) =>
-      allowSpotMerging(raw)
+      allowSpotMerging(view.raw)
         ? { ...spot, refs: spot.refs?.filter((ref) => ref.type !== 'rbn') }
         : spot,
     )
+  }
+
+  function* candidates(
+    projection: BoardProjection,
+    vail: Iterable<Spot>,
+    cluster: Iterable<Spot>,
+  ): Iterable<Spot> {
+    for (const reports of [vail, cluster]) {
+      for (const report of reports) {
+        const time = report.spot.timeInMillis
+        if (time > projection.at) {
+          const key = spotKey(report.their.call, report.band, report.mode)
+          projection.future.set(key, Math.min(time, projection.future.get(key) ?? time))
+        } else {
+          yield report
+        }
+      }
+    }
+  }
+
+  function select(view: BoardView): Spot[] {
+    const at = now()
+    const cluster = options.cluster
+    if (!view.clusterEnabled || !cluster) {
+      return selectReports(view, vailSpots(view), at, live ? maxLiveBoardSpots : undefined)
+    }
+
+    const receiverRevision = options.receiverRevision?.()
+    let projection = view.projection
+    if (!projection || projection.receiverRevision !== receiverRevision || projection.at > at) {
+      const vail = vailSpots(view)
+      projection = {
+        at,
+        receiverRevision,
+        vailByKey: new Map(),
+        winners: new Map(),
+        dirty: new Set(),
+        future: new Map(),
+        visible: [],
+      }
+      for (const spot of vail) {
+        const key = spotKey(spot.their.call, spot.band, spot.mode)
+        const held = projection.vailByKey.get(key)
+        if (held) held.push(spot)
+        else projection.vailByKey.set(key, [spot])
+      }
+      const clusterReports = clusterSpots(view, cluster.getSnapshot(undefined, maxAgeMs).reports)
+      for (const winner of selectReports(view, candidates(projection, vail, clusterReports), at)) {
+        projection.winners.set(winner.key, winner)
+      }
+      view.projection = projection
+    } else {
+      projection.at = at
+      const { dirty, winners, vailByKey, future } = projection
+      for (const [key, time] of future) {
+        if (time <= at) dirty.add(key)
+      }
+      for (const [key, winner] of winners) {
+        if (winner.spot.timeInMillis < at - maxAgeMs) dirty.add(key)
+      }
+      if (!dirty.size) return projection.visible
+      for (const key of dirty) {
+        future.delete(key)
+        const reports = candidates(
+          projection,
+          vailByKey.get(key) ?? [],
+          clusterSpots(view, cluster.reportsForSpot(key)),
+        )
+        const [winner] = selectReports(view, reports, at)
+        if (winner) winners.set(key, winner)
+        else winners.delete(key)
+      }
+      dirty.clear()
+    }
+    projection.visible = [...projection.winners.values()]
+      // Cluster timestamps are rounded to the minute. A stable key settles
+      // ties at the board limit without depending on which group changed last.
+      .sort(compareBoardSpots)
+      .slice(0, maxLiveBoardSpots)
+    return projection.visible
   }
 
   function demand(view: BoardView) {
@@ -277,6 +405,19 @@ export function createRbnSpots(options: Options) {
     live?.pause()
   }
 
+  async function answerSpots(selected: Spot[], online: boolean) {
+    if (online) {
+      try {
+        // The host can replay earlier pushes over this fetch result.
+        // End that replay on the exact snapshot we return.
+        await live?.syncSnapshot(selected)
+      } catch {
+        // A refused push does not prevent the fetch from returning spots.
+      }
+    }
+    return selected
+  }
+
   const spots: SpotsHook = {
     sourceName: 'RBN',
     async fetchSpots(_args, ctx) {
@@ -286,10 +427,11 @@ export function createRbnSpots(options: Options) {
         if (raw.spotContinents === undefined && locating) {
           status =
             'Finding a local receiver continent. Refresh Spots after location is available, or choose a continent in RBN settings.'
-          return []
+          return answerSpots([], ctx.online)
         }
         const view = makeView(raw, ctx.online, ctx.distanceUnits)
-        if (lifecycle !== boardLifecycle) return select(view)
+        if (lifecycle !== boardLifecycle)
+          return answerSpots(select(board ?? view), Boolean(board?.online))
         board = view
         if (ctx.online) {
           const needsSnapshot = !live?.active
@@ -300,11 +442,11 @@ export function createRbnSpots(options: Options) {
           status = 'Offline: showing unexpired cached reports only.'
         }
         // If preferences changed during the request, only the newer view may supply spots.
-        if (settingsGeneration !== generation && board === view) return []
-        return board ? select(board) : select(view)
+        if (settingsGeneration !== generation && board === view) return answerSpots([], ctx.online)
+        return answerSpots(select(board ?? view), ctx.online)
       } catch (error) {
         status = error instanceof Error ? error.message : 'RBN spots unavailable.'
-        return []
+        return answerSpots([], ctx.online)
       }
     },
   }

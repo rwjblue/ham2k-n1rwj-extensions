@@ -39,10 +39,15 @@ defineExtension({
       healthTimers: host,
       lookup: receivers.lookup,
       receiverEntries: receivers.entries,
+      receiverRevision: receivers.revision,
       continentNear: receivers.continentNear,
       setSettings: setRbnSettings,
       cluster: live,
-      publishSpots: (spots) => host.spots.replace(spots, { source: manifest.key }),
+      publishSpots: {
+        replace: (spots) => host.spots.replace(spots, { source: manifest.key }),
+        put: (spots) => host.spots.put(spots, { source: manifest.key }),
+        remove: (keys) => host.spots.remove(keys, { source: manifest.key }),
+      },
     })
     pauseSpots = pause
     registerHook('cluster', { key: manifest.key, hook: { onLines: live.hook.onLines } })

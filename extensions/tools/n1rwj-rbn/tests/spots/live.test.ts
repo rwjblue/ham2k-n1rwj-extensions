@@ -1,8 +1,13 @@
 import type { FetchResponse, JSONValue, Spot } from '@ham2k/extension-sdk'
 import { afterEach, expect, it, vi } from 'vitest'
-import type { RbnCluster } from '../../src/cluster/index.ts'
+import type { RbnCluster, RbnClusterChange } from '../../src/cluster/index.ts'
 import type { RbnReport } from '../../src/model.ts'
 import { createRbnSpots } from '../../src/spots/index.ts'
+import { maxAgeMs, spotKey } from '../../src/spots/model.ts'
+
+function reportKey(report: RbnReport) {
+  return spotKey(report.call, report.band, report.mode)
+}
 
 const start = Date.parse('2026-11-11T19:00:00Z')
 
@@ -13,7 +18,7 @@ function fixture(settings: Record<string, JSONValue> = {}) {
     spotContinents: ['NA'],
     ...settings,
   }
-  let listener = () => {}
+  const observers = new Set<(change?: RbnClusterChange) => void>()
   let snapshot: ReturnType<RbnCluster['getSnapshot']> = {
     state: 'idle',
     reports: [],
@@ -25,10 +30,11 @@ function fixture(settings: Record<string, JSONValue> = {}) {
     pause: vi.fn(),
     resume: vi.fn(),
     getStatus: () => snapshot,
-    getSnapshot: () => snapshot,
+    getSnapshot: vi.fn(() => snapshot),
+    reportsForSpot: vi.fn((key) => snapshot.reports.filter((report) => reportKey(report) === key)),
     observe(callback) {
-      listener = callback
-      return () => {}
+      observers.add(callback)
+      return () => observers.delete(callback)
     },
     hook: { async onLines() {} },
   }
@@ -50,9 +56,30 @@ function fixture(settings: Record<string, JSONValue> = {}) {
     }),
   )
   const publishSpots = vi.fn(async (_spots: Spot[]) => {})
+  let held = new Map<string | undefined, Spot>()
+  async function write(next: Map<string | undefined, Spot>) {
+    await publishSpots(
+      [...next.values()].sort(
+        (a, b) =>
+          b.spot.timeInMillis - a.spot.timeInMillis || (a.their.call < b.their.call ? -1 : 1),
+      ),
+    )
+    held = next
+  }
+  const publisher = {
+    replace: vi.fn((spots: Spot[]) => write(new Map(spots.map((spot) => [spot.key, spot])))),
+    put: vi.fn((spots: Spot[]) =>
+      write(new Map([...held, ...spots.map((spot) => [spot.key, spot] as const)])),
+    ),
+    remove: vi.fn((keys: string[]) => {
+      const next = new Map(held)
+      for (const key of keys) next.delete(key)
+      return write(next)
+    }),
+  }
   const runtime = createRbnSpots({
     cluster,
-    publishSpots,
+    publishSpots: publisher,
     fetch,
     healthTimers: {
       setTimeout(callback, delay) {
@@ -71,10 +98,22 @@ function fixture(settings: Record<string, JSONValue> = {}) {
     cluster,
     fetch,
     publishSpots,
+    publisher,
     runtime,
     update(update: Partial<typeof snapshot>) {
+      let change: RbnClusterChange | undefined
+      if (update.reports) {
+        const before = new Set(snapshot.reports)
+        const after = new Set(update.reports)
+        change = {
+          keys: new Set([
+            ...snapshot.reports.filter((report) => !after.has(report)).map(reportKey),
+            ...update.reports.filter((report) => !before.has(report)).map(reportKey),
+          ]),
+        }
+      }
       snapshot = { ...snapshot, ...update }
-      listener()
+      for (const notify of observers) notify(change)
     },
     report(fields: Partial<RbnReport> = {}): RbnReport {
       return {
@@ -178,8 +217,8 @@ it('reselects qualifying CW reports from live and cached Spots when the SNR mini
     spots?.map(({ their, mode, spot }) => [their.call, mode, spot.sourceInfo?.snr ?? null])
   const all = [
     ['W1AW', 'CW', 8],
-    ['W2AW', 'CW', null],
     ['W1AW', 'FT8', -14],
+    ['W2AW', 'CW', null],
     ['K1ABC', 'CW', null], // Cached Vail report
   ]
   expect(summary(await s.fetchBoard())).toEqual(all)
@@ -367,15 +406,15 @@ it('corrects an older publication that finishes after settings change', async ()
         finish = resolve
       }),
   )
-  s.update({ reports: [s.report({ call: 'W1AW/P' })] })
+  s.update({ reports: [s.report({ frequencyKhz: 14027 })] })
   await vi.advanceTimersByTimeAsync(300)
-  expect(s.publishSpots.mock.lastCall?.[0][0]?.their.call).toBe('W1AW/P')
+  expect(s.publishSpots.mock.lastCall?.[0][0]?.freq).toBe(14027)
 
   s.update({ reports: [first] })
   await s.edit('spotMode', 'CW')
   finish()
   await vi.advanceTimersByTimeAsync(300)
-  expect(s.publishSpots.mock.lastCall?.[0][0]?.their.call).toBe('W1AW')
+  expect(s.publishSpots.mock.lastCall?.[0][0]?.freq).toBe(14025)
 })
 
 it('gives costly pushes time to recover and coalesces cluster updates while waiting', async () => {
@@ -384,24 +423,50 @@ it('gives costly pushes time to recover and coalesces cluster updates while wait
   let work = 0
   const clock = vi.spyOn(performance, 'now').mockImplementation(() => realNow() + work)
   try {
+    s.update({ state: 'connected', lastReportAt: { CW: start }, reports: [s.report()] })
+    await s.fetchBoard()
+    await vi.advanceTimersByTimeAsync(300)
     s.publishSpots.mockImplementation(async () => {
       work += 300 // Sending a large board spends time before awaiting the host.
     })
-    s.update({ state: 'connected', lastReportAt: { CW: start }, reports: [s.report()] })
-    await s.fetchBoard()
+    s.update({ reports: [s.report({ frequencyKhz: 14030 })] })
     await vi.advanceTimersByTimeAsync(250)
-    expect(s.publishSpots).toHaveBeenCalledTimes(1)
+    expect(s.publishSpots).toHaveBeenCalledTimes(2)
 
     s.update({ reports: [s.report({ call: 'W2AW' })] })
     for (let second = 0; second < 6; second++) {
       await vi.advanceTimersByTimeAsync(1000)
       s.update({ reports: [s.report({ call: 'W3AW' })] })
-      expect(s.publishSpots).toHaveBeenCalledTimes(1)
+      expect(s.publishSpots).toHaveBeenCalledTimes(2)
     }
     await vi.advanceTimersByTimeAsync(250)
-    expect(s.publishSpots).toHaveBeenCalledTimes(2)
+    expect(s.publisher.put.mock.lastCall?.[0][0]?.their.call).toBe('W3AW')
     expect(s.publishSpots.mock.lastCall?.[0][0]?.their.call).toBe('W3AW')
   } finally {
     clock.mockRestore()
   }
+})
+
+it('reselects only changed stations and uses a newer receiver when the closest report expires', async () => {
+  const s = fixture({ spotRadiusGrid: 'FN42' })
+  const near = s.report({ timeMs: start - maxAgeMs + 1000 })
+  const far = s.report({ receiver: 'W9ABC', frequencyKhz: 14027 })
+  const other = s.report({ call: 'W9OLD' })
+  s.update({
+    state: 'connected',
+    lastReportAt: { CW: start },
+    reports: [far, near, other],
+  })
+  expect((await s.fetchBoard()).find((spot) => spot.their.call === 'W1AW')?.freq).toBe(14025)
+  await vi.advanceTimersByTimeAsync(1001)
+
+  s.update({ reports: [far, near, other, s.report({ call: 'W9NEW' })] })
+  await vi.advanceTimersByTimeAsync(300)
+  expect(s.cluster.getSnapshot).toHaveBeenCalledTimes(1)
+  expect(s.cluster.reportsForSpot).toHaveBeenCalledTimes(2)
+  expect(s.publisher.replace).toHaveBeenCalledTimes(1)
+  expect(s.publisher.put.mock.lastCall?.[0].map(({ their, freq }) => [their.call, freq])).toEqual([
+    ['W9NEW', 14025],
+    ['W1AW', 14027],
+  ])
 })

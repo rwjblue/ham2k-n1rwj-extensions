@@ -165,6 +165,7 @@ function familyMetadata(nodes: ReadonlyMap<string, Receiver>): Map<string, Recei
 export function createReceiverData() {
   let current = new Map<string, Receiver>()
   let families = new Map<string, ReceiverMetadata>()
+  let revision = 0
   const dataFile = {
     key: 'n1rwj-rbn_receivers',
     name: 'RBN receiver directory',
@@ -191,10 +192,12 @@ export function createReceiverData() {
       const aliases = familyMetadata(nodes)
       current = nodes
       families = aliases
+      revision++
     },
     async onRemoveRawData() {
       current = new Map()
       families = new Map()
+      revision++
     },
   } satisfies DataFileDefinition
   function lookup(call: string): ReceiverMetadata | undefined {
@@ -244,6 +247,7 @@ export function createReceiverData() {
     enrichReports,
     continentNear,
     lookup,
+    revision: () => revision,
     entries: (): readonly Receiver[] => [...current.values()],
   }
 }

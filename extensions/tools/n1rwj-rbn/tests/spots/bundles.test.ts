@@ -370,7 +370,7 @@ it('ignores a saved station filter while keeping the receiver filters and settin
   const runtime = await harness({ 'extension_n1rwj-rbn': saved })
   expect(runtime.spots.sourceName).toBe('RBN')
   const [first, second] = await Promise.all([runtime.fetch(), runtime.fetch()])
-  expect(first.map((spot) => spot.their.call)).toEqual(['K1ABC/P', 'W9NEW', 'N2SST'])
+  expect(first.map((spot) => spot.their.call)).toEqual(['K1ABC/P', 'N2SST', 'W9NEW'])
   expect(second).toEqual(first)
   expect(runtime.requests).toHaveBeenCalledExactlyOnceWith(
     expect.stringContaining('mode=CW&spotter=KM3T-5'),

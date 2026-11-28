@@ -113,6 +113,17 @@ it('automatically configures the live cluster feed and publishes spots from the 
         published = params.spots as Spot[]
         return null
       }
+      if (method === 'putSpots') {
+        expect(params.source).toBe(manifest.key)
+        expect(params.ns).toBe(manifest.key)
+        const byKey = new Map(published.map((spot) => [spot.key, spot]))
+        for (const spot of params.spots as Spot[]) {
+          expect(spot.key).toBeTruthy()
+          byKey.set(spot.key, spot)
+        }
+        published = [...byKey.values()]
+        return null
+      }
       throw new Error(`Unexpected host call ${method}`)
     },
   })

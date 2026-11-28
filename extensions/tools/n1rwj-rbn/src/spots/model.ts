@@ -7,6 +7,10 @@ import { isValidReceiver, receiverLocation } from '../data/parser.ts'
 import { type Coordinates, distanceKm, isValidCall, normalizeCall } from '../model.ts'
 
 export const maxAgeMs = 10 * 60_000
+export function spotKey(call: string, band?: string, mode?: string): string {
+  return `${call}|${band ?? ''}|${mode ?? ''}`
+}
+
 export const bands = [
   { name: '160m', low: 1800, high: 2000 },
   { name: '80m', low: 3500, high: 4000 },
@@ -84,6 +88,7 @@ export interface ReceiverSelection {
 export type ReceiverLookup = (
   call: string,
 ) => { grid: string | null; continent?: Continent | null; gridAmbiguous?: boolean } | undefined
+export type KeyedSpot = Spot & { key: string }
 
 function spotLabel(
   snr: unknown,
@@ -110,7 +115,7 @@ export function selectSpots(
   now: number,
   distanceUnits?: string,
   limit?: number,
-): Spot[] {
+): KeyedSpot[] {
   const selected = new Map<
     string,
     { report: Spot; grid: string; receiverKm?: number; unknownCwSpeed: boolean }
@@ -170,7 +175,7 @@ export function selectSpots(
       (receiverKm === undefined || receiverKm > receivers.radius.miles * 1.609344)
     )
       continue
-    const key = `${report.their.call}:${report.band}:${report.mode}`
+    const key = spotKey(report.their.call, report.band, report.mode)
     const previous = selected.get(key)
     if (previous) {
       const distance = receiverKm ?? Infinity
@@ -190,6 +195,7 @@ export function selectSpots(
   if (limit !== undefined && ranked.length > limit) ranked.length = limit
   return ranked.map(({ report, grid, receiverKm, unknownCwSpeed }) => ({
     ...report,
+    key: spotKey(report.their.call, report.band, report.mode),
     spot: {
       ...report.spot,
       label: spotLabel(report.spot.sourceInfo?.snr, receiverKm, distanceUnits, unknownCwSpeed),

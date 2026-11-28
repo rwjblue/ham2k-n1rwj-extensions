@@ -1,8 +1,8 @@
 import type { ClusterStatus } from '@ham2k/extension-sdk'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { createRbnCluster } from '../../src/cluster/index.ts'
+import { createRbnCluster, type RbnClusterChange } from '../../src/cluster/index.ts'
 import { latestReports } from '../../src/model.ts'
-import { maxAgeMs } from '../../src/spots/model.ts'
+import { maxAgeMs, spotKey } from '../../src/spots/model.ts'
 
 const NOW = Date.parse('2026-11-11T17:10:15Z')
 const defaultNode = { name: 'Test Node', host: 'test.example', port: 7300 }
@@ -138,6 +138,33 @@ describe('shared cluster demand', () => {
 })
 
 describe('cluster reports', () => {
+  it('indexes affected stations by band and mode with the newest arrivals first', async () => {
+    const { cluster } = setup()
+    const listener = vi.fn()
+    cluster.renew('spots', 60_000)
+    await tick()
+    cluster.observe(listener)
+    await cluster.hook.onLines(
+      {
+        lines: [
+          { seq: 13, at: NOW, text: cw },
+          { seq: 14, at: NOW, text: ft8 },
+          { seq: 15, at: NOW, text: cw.replace('7002.5', '14002.5') },
+          { seq: 16, at: NOW, text: cw.replace('22dB', '30dB') },
+        ],
+      },
+      { online: true },
+    )
+
+    const cwKey = spotKey('WI3W', '40m', 'CW')
+    const ft8Key = spotKey('WI3W', '40m', 'FT8')
+    const twentyKey = spotKey('WI3W', '20m', 'CW')
+    expect(listener).toHaveBeenCalledExactlyOnceWith({ keys: new Set([cwKey, ft8Key, twentyKey]) })
+    expect([...cluster.reportsForSpot(cwKey)].map(({ snrDb }) => snrDb)).toEqual([30, 22])
+    expect([...cluster.reportsForSpot(ft8Key)]).toHaveLength(1)
+    expect([...cluster.reportsForSpot(twentyKey)]).toHaveLength(1)
+  })
+
   it('uses receipt time for feed freshness while retaining a grouped CW report time', async () => {
     const { cluster } = setup()
     cluster.renew('spots', 60_000)
@@ -161,6 +188,7 @@ describe('cluster reports', () => {
 
   it('keeps a board spot through a contest-sized burst and preserves a watched call at the cap', async () => {
     const { cluster } = setup()
+    const cwKey = spotKey('WI3W', '40m', 'CW')
     cluster.renew('map', 60_000, 'WI3W')
     cluster.renew('second map', 60_000, 'WI3W')
     cluster.renew('spots', 60_000)
@@ -182,8 +210,14 @@ describe('cluster reports', () => {
     expect(
       cluster.getSnapshot(undefined, maxAgeMs).reports.some(({ call }) => call === 'WI3W'),
     ).toBe(true)
+    expect([...cluster.reportsForSpot(cwKey)]).toHaveLength(1)
 
+    const listener = vi.fn<(change?: RbnClusterChange) => void>()
+    cluster.observe(listener)
     await receive(60_000, 40_000)
+    const change = listener.mock.lastCall?.[0]
+    expect(change && 'keys' in change && change.keys.has(cwKey)).toBe(true)
+    expect([...cluster.reportsForSpot(cwKey)]).toEqual([])
     expect(cluster.getSnapshot().reports).toHaveLength(100_000)
     expect(cluster.getSnapshot().reports.some(({ call }) => call === 'WI3W')).toBe(false)
     expect(cluster.getSnapshot('WI3W').reports.map(({ call }) => call)).toEqual(['WI3W'])
@@ -361,11 +395,16 @@ describe('cluster reports', () => {
 
   it('clears the old node reports and ages inactive reports out', async () => {
     const { cluster, setStatus } = setup()
+    const cwKey = spotKey('WI3W', '40m', 'CW')
     cluster.renew('spots', 30_000)
     await tick()
     await cluster.hook.onLines({ lines: [{ seq: 13, at: NOW, text: cw }] }, { online: true })
+    const listener = vi.fn()
+    cluster.observe(listener)
     setStatus(status('connected', { node: { ...defaultNode, host: 'other.example' }, lastSeq: 13 }))
     await tick(5_000)
+    expect(listener).toHaveBeenCalledExactlyOnceWith({ reset: true })
+    expect([...cluster.reportsForSpot(cwKey)]).toEqual([])
     expect(cluster.getSnapshot().reports).toEqual([])
     await cluster.hook.onLines(
       { lines: [{ seq: 14, at: NOW + 5_000, text: cw }] },
@@ -375,5 +414,8 @@ describe('cluster reports', () => {
     expect(cluster.getSnapshot().reports).toHaveLength(1)
     await tick(60 * 60_000)
     expect(cluster.getSnapshot().reports).toEqual([])
+    cluster.renew('spots', 30_000)
+    await tick(5_000)
+    expect([...cluster.reportsForSpot(cwKey)]).toEqual([])
   })
 })

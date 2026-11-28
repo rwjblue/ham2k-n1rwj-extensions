@@ -1,7 +1,7 @@
 import type { ClusterHook, ClusterStatus } from '@ham2k/extension-sdk'
 import { createTimerSlot, type TimerDriver } from '../../../../../packages/reception/src/timers.ts'
 import { normalizeCall, type RbnReport } from '../model.ts'
-import { bands } from '../spots/model.ts'
+import { bands, spotKey } from '../spots/model.ts'
 import { type ClusterRbnMode, clusterSkimmerLines, parseClusterReport } from './parser.ts'
 import { type ClusterSetupHost, createClusterFeedSetup } from './skimmer-setup.ts'
 
@@ -21,6 +21,8 @@ export interface RbnClusterSnapshot extends RbnClusterStatus {
   reports: readonly RbnReport[]
 }
 
+export type RbnClusterChange = { keys: ReadonlySet<string> } | { reset: true }
+
 export interface RbnCluster {
   renew(key: string, leaseMs: number, call?: string): void
   release(key: string): void
@@ -28,7 +30,8 @@ export interface RbnCluster {
   resume(): void
   getStatus(): RbnClusterStatus
   getSnapshot(call?: string, maxAgeMs?: number): RbnClusterSnapshot
-  observe(listener: () => void): () => void
+  reportsForSpot(key: string): Iterable<RbnReport>
+  observe(listener: (change?: RbnClusterChange) => void): () => void
   hook: ClusterHook
 }
 
@@ -57,8 +60,10 @@ function noteReceipt(times: ReportTimes, mode: ClusterRbnMode, at: number) {
 function retain(reports: Map<string, RbnReport>, key: string, report: RbnReport, limit: number) {
   reports.set(key, report)
   if (reports.size <= limit) return
-  const oldest = reports.keys().next().value
-  if (oldest !== undefined) reports.delete(oldest)
+  const oldest = reports.entries().next().value
+  if (oldest === undefined) return
+  reports.delete(oldest[0])
+  return oldest[1]
 }
 
 /** One read subscription shared by all interested views in this extension. */
@@ -67,8 +72,9 @@ export function createRbnCluster(host: ClusterHost, now = Date.now): RbnCluster 
   const configure = createClusterFeedSetup(host, now)
   const leases = new Map<string, { expires: number; call?: string }>()
   const cache = new Map<ClusterRbnMode, Map<string, RbnReport>>()
+  const reportsBySpot = new Map<string, Set<RbnReport>>()
   const watched = new Map<string, Map<string, RbnReport>>()
-  const listeners = new Set<() => void>()
+  const listeners = new Set<(change?: RbnClusterChange) => void>()
   let paused = false
   let leaseClock = 0
   let wakeAt: number | undefined
@@ -90,10 +96,10 @@ export function createRbnCluster(host: ClusterHost, now = Date.now): RbnCluster 
   const wanted = () => !paused && leases.size > 0
   const current = (request: number) => request === generation && wanted()
 
-  function notify() {
+  function notify(change?: RbnClusterChange) {
     for (const listener of [...listeners]) {
       try {
-        listener()
+        listener(change)
       } catch {
         // Each view observes the same cache independently.
       }
@@ -115,17 +121,37 @@ export function createRbnCluster(host: ClusterHost, now = Date.now): RbnCluster 
     }
   }
 
-  function update(next: RbnClusterSnapshot['state'], reason?: string, reset = false) {
+  function update(
+    next: RbnClusterSnapshot['state'],
+    reason?: string,
+    reset = false,
+    change?: RbnClusterChange,
+  ) {
     const changed = next !== state || reason !== error || reset
     state = next
     error = reason
     if (state !== 'connected' || reset) resetFreshness()
-    if (changed) notify()
+    if (changed || change) notify(change)
+  }
+
+  function unlinkReport(report: RbnReport) {
+    const key = spotKey(report.call, report.band, report.mode)
+    const reports = reportsBySpot.get(key)
+    reports?.delete(report)
+    if (reports?.size === 0) reportsBySpot.delete(key)
+    return key
   }
 
   function pruneReports() {
     const cutoff = now() - reportAgeMs
-    for (const reports of [...cache.values(), ...watched.values()]) {
+    for (const reports of cache.values()) {
+      for (const [key, report] of reports) {
+        if (report.timeMs >= cutoff) continue
+        reports.delete(key)
+        unlinkReport(report)
+      }
+    }
+    for (const reports of watched.values()) {
       for (const [key, report] of reports) {
         if (report.timeMs < cutoff) reports.delete(key)
       }
@@ -158,6 +184,7 @@ export function createRbnCluster(host: ClusterHost, now = Date.now): RbnCluster 
     loginCall = status.call || loginCall
     if (nodeChanged) {
       cache.clear()
+      reportsBySpot.clear()
       for (const reports of watched.values()) reports.clear()
     }
     if (nodeChanged || callChanged || status.state !== 'connected') {
@@ -171,7 +198,12 @@ export function createRbnCluster(host: ClusterHost, now = Date.now): RbnCluster 
     if (status.state === 'connected') manuallyDisconnected = false
     const next =
       status.state === 'connected' || status.state === 'connecting' ? status.state : 'unavailable'
-    update(next, status.error, nodeChanged || callChanged)
+    update(
+      next,
+      status.error,
+      nodeChanged || callChanged,
+      nodeChanged ? { reset: true } : undefined,
+    )
     if (status.state === 'connected') {
       // Setup runs beside live delivery and the initial Vail request.
       void configure(
@@ -272,12 +304,10 @@ export function createRbnCluster(host: ClusterHost, now = Date.now): RbnCluster 
   const hook: ClusterHook = {
     async onLines({ lines }, ctx) {
       if (!ctx.online || !wanted() || subscribedAt !== generation || state !== 'connected') return
-      let changed = false
       const at = now()
-      if ((lastReportAt.all ?? 0) > at + maxClockLeadMs) {
-        resetFreshness()
-        changed = true
-      }
+      const clockRewound = (lastReportAt.all ?? 0) > at + maxClockLeadMs
+      if (clockRewound) resetFreshness()
+      const changedKeys = new Set<string>()
       for (const line of lines) {
         if (!Number.isSafeInteger(line.seq) || line.seq <= lastSeq) continue
         lastSeq = line.seq
@@ -298,15 +328,21 @@ export function createRbnCluster(host: ClusterHost, now = Date.now): RbnCluster 
           report.wpm,
         ].join('|')
         if (reports.has(key)) continue
-        retain(reports, key, report, maxReportsPerMode[report.mode])
+        const evicted = retain(reports, key, report, maxReportsPerMode[report.mode])
+        if (evicted) changedKeys.add(unlinkReport(evicted))
+        const stationKey = spotKey(report.call, report.band, report.mode)
+        const stationReports = reportsBySpot.get(stationKey) ?? new Set<RbnReport>()
+        reportsBySpot.set(stationKey, stationReports)
+        stationReports.add(report)
+        changedKeys.add(stationKey)
         const callReports = watched.get(report.call)
         if (callReports?.has(key)) continue
         if (callReports) retain(callReports, key, report, maxReportsPerCall)
         noteReceipt(lastReportAt, report.mode, line.at)
         if (spotsBands.has(report.band)) noteReceipt(lastSpotsReportAt, report.mode, line.at)
-        changed = true
       }
-      if (changed) notify()
+      if (changedKeys.size) notify({ keys: changedKeys })
+      else if (clockRewound) notify()
     },
   }
 
@@ -366,6 +402,10 @@ export function createRbnCluster(host: ClusterHost, now = Date.now): RbnCluster 
           return recent.reverse()
         }),
       }
+    },
+    reportsForSpot(key) {
+      const reports = reportsBySpot.get(key)
+      return reports ? [...reports].reverse() : []
     },
     observe(listener) {
       listeners.add(listener)
