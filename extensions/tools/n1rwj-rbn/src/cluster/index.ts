@@ -10,11 +10,14 @@ interface ClusterHost extends TimerDriver, ClusterSetupHost {
   clusterUnsubscribe(): Promise<ClusterStatus>
 }
 
-export interface RbnClusterSnapshot {
+interface RbnClusterStatus {
   state: 'idle' | 'connecting' | 'connected' | 'unavailable'
   error?: string
   lastReportAt: Readonly<Partial<Record<string, number>>>
   lastSpotsReportAt?: Readonly<Partial<Record<string, number>>>
+}
+
+export interface RbnClusterSnapshot extends RbnClusterStatus {
   reports: readonly RbnReport[]
 }
 
@@ -23,7 +26,8 @@ export interface RbnCluster {
   release(key: string): void
   pause(): void
   resume(): void
-  getSnapshot(call?: string): RbnClusterSnapshot
+  getStatus(): RbnClusterStatus
+  getSnapshot(call?: string, maxAgeMs?: number): RbnClusterSnapshot
   observe(listener: () => void): () => void
   hook: ClusterHook
 }
@@ -32,7 +36,13 @@ const pollMs = 5_000
 const reportAgeMs = 60 * 60_000
 const maxDeliveryAgeMs = 30_000
 const maxClockLeadMs = 5_000
-const maxReportsPerMode = 1250
+// Give contest CW ten minutes at about 167 reports/second before board filters.
+const maxReportsPerMode: Record<ClusterRbnMode, number> = {
+  CW: 100_000,
+  RTTY: 12_500,
+  FT4: 12_500,
+  FT8: 12_500,
+}
 const maxWatchedCalls = 8
 const maxReportsPerCall = 500
 const spotsBands = new Set<string>(bands.map(({ name }) => name))
@@ -93,6 +103,16 @@ export function createRbnCluster(host: ClusterHost, now = Date.now): RbnCluster 
   function resetFreshness() {
     lastReportAt = {}
     lastSpotsReportAt = {}
+  }
+
+  function readStatus(at: number): RbnClusterStatus {
+    const clockRewound = (lastReportAt.all ?? 0) > at + maxClockLeadMs
+    return {
+      state,
+      error,
+      lastReportAt: clockRewound ? {} : { ...lastReportAt },
+      lastSpotsReportAt: clockRewound ? {} : { ...lastSpotsReportAt },
+    }
   }
 
   function update(next: RbnClusterSnapshot['state'], reason?: string, reset = false) {
@@ -278,7 +298,7 @@ export function createRbnCluster(host: ClusterHost, now = Date.now): RbnCluster 
           report.wpm,
         ].join('|')
         if (reports.has(key)) continue
-        retain(reports, key, report, maxReportsPerMode)
+        retain(reports, key, report, maxReportsPerMode[report.mode])
         const callReports = watched.get(report.call)
         if (callReports?.has(key)) continue
         if (callReports) retain(callReports, key, report, maxReportsPerCall)
@@ -324,27 +344,27 @@ export function createRbnCluster(host: ClusterHost, now = Date.now): RbnCluster 
     resume() {
       paused = false
     },
-    getSnapshot(call) {
+    getStatus: () => readStatus(now()),
+    getSnapshot(call, maxAgeMs = reportAgeMs) {
       const at = now()
-      const clockRewound = (lastReportAt.all ?? 0) > at + maxClockLeadMs
       const watch = call ? normalizeCall(call) : undefined
       const callReports = watch ? watched.get(watch) : undefined
       const sources = callReports ? [callReports] : cache.values()
       return {
-        state,
-        error,
-        lastReportAt: clockRewound ? {} : { ...lastReportAt },
-        lastSpotsReportAt: clockRewound ? {} : { ...lastSpotsReportAt },
-        reports: [...sources].flatMap((reports) =>
-          [...reports.values()]
-            .reverse()
-            .filter(
-              (report) =>
-                report.timeMs >= at - reportAgeMs &&
-                report.timeMs <= at + maxClockLeadMs &&
-                (!watch || report.call === watch),
-            ),
-        ),
+        ...readStatus(at),
+        reports: [...sources].flatMap((reports) => {
+          const recent = []
+          for (const report of reports.values()) {
+            if (
+              report.timeMs >= at - maxAgeMs &&
+              report.timeMs <= at + maxClockLeadMs &&
+              (!watch || report.call === watch)
+            ) {
+              recent.push(report)
+            }
+          }
+          return recent.reverse()
+        }),
       }
     },
     observe(listener) {

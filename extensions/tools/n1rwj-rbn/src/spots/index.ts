@@ -19,7 +19,7 @@ import { rbnAboutDefinition } from './about.ts'
 import { createSpotFeed } from './feed.ts'
 import { createHealthCheck } from './health.ts'
 import { createLiveSpots, maxLiveBoardSpots } from './live.ts'
-import { bands, type ReceiverLookup, selectSpots } from './model.ts'
+import { bands, maxAgeMs, type ReceiverLookup, selectSpots } from './model.ts'
 import {
   allowSpotMerging,
   ownSettings,
@@ -204,39 +204,42 @@ export function createRbnSpots(options: Options) {
     }
   }
 
-  function select(view: BoardView): Spot[] {
-    const { raw, preferences, distanceUnits, entry } = view
+  function* boardReports(view: BoardView): Iterable<Spot> {
+    const { preferences, entry } = view
     const reports =
       entry?.attempted && !entry.feed.getStatus() ? entry.reports : cachedReports(preferences.mode)
-    const clusterReports: Spot[] = []
-    if (view.clusterEnabled) {
-      for (const report of options.cluster?.getSnapshot().reports ?? []) {
-        if (
-          !spotBands.has(report.band) ||
-          (preferences.mode !== 'all' && preferences.mode !== report.mode)
-        )
-          continue
-        clusterReports.push({
-          their: { call: report.call },
-          freq: report.frequencyKhz,
-          band: report.band,
-          mode: report.mode,
-          refs: [{ type: 'rbn', ref: report.call }],
-          spot: {
-            timeInMillis: report.timeMs,
-            source: manifest.key,
-            sourceInfo: {
-              spotter: report.receiver,
-              snr: report.snrDb,
-              wpm: report.wpm,
-              transport: 'cluster',
-            },
+    yield* reports
+    if (!view.clusterEnabled) return
+    for (const report of options.cluster?.getSnapshot(undefined, maxAgeMs).reports ?? []) {
+      if (
+        !spotBands.has(report.band) ||
+        (preferences.mode !== 'all' && preferences.mode !== report.mode)
+      )
+        continue
+      yield {
+        their: { call: report.call },
+        freq: report.frequencyKhz,
+        band: report.band,
+        mode: report.mode,
+        refs: [{ type: 'rbn', ref: report.call }],
+        spot: {
+          timeInMillis: report.timeMs,
+          source: manifest.key,
+          sourceInfo: {
+            spotter: report.receiver,
+            snr: report.snrDb,
+            wpm: report.wpm,
+            transport: 'cluster',
           },
-        })
+        },
       }
     }
+  }
+
+  function select(view: BoardView): Spot[] {
+    const { raw, preferences, distanceUnits } = view
     const selected = selectSpots(
-      [...reports, ...clusterReports],
+      boardReports(view),
       preferences,
       options.lookup,
       now(),

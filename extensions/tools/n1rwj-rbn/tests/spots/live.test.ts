@@ -24,6 +24,7 @@ function fixture(settings: Record<string, JSONValue> = {}) {
     release: vi.fn(),
     pause: vi.fn(),
     resume: vi.fn(),
+    getStatus: () => snapshot,
     getSnapshot: () => snapshot,
     observe(callback) {
       listener = callback

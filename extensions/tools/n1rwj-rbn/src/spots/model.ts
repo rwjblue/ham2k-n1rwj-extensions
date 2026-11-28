@@ -104,7 +104,7 @@ function spotLabel(
 
 /** Filter reports, then pick the closest one for each station, band, and mode. */
 export function selectSpots(
-  reports: readonly Spot[],
+  reports: Iterable<Spot>,
   receivers: ReceiverSelection,
   lookup: ReceiverLookup,
   now: number,
@@ -115,6 +115,7 @@ export function selectSpots(
     { report: Spot; grid: string; receiverKm?: number; unknownCwSpeed: boolean }
   >()
   const origin = receivers.radius?.origin ?? receivers.distanceOrigin
+  const distanceByGrid = new Map<string, number | null>()
   for (const report of reports) {
     if (report.spot.timeInMillis < now - maxAgeMs || report.spot.timeInMillis > now) continue
     const info = report.spot.sourceInfo ?? {}
@@ -152,10 +153,16 @@ export function selectSpots(
       continue
     let receiverKm: number | undefined
     if (origin && !directory?.gridAmbiguous) {
-      const [latitude, longitude] = receiverLocation(grid)
-      if (latitude !== null && longitude !== null) {
-        receiverKm = distanceKm(origin, { latitude, longitude })
+      let km = distanceByGrid.get(grid)
+      if (km === undefined) {
+        const [latitude, longitude] = receiverLocation(grid)
+        km =
+          latitude !== null && longitude !== null
+            ? distanceKm(origin, { latitude, longitude })
+            : null
+        distanceByGrid.set(grid, km)
       }
+      receiverKm = km ?? undefined
     }
     if (
       receivers.radius &&

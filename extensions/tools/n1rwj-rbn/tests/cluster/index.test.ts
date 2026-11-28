@@ -2,6 +2,7 @@ import type { ClusterStatus } from '@ham2k/extension-sdk'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createRbnCluster } from '../../src/cluster/index.ts'
 import { latestReports } from '../../src/model.ts'
+import { maxAgeMs } from '../../src/spots/model.ts'
 
 const NOW = Date.parse('2026-11-11T17:10:15Z')
 const defaultNode = { name: 'Test Node', host: 'test.example', port: 7300 }
@@ -158,24 +159,32 @@ describe('cluster reports', () => {
     })
   })
 
-  it('preserves exact watched reports when unrelated traffic fills the global cache', async () => {
+  it('keeps a board spot through a contest-sized burst and preserves a watched call at the cap', async () => {
     const { cluster } = setup()
     cluster.renew('map', 60_000, 'WI3W')
     cluster.renew('second map', 60_000, 'WI3W')
     cluster.renew('spots', 60_000)
     await tick()
     await cluster.hook.onLines({ lines: [{ seq: 13, at: NOW, text: cw }] }, { online: true })
-    await cluster.hook.onLines(
-      {
-        lines: Array.from({ length: 1_300 }, (_, index) => ({
-          seq: 14 + index,
-          at: NOW,
-          text: cw.replace('WI3W', `K${index}X`),
-        })),
-      },
-      { online: true },
-    )
-    expect(cluster.getSnapshot().reports).toHaveLength(1250)
+    const receive = (start: number, length: number) =>
+      cluster.hook.onLines(
+        {
+          lines: Array.from({ length }, (_, offset) => ({
+            seq: 14 + start + offset,
+            at: NOW,
+            text: cw.replace('WI3W', `K${start + offset}X`),
+          })),
+        },
+        { online: true },
+      )
+
+    await receive(0, 60_000)
+    expect(
+      cluster.getSnapshot(undefined, maxAgeMs).reports.some(({ call }) => call === 'WI3W'),
+    ).toBe(true)
+
+    await receive(60_000, 40_000)
+    expect(cluster.getSnapshot().reports).toHaveLength(100_000)
     expect(cluster.getSnapshot().reports.some(({ call }) => call === 'WI3W')).toBe(false)
     expect(cluster.getSnapshot('WI3W').reports.map(({ call }) => call)).toEqual(['WI3W'])
     cluster.release('map')
@@ -183,6 +192,21 @@ describe('cluster reports', () => {
     cluster.release('second map')
     expect(cluster.getSnapshot('WI3W').reports).toEqual([])
     expect(cluster.getSnapshot().state).toBe('connected')
+  })
+
+  it('reads the board age window without shortening My Signal history', async () => {
+    const { cluster } = setup()
+    const reportTime = Date.parse('2026-11-11T17:10:00Z')
+    cluster.renew('map', 60_000, 'WI3W')
+    cluster.renew('spots', 60_000)
+    await tick()
+    await cluster.hook.onLines({ lines: [{ seq: 13, at: NOW, text: cw }] }, { online: true })
+
+    vi.setSystemTime(reportTime + maxAgeMs)
+    expect(cluster.getSnapshot(undefined, maxAgeMs).reports).toHaveLength(1)
+    vi.setSystemTime(reportTime + maxAgeMs + 1)
+    expect(cluster.getSnapshot(undefined, maxAgeMs).reports).toEqual([])
+    expect(cluster.getSnapshot('WI3W').reports).toHaveLength(1)
   })
 
   it('tracks separate board freshness for its supported bands', async () => {

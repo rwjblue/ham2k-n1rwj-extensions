@@ -75,9 +75,9 @@ export function createLiveSpots(
 
   function observe() {
     if (!demand?.enabled) return
-    const snapshot = cluster.getSnapshot()
-    const arrivals = snapshot.lastSpotsReportAt ?? snapshot.lastReportAt
-    const next = snapshot.state === 'connected' ? arrivals[demand.mode] : undefined
+    const status = cluster.getStatus()
+    const arrivals = status.lastSpotsReportAt ?? status.lastReportAt
+    const next = status.state === 'connected' ? arrivals[demand.mode] : undefined
     if (next !== latest) {
       latest = next
       silence.cancel()
