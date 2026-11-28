@@ -38,6 +38,23 @@ describe('extension discovery and scaffolding', () => {
     await expect(selectExtensions(dir, 'n1rwj-missing')).rejects.toThrow('Unknown extension')
   })
 
+  it('keeps preview packages out of automatic discovery while allowing an explicit build', async () => {
+    const dir = await fixture()
+    await scaffoldExtension(dir, { key: 'n1rwj-stable' })
+    const preview = await scaffoldExtension(dir, { key: 'n1rwj-preview' })
+    const packageFile = join(preview, 'package.json')
+    const pkg = JSON.parse(await readFile(packageFile, 'utf8'))
+    await writeJson(packageFile, { ...pkg, preview: true })
+
+    expect((await discoverExtensions(dir)).map(({ manifest }) => manifest.key)).toEqual([
+      'n1rwj-stable',
+    ])
+    expect((await selectExtensions(dir)).map(({ manifest }) => manifest.key)).toEqual([
+      'n1rwj-stable',
+    ])
+    expect((await selectExtensions(dir, 'n1rwj-preview'))[0]?.package.preview).toBe(true)
+  })
+
   it('refuses to overwrite an existing key in any group', async () => {
     const dir = await fixture()
     const created = await scaffoldExtension(dir, { key: 'n1rwj-demo' })

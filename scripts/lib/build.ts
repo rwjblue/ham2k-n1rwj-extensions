@@ -1,7 +1,7 @@
 import { copyFile, cp, mkdir, readdir, rm } from 'node:fs/promises'
 import { basename, join } from 'node:path'
-import { buildExtension } from '@ham2k/extension-tools'
 import { build } from 'esbuild'
+import { extensionToolchain } from './extension-toolchain.ts'
 import { readJson, selectExtensions } from './extensions.ts'
 
 /** Declared local workspaces may supply notices/assets bundled by every consumer. */
@@ -26,6 +26,9 @@ async function workspaceAssets(root: string, dependencies: Record<string, unknow
 export async function buildExtensions(root: string, key?: string): Promise<void> {
   for (const extension of await selectExtensions(root, key)) {
     await rm(join(extension.dir, 'build'), { recursive: true, force: true })
+    const {
+      build: { buildExtension },
+    } = await extensionToolchain(extension)
     const result = await buildExtension(build, { dir: extension.dir })
     // Copyright and adaptation provenance travel with every installable bundle.
     const assetsDir = join(result.outDir, 'assets')

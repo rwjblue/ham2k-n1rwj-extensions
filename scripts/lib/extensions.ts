@@ -13,6 +13,7 @@ export interface Manifest {
 export interface PackageJson {
   name?: string
   version: string
+  preview?: boolean
   devDependencies?: Record<string, string>
   [field: string]: unknown
 }
@@ -32,7 +33,10 @@ export async function writeJson(path: string, value: unknown): Promise<void> {
   await writeFile(path, `${JSON.stringify(value, null, 2)}\n`)
 }
 
-export async function discoverExtensions(root: string): Promise<Extension[]> {
+export async function discoverExtensions(
+  root: string,
+  { includePreviews = false } = {},
+): Promise<Extension[]> {
   const result: Extension[] = []
   const keys = new Set<string>()
   const base = join(root, 'extensions')
@@ -57,11 +61,15 @@ export async function discoverExtensions(root: string): Promise<Extension[]> {
     }
   }
   if (!result.length) throw new Error('No extensions found under extensions/<group>/<key>')
-  return result.sort((a, b) => a.manifest.key.localeCompare(b.manifest.key))
+  // Preview packages can be built by key without entering the automatic
+  // release, catalog and version-sync lists that use default discovery.
+  return result
+    .filter(({ package: pkg }) => includePreviews || !pkg.preview)
+    .sort((a, b) => a.manifest.key.localeCompare(b.manifest.key))
 }
 
 export async function selectExtensions(root: string, key?: string): Promise<Extension[]> {
-  const extensions = await discoverExtensions(root)
+  const extensions = await discoverExtensions(root, { includePreviews: Boolean(key) })
   if (!key) return extensions
   const selected = extensions.filter((extension) => extension.manifest.key === key)
   if (!selected.length) {

@@ -35,6 +35,11 @@ from https://www.bkg.club/data/v2/roster.json. Its original scene follows the
 club website's brass/black/lime theme and member-card vocabulary. Website
 scripts, fonts, photos and map data are not bundled.
 
+U.S. Operation Location downloads a separate dataset based on U.S. Census
+Bureau TIGER/Line geometry and county names from ARRL TrustedQSL. The
+[dataset notice](data/us-operation-location/SOURCE-NOTICE.txt) records its
+sources and the TrustedQSL license.
+
 The bundles include portions of the published `@ham2k/extension-sdk`;
 CWT also includes prefill improvements backported from Ham2K/extensions
 PR #1. The shared spot-filter contract and its CWT provider are original

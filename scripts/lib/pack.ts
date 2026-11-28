@@ -2,13 +2,16 @@ import { createHash } from 'node:crypto'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { isDeepStrictEqual } from 'node:util'
-import { withAboutFiles } from '@ham2k/extension-tools'
-import { pack, settingsReviewReasons } from '@ham2k/extension-tools/format'
+import { extensionToolchain } from './extension-toolchain.ts'
 import { type Manifest, readJson, selectExtensions } from './extensions.ts'
 
 export async function packExtensions(root: string, key?: string): Promise<void> {
   const builds = []
   for (const extension of await selectExtensions(root, key)) {
+    const {
+      build: { withAboutFiles },
+      format: { pack, settingsReviewReasons },
+    } = await extensionToolchain(extension)
     const buildDir = join(extension.dir, 'build')
     const manifest = await readJson<Manifest>(join(buildDir, 'manifest.json'))
     const expected = await withAboutFiles(extension.manifest, extension.dir)
@@ -20,12 +23,12 @@ export async function packExtensions(root: string, key?: string): Promise<void> 
       const reasons = reviewReasons.join('\n')
       throw new Error(`${manifest.key} settings placement requires catalog review.\n${reasons}`)
     }
-    builds.push({ buildDir, manifest })
+    builds.push({ buildDir, manifest, pack })
   }
 
   const dist = join(root, 'dist')
   await mkdir(dist, { recursive: true })
-  for (const { buildDir, manifest } of builds) {
+  for (const { buildDir, manifest, pack } of builds) {
     const filename = `${manifest.key}-${manifest.version}.h2kext`
     const outPath = join(dist, filename)
     // This is the validator/packer invoked by the official h2kext-pack CLI.
